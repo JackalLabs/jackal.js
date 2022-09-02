@@ -1,5 +1,6 @@
 export { txClient as cosmTxClient, queryClient as cosmQueryClient } from '@/protos/cosmwasm'
 export { txClient as dsigTxClient, queryClient as dsigQueryClient } from '@/protos/dsig'
+export { txClient as filetreeTxClient, queryClient as filetreeQueryClient } from '@/protos/filetree'
 export { txClient as jklAccountsTxClient, queryClient as jklAccountsQueryClient } from '@/protos/jklaccounts'
 export { txClient as jklMintTxClient, queryClient as jklMintQueryClient } from '@/protos/jklmint'
 export { txClient as rnsTxClient, queryClient as rnsQueryClient } from '@/protos/rns'
