@@ -31,10 +31,18 @@
   },
   "homepage": "https://github.com/JackalLabs/EXAMPLE/#readme",
   "dependencies": {
+    "@cosmjs/crypto": "^0.28.13",
     "@cosmjs/launchpad": "^0.27.1",
     "@cosmjs/proto-signing": "^0.28.13",
     "@cosmjs/stargate": "^0.28.13",
-    "bech32": "^2.0.0"
+    "bech32": "^2.0.0",
+    "bip32": "^3.0.1",
+    "bip39": "^3.0.4",
+    "bs58check": "^2.1.2",
+    "eciesjs": "^0.3.15",
+    "elliptic": "^6.5.4",
+    "formdata-node": "^5.0.0",
+    "tiny-secp256k1": "^2.2.1"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^4.18.0",

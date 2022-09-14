@@ -1,5 +1,8 @@
+import { encrypt } from 'eciesjs'
+
 import IFileBuffer from '@/interfaces/IFileBuffer'
 import IEncryptedPack from '@/interfaces/IEncryptedPack'
+import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 
 const keyAlgo = {
   name: 'AES-GCM',
@@ -11,19 +14,24 @@ export default class FileHandler {
   isUpload: boolean
   key: CryptoKey
   iv: Uint8Array
+  fileConfig: IFileConfigRaw
 
-  private constructor (file: File | ArrayBuffer, mode: boolean, key: CryptoKey, iv: Uint8Array) {
+  private constructor (file: File | ArrayBuffer, mode: boolean, ownerConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
     this.baseFile = file
     this.isUpload = mode
     this.key = key
     this.iv = iv
+    this.fileConfig = ownerConfig
   }
 
-  static async trackFile (file: File | ArrayBuffer, key?: Uint8Array, iv?: Uint8Array): Promise<FileHandler> {
+  static async trackFile (file: File | ArrayBuffer, ownerConfig: IFileConfigRaw, path: string, creatorPubkey: string, key?: Uint8Array, iv?: Uint8Array): Promise<FileHandler> {
     const isUpload: boolean = !key
     const savedKey: CryptoKey = (key) ? await this.importJackalKey(key) : await this.genKey()
     const savedIv: Uint8Array = iv || this.genIv()
-    return new FileHandler(file, isUpload, savedKey, savedIv)
+    const encryptedKey = (new TextDecoder()).decode(encrypt(creatorPubkey, new Buffer(await FileHandler.exportJackalKey(savedKey))))
+    ownerConfig.editors[ownerConfig.creator] = encryptedKey
+    ownerConfig.viewers[ownerConfig.creator] = encryptedKey
+    return new FileHandler(file, isUpload, ownerConfig, path, savedKey, savedIv)
   }
   private static async exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
     return new Uint8Array(await crypto.subtle.exportKey('raw', key))
@@ -38,6 +46,20 @@ export default class FileHandler {
   private static genIv (): Uint8Array {
     return crypto.getRandomValues(new Uint8Array(16))
   }
+  static async makeOwnerConfig (baseCreator: string, path: string, fid: string) {
+    const { digest } = crypto.subtle
+    const algo = 'SHA-256'
+    const preJson: { [key: string]: string } = {}
+    const creator = (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(baseCreator)))
+    preJson[creator] = ''
+    return {
+      creator,
+      hashpath: (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(path))),
+      contents: (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(fid))),
+      viewers: preJson,
+      editors: preJson,
+    }
+  }
 
   async getFile (): Promise<File> {
     if (this.isUpload) {
@@ -45,6 +67,9 @@ export default class FileHandler {
     } else {
       return this.convertToOriginalFile()
     }
+  }
+  getFileMeta (owner: string) {
+    return {...this}
   }
   setFile (file: File): void {
     this.baseFile = file
