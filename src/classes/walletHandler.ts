@@ -1,12 +1,14 @@
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing/build/directsecp256k1hdwallet'
 import { storageTxClient } from '@/raw'
-import { OfflineDirectSigner } from '@cosmjs/proto-signing/build/signer'
 import { bech32, Decoded } from 'bech32'
 import IChainDetails from '@/interfaces/IChainDetails'
-import { encrypt, decrypt, PrivateKey } from 'eciesjs'
-import * as buffer from 'buffer'
+import { encrypt, decrypt } from 'eciesjs'
+import bs58check from 'bs58check'
+import ecc from 'tiny-secp256k1'
+import { BIP32Factory } from 'bip32'
 
+const Bip32 = BIP32Factory(ecc)
 
 export default class WalletHandler {
   private wallet: DirectSecp256k1HdWallet
@@ -46,12 +48,14 @@ export default class WalletHandler {
   getPubkey () {
     return this.jackalAccount.pubkey
   }
-  asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string) {
-    return encrypt(pubKey, Buffer.from(toEncrypt))
+  asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string {
+    return encrypt(Buffer.from(pubKey), Buffer.from(toEncrypt)).toString('hex')
   }
-  asymmetricDecrypt (toDecrypt: string) {
-    const privKey = new PrivateKey(Buffer.from(this.wallet.mnemonic))
-    return decrypt(privKey.toHex(), Buffer.from(toDecrypt))
+  asymmetricDecrypt (toDecrypt: string): ArrayBuffer {
+    const bipX = Bip32.fromSeed(Buffer.from(this.wallet.mnemonic))
+    const dec = Buffer.from(bs58check.decode(bipX.toBase58()))
+    const privKey = Bip32.fromBase58(bs58check.encode(dec)).derivePath(`m/44'/118'/0'/0/0`).privateKey
+    return new Uint8Array(decrypt(privKey as Buffer, Buffer.from(toDecrypt, 'hex')))
   }
 
   processStockChains () {
