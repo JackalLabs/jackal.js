@@ -1,8 +1,7 @@
-import { encrypt } from 'eciesjs'
-
 import IFileBuffer from '@/interfaces/IFileBuffer'
 import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import IFileHandler from '@/interfaces/classes/IFileHandler'
+import { hashAndHex } from '@/utils/hash'
 
 const keyAlgo = {
   name: 'AES-GCM',
@@ -19,25 +18,22 @@ export default class FileHandler implements IFileHandler {
   cid: string
   fid: string
 
-  private constructor (file: File | ArrayBuffer, mode: boolean, ownerConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
+  private constructor (file: File | ArrayBuffer, mode: boolean, fileConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
     this.baseFile = file
     this.isUpload = mode
     this.key = key
     this.iv = iv
-    this.fileConfig = ownerConfig
-    this.path = ''
+    this.fileConfig = fileConfig
+    this.path = path
     this.cid = ''
     this.fid = ''
   }
 
-  static async trackFile (file: File | ArrayBuffer, ownerConfig: IFileConfigRaw, path: string, creatorPubkey: string, key?: Uint8Array, iv?: Uint8Array): Promise<FileHandler> {
-    const isUpload: boolean = !key
-    const savedKey: CryptoKey = (key) ? await this.importJackalKey(key) : await this.genKey()
-    const savedIv: Uint8Array = iv || this.genIv()
-    const encryptedKey = (new TextDecoder()).decode(encrypt(creatorPubkey, new Buffer(await FileHandler.exportJackalKey(savedKey))))
-    ownerConfig.editors[ownerConfig.creator] = encryptedKey
-    ownerConfig.viewers[ownerConfig.creator] = encryptedKey
-    return new FileHandler(file, isUpload, ownerConfig, path, savedKey, savedIv)
+  static async trackFile (file: File | ArrayBuffer, fileConfig: IFileConfigRaw, path: string, key?: ArrayBuffer, iv?: ArrayBuffer): Promise<FileHandler> {
+    const pendUpload: boolean = !key
+    const savedKey: CryptoKey = (key) ? await this.importJackalKey(new Uint8Array(key)) : await this.genKey()
+    const savedIv: Uint8Array = new Uint8Array(iv as ArrayBuffer) || this.genIv()
+    return new FileHandler(file, pendUpload, fileConfig, path, savedKey, savedIv)
   }
   private static async exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
     return new Uint8Array(await crypto.subtle.exportKey('raw', key))
@@ -71,7 +67,7 @@ export default class FileHandler implements IFileHandler {
     this.cid = idObj.cid
     this.fid = idObj.fid
   }
-  getUpload (): Promise<File> {
+  getForUpload (): Promise<File> {
     if (this.isUpload) {
       return this.convertToEncryptedFile()
     } else {
@@ -156,7 +152,7 @@ export default class FileHandler implements IFileHandler {
         parts[i]
       )
     }
-    return new File(staged, `${await oneWayString(name)}.jkl`, { type: 'text/plain' })
+    return new File(staged, `${await hashAndHex(name)}.jkl`, { type: 'text/plain' })
   }
 
   private async readFile (): Promise<IFileBuffer> {
@@ -178,10 +174,4 @@ export default class FileHandler implements IFileHandler {
       reader.readAsArrayBuffer(workingFile)
     })
   }
-
-}
-
-async function oneWayString (toHash: string): Promise<string> {
-  return crypto.subtle.digest('sha-256', (new TextEncoder()).encode(toHash).buffer)
-    .then(buf => (new TextDecoder()).decode(new Uint8Array(buf)))
 }
