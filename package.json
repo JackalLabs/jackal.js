@@ -1,8 +1,11 @@
 {
-  "name": "EXAMPLE",
+  "name": "jackal.js",
   "version": "0.0.1",
-  "description": "Typescript Base for Jackal Labs",
-  "keywords": [],
+  "description": "Javascript library for interacting with the Jackal Canine Chain",
+  "keywords": [
+    "jackal",
+    "canine"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -17,19 +20,19 @@
       "url": "https://jackallabs.io"
     },
     {
-      "name": "Example",
-      "email": "example@jackallabs.io"
+      "name": "Erin Rivas",
+      "email": "erin@jackallabs.io"
     }
   ],
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JackalLabs/EXAMPLE.git"
+    "url": "git+https://github.com/JackalLabs/jackal.js.git"
   },
   "bugs": {
-    "url": "https://github.com/JackalLabs/EXAMPLE/issues"
+    "url": "https://github.com/JackalLabs/jackal.js/issues"
   },
-  "homepage": "https://github.com/JackalLabs/EXAMPLE/#readme",
+  "homepage": "https://github.com/JackalLabs/jackal.js/#README",
   "dependencies": {
     "@cosmjs/launchpad": "^0.27.1",
     "@cosmjs/proto-signing": "^0.28.13",
