@@ -10,11 +10,12 @@ import FileHandler from '@/classes/fileHandler'
 import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import IEditorsViewers from '@/interfaces/IEditorsViewers'
 import { Api } from '@/protos/storage/rest'
+import IFileIo from '@/interfaces/classes/IFileIo'
 
 const defaultTxAddr26657 = 'http://localhost:26657'
 const defaultQueryAddr1317 = 'http://localhost:1317'
 
-export default class FileIo {
+export default class FileIo implements IFileIo{
   walletRef: OfflineSigner
   txAddr26657: string
   queryAddr1317: string

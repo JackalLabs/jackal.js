@@ -14,12 +14,9 @@ export default interface IFileIo {
   availableProviders: Miners[]
   currentProvider: Miners
 
-  getProvider (queryClient: Api<any>): Promise<Miners[]>
   shuffle (): Promise<void>
   forceProvider (toSet: Miners): void
 
   uploadFiles (toUpload: IFileHandler[], wallet: IWalletHandler): Promise<void>
   downloadFile (fileAddress: string, wallet: IWalletHandler): Promise<IFileHandler>
-  afterUpload (ids: IFileHandler[], wallet: IWalletHandler): Promise<void>
-
 }
