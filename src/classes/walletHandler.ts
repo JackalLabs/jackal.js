@@ -1,11 +1,11 @@
 import { AccountData } from '@cosmjs/proto-signing'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing/build/directsecp256k1hdwallet'
 import { bech32, Decoded } from 'bech32'
-import IChainDetails from '@/interfaces/IChainDetails'
 import { encrypt, decrypt } from 'eciesjs'
 import bs58check from 'bs58check'
 import ecc from 'tiny-secp256k1'
 import { BIP32Factory } from 'bip32'
+import IChainDetails from '@/interfaces/IChainDetails'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 
 const Bip32 = BIP32Factory(ecc)
@@ -36,9 +36,6 @@ export default class WalletHandler implements IWalletHandler {
     return new WalletHandler(wallet, baseAccount)
   }
 
-  // getMnemonic () {
-  //   return this.wallet.mnemonic
-  // }
   getAccounts () {
     return this.wallet.getAccounts()
   }
