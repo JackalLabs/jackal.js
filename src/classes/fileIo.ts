@@ -1,13 +1,15 @@
-import { storageQueryClient, storageTxClient, filetreeTxClient } from '@/raw'
+import { storageQueryClient, storageTxClient, filetreeTxClient, filetreeQueryClient } from '@/raw'
 import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
-import { Api } from '@/protos/storage/rest'
 import { Miners } from '@/protos/storage/types/storage/miners'
-import { File, FormData } from 'formdata-node'
-import { estimateGas, finalizeGas } from '@/utils/gas'
-import IProviderResponse from '@/interfaces/IProviderResponse'
-import FileHandler from '@/classes/fileHandler'
+import { FormData } from 'formdata-node'
+import { finalizeGas } from '@/utils/gas'
 import IFileHandler from '@/interfaces/classes/IFileHandler'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
+import { hashAndHex } from '@/utils/hash'
+import FileHandler from '@/classes/fileHandler'
+import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
+import IEditorsViewers from '@/interfaces/IEditorsViewers'
+import { Api } from '@/protos/storage/rest'
 
 const defaultTxAddr26657 = 'http://localhost:26657'
 const defaultQueryAddr1317 = 'http://localhost:1317'
@@ -18,17 +20,15 @@ export default class FileIo {
   queryAddr1317: string
   fileTxClient: any
   storageTxClient: any
-  storageQueryClient: Api<any>
   availableProviders: Miners[]
   currentProvider: Miners
 
-  private constructor (wallet: OfflineSigner, tAddr: string, qAddr: string, fTxClient: any, sTxClient: any, queryClient: Api<any>, providers: Miners[]) {
+  private constructor (wallet: OfflineSigner, tAddr: string, qAddr: string, fTxClient: any, sTxClient: any, providers: Miners[]) {
     this.walletRef = wallet
     this.txAddr26657 = tAddr
     this.queryAddr1317 = qAddr
     this.fileTxClient = fTxClient
     this.storageTxClient = sTxClient
-    this.storageQueryClient = queryClient
     this.availableProviders = providers
     this.currentProvider = providers[Math.floor(Math.random() * providers.length)]
   }
@@ -38,9 +38,8 @@ export default class FileIo {
     const qAddr = queryAddr || defaultQueryAddr1317
     const ftxClient = await filetreeTxClient(wallet, { addr: tAddr })
     const stxClient = await storageTxClient(wallet, { addr: tAddr })
-    const queryClient: Api<any> = await storageQueryClient({ addr: qAddr })
-    const providers = await this.getProvider(queryClient)
-    return new FileIo(wallet, tAddr, qAddr, ftxClient, stxClient, queryClient, providers)
+    const providers = await this.getProvider(await storageQueryClient({ addr: qAddr }))
+    return new FileIo(wallet, tAddr, qAddr, ftxClient, stxClient, providers)
   }
 
   static async getProvider (queryClient: Api<any>): Promise<Miners[]> {
@@ -49,7 +48,7 @@ export default class FileIo {
     return rawProviderList.slice(0, 100)
   }
   async shuffle (): Promise<void> {
-    this.availableProviders = await FileIo.getProvider(this.storageQueryClient)
+    this.availableProviders = await FileIo.getProvider(await storageQueryClient({ addr: this.queryAddr1317 }))
     this.currentProvider = this.availableProviders[Math.floor(Math.random() * this.availableProviders.length)]
   }
   forceProvider (toSet: Miners): void {
@@ -69,7 +68,7 @@ export default class FileIo {
       const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
       const ids: IFileHandler[] = await Promise.all(toUpload.map(async (item: IFileHandler) => {
         const fileFormData = new FormData()
-        fileFormData.set('file', await item.getUpload())
+        fileFormData.set('file', await item.getForUpload())
         const ret = await fetch(url, {method: 'POST', body: fileFormData})
           .then(resp => resp.json())
         item.setIds(ret)
@@ -79,18 +78,35 @@ export default class FileIo {
     }
 
   }
-  async downloadFile (fid: string) {
+  async downloadFile (fileAddress: string, wallet: IWalletHandler) {
     /**
      * fid to /d/
      * process
      */
-    const queryResults = await this.storageQueryClient.queryFindFile(fid)
-    const providers = queryResults.data.minerIps || '[]'
+
+    const { queryFiles } = await filetreeQueryClient({ addr: this.queryAddr1317 })
+    const { queryFindFile } = await storageQueryClient({ addr: this.queryAddr1317 })
+    const ftQueryResults = await queryFiles(await hashAndHex(fileAddress))
+    const fileData = ftQueryResults.data.files || {address: '', contents: '', owner: '', editAccess: '', viewingAccess: ''}
+    const sQueryResults = await queryFindFile(fileData.contents as string)
+
+    const providers = sQueryResults.data.minerIps || '[]'
     const targetProvider = JSON.parse(providers)
     if (targetProvider && targetProvider.length) {
-      const url = `${targetProvider.endsWith('/') ? targetProvider.slice(0, -1) : targetProvider}/d/${fid}`
+      const url = `${targetProvider.endsWith('/') ? targetProvider.slice(0, -1) : targetProvider}/d/${fileData.contents as string}`
       return await fetch(url)
         .then(resp => resp.arrayBuffer())
+        .then(resp => {
+          const config: IFileConfigRaw = {
+            creator: fileData.owner as string,
+            hashpath: fileData.address as string,
+            contents: fileData.contents as string,
+            viewers: JSON.parse(fileData.viewingAccess as string) as IEditorsViewers,
+            editors: JSON.parse(fileData.editAccess as string) as IEditorsViewers
+          }
+          const { key, iv } = config.editors[config.creator]
+          return FileHandler.trackFile(resp, config, fileAddress, wallet.asymmetricDecrypt(key), wallet.asymmetricDecrypt(iv))
+        })
     } else {
       throw new Error('No available providers!')
     }
@@ -99,13 +115,7 @@ export default class FileIo {
     const { signAndBroadcast, msgPostFile } = await this.fileTxClient()
     const { msgSignContract } = await this.storageTxClient()
 
-    const { digest } = crypto.subtle
-    const algo = 'SHA-256'
-
-    const creator = (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(wallet.getJackalAddress())))
-
-
-
+    const creator = await hashAndHex(wallet.getJackalAddress())
     const ready = await Promise.all(ids.flatMap(async (obj: IFileHandler) => {
       const crypt = await obj.getEnc()
       const partial = {
@@ -117,8 +127,8 @@ export default class FileIo {
 
       const msgPost: EncodeObject = await msgPostFile(JSON.stringify({
         creator,
-        hashpath: (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(obj.path))),
-        contents: (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(obj.fid))),
+        hashpath: await hashAndHex(obj.path),
+        contents: obj.fid,
         viewers: perms,
         editors: perms
       }))
@@ -132,7 +142,7 @@ export default class FileIo {
     }))
 
     const lastStep = await signAndBroadcast(ready.flat(), {fee: finalizeGas(ready.flat()),memo: ''})
-
+    console.dir(lastStep)
   }
 
 }

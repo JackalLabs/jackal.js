@@ -10,7 +10,7 @@ export default interface IFileHandler {
   setFile (file: File): void
   setConfig (config: IFileConfigRaw): void
   setIds (idObj: {cid: string, fid: string}): void
-  getUpload (): Promise<File>
+  getForUpload (): Promise<File>
   getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}>
 
 }
