@@ -1,16 +1,16 @@
-import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
+import { AccountData } from '@cosmjs/proto-signing'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing/build/directsecp256k1hdwallet'
-import { storageTxClient } from '@/raw'
 import { bech32, Decoded } from 'bech32'
 import IChainDetails from '@/interfaces/IChainDetails'
 import { encrypt, decrypt } from 'eciesjs'
 import bs58check from 'bs58check'
 import ecc from 'tiny-secp256k1'
 import { BIP32Factory } from 'bip32'
+import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 
 const Bip32 = BIP32Factory(ecc)
 
-export default class WalletHandler {
+export default class WalletHandler implements IWalletHandler {
   private wallet: DirectSecp256k1HdWallet
   jackalAccount: AccountData
   deconstructedAccount: Decoded
@@ -41,6 +41,9 @@ export default class WalletHandler {
   // }
   getAccounts () {
     return this.wallet.getAccounts()
+  }
+  getJackalAddress (): string {
+    return this.jackalAccount.address
   }
   getChains () {
     return this.enabledChains

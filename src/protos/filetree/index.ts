@@ -33,7 +33,7 @@ interface SignAndBroadcastOptions {
 
 const txClient = async (wallet: OfflineSigner, { addr: addr }: TxClientOptions = { addr: "http://localhost:26657" }) => {
   if (!wallet) throw MissingWalletError;
-  let client;
+  let client: any;
   if (addr) {
     client = await SigningStargateClient.connectWithSigner(addr, wallet, { registry });
   }else{

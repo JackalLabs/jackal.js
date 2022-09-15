@@ -1,8 +1,13 @@
 import { storageQueryClient, storageTxClient, filetreeTxClient } from '@/raw'
-import { OfflineSigner } from '@cosmjs/proto-signing'
+import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
 import { Api } from '@/protos/storage/rest'
 import { Miners } from '@/protos/storage/types/storage/miners'
-import { FormData } from 'formdata-node'
+import { File, FormData } from 'formdata-node'
+import { estimateGas, finalizeGas } from '@/utils/gas'
+import IProviderResponse from '@/interfaces/IProviderResponse'
+import FileHandler from '@/classes/fileHandler'
+import IFileHandler from '@/interfaces/classes/IFileHandler'
+import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 
 const defaultTxAddr26657 = 'http://localhost:26657'
 const defaultQueryAddr1317 = 'http://localhost:1317'
@@ -51,19 +56,27 @@ export default class FileIo {
     this.currentProvider = toSet
   }
 
-  async uploadFile (toUpload: File) {
+  async uploadFiles (toUpload: IFileHandler[], wallet: IWalletHandler) {
     /**
      * http to provider
      * receive fid/cid
      * use cid to msgSignContract and also msgPostFile
      */
-
-    const { ip } = this.currentProvider
-    const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
-    const myFormData = new FormData()
-    myFormData.set('file', toUpload)
-    const data = await fetch(url, {method: 'POST'})
-      .then(resp => resp.json())
+    if (!toUpload.length) {
+      throw new Error('Empty File array submitted for upload')
+    } else {
+      const { ip } = this.currentProvider
+      const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
+      const ids: IFileHandler[] = await Promise.all(toUpload.map(async (item: IFileHandler) => {
+        const fileFormData = new FormData()
+        fileFormData.set('file', await item.getUpload())
+        const ret = await fetch(url, {method: 'POST', body: fileFormData})
+          .then(resp => resp.json())
+        item.setIds(ret)
+        return item
+      }))
+      await this.afterUpload(ids, wallet)
+    }
 
   }
   async downloadFile (fid: string) {
@@ -82,24 +95,44 @@ export default class FileIo {
       throw new Error('No available providers!')
     }
   }
-  private async afterUpload () {
+  private async afterUpload (ids: IFileHandler[], wallet: IWalletHandler) {
+    const { signAndBroadcast, msgPostFile } = await this.fileTxClient()
+    const { msgSignContract } = await this.storageTxClient()
 
-    const { msgPostFile } = await this.fileTxClient()
-    const { signAndBroadcast, msgSignContract } = await this.storageTxClient()
+    const { digest } = crypto.subtle
+    const algo = 'SHA-256'
 
-    const msgPost = await msgPostFile({
-      creator: '',  // hash owner
-      hashpath: '', // hash SHA256 of file path
-      contents: '', // file id hash
-      viewers: '',  // stringified json of sha256:enc aes key
-      editors: ''   // stringified json of sha256:enc aes key
-    })
+    const creator = (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(wallet.getJackalAddress())))
 
-    const msgSign = await msgSignContract({
-      creator: '',  // owner jkl address
-      cid: ''       // cid from above
-    })
+
+
+    const ready = await Promise.all(ids.flatMap(async (obj: IFileHandler) => {
+      const crypt = await obj.getEnc()
+      const partial = {
+        iv: wallet.asymmetricEncrypt(crypt.iv, (new TextDecoder()).decode(wallet.getPubkey())),
+        key: wallet.asymmetricEncrypt(crypt.key, (new TextDecoder()).decode(wallet.getPubkey()))
+      }
+      const perms: any = {}
+      perms[creator] = partial
+
+      const msgPost: EncodeObject = await msgPostFile(JSON.stringify({
+        creator,
+        hashpath: (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(obj.path))),
+        contents: (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(obj.fid))),
+        viewers: perms,
+        editors: perms
+      }))
+
+      const msgSign: EncodeObject = await msgSignContract({
+        creator,      // owner jkl address
+        cid: obj.cid  // cid from above
+      })
+
+      return [msgPost, msgSign]
+    }))
+
+    const lastStep = await signAndBroadcast(ready.flat(), {fee: finalizeGas(ready.flat()),memo: ''})
+
   }
 
 }
-

@@ -1,20 +1,23 @@
 import { encrypt } from 'eciesjs'
 
 import IFileBuffer from '@/interfaces/IFileBuffer'
-import IEncryptedPack from '@/interfaces/IEncryptedPack'
 import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
+import IFileHandler from '@/interfaces/classes/IFileHandler'
 
 const keyAlgo = {
   name: 'AES-GCM',
   length: 256
 }
 
-export default class FileHandler {
-  baseFile: File | ArrayBuffer
-  isUpload: boolean
-  key: CryptoKey
-  iv: Uint8Array
+export default class FileHandler implements IFileHandler {
+  private baseFile: File | ArrayBuffer
+  private isUpload: boolean
+  private readonly key: CryptoKey
+  private readonly iv: Uint8Array
   fileConfig: IFileConfigRaw
+  path: string
+  cid: string
+  fid: string
 
   private constructor (file: File | ArrayBuffer, mode: boolean, ownerConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
     this.baseFile = file
@@ -22,6 +25,9 @@ export default class FileHandler {
     this.key = key
     this.iv = iv
     this.fileConfig = ownerConfig
+    this.path = ''
+    this.cid = ''
+    this.fid = ''
   }
 
   static async trackFile (file: File | ArrayBuffer, ownerConfig: IFileConfigRaw, path: string, creatorPubkey: string, key?: Uint8Array, iv?: Uint8Array): Promise<FileHandler> {
@@ -46,20 +52,6 @@ export default class FileHandler {
   private static genIv (): Uint8Array {
     return crypto.getRandomValues(new Uint8Array(16))
   }
-  static async makeOwnerConfig (baseCreator: string, path: string, fid: string) {
-    const { digest } = crypto.subtle
-    const algo = 'SHA-256'
-    const preJson: { [key: string]: string } = {}
-    const creator = (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(baseCreator)))
-    preJson[creator] = ''
-    return {
-      creator,
-      hashpath: (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(path))),
-      contents: (new TextDecoder()).decode(await digest(algo, (new TextEncoder()).encode(fid))),
-      viewers: preJson,
-      editors: preJson,
-    }
-  }
 
   async getFile (): Promise<File> {
     if (this.isUpload) {
@@ -68,31 +60,37 @@ export default class FileHandler {
       return this.convertToOriginalFile()
     }
   }
-  getFileMeta (owner: string) {
-    return {...this}
-  }
   setFile (file: File): void {
     this.baseFile = file
     this.isUpload = true
   }
-  getUpload (): Promise<IEncryptedPack> {
+  setConfig (config: IFileConfigRaw) {
+    this.fileConfig = config
+  }
+  setIds (idObj: {cid: string, fid: string}) {
+    this.cid = idObj.cid
+    this.fid = idObj.fid
+  }
+  getUpload (): Promise<File> {
     if (this.isUpload) {
       return this.convertToEncryptedFile()
     } else {
       throw new Error('File not in upload-compatible state. Is this a downloaded file?')
     }
   }
+  async getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}> {
+    return {
+      iv: this.iv,
+      key: await FileHandler.exportJackalKey(this.key)
+    }
+  }
 
-  private async convertToEncryptedFile (): Promise<IEncryptedPack> {
+  private async convertToEncryptedFile (): Promise<File> {
     const read = await this.readFile()
     const chunks = this.encryptPrep(read.content)
     chunks.unshift((new TextEncoder()).encode(JSON.stringify(read.meta)).buffer)
     const encChunks: ArrayBuffer[] = await Promise.all(chunks.map((chunk: ArrayBuffer) => this.aesCrypt(chunk, 'encrypt')))
-    return {
-      encFile: await this.assembleEncryptedFile(encChunks, read.meta.name),
-      iv: this.iv,
-      key: await FileHandler.exportJackalKey(this.key)
-    }
+    return await this.assembleEncryptedFile(encChunks, read.meta.name)
   }
   private async convertToOriginalFile (): Promise<File> {
     const decChunks: ArrayBuffer[] = await Promise.all(this.decryptPrep(this.baseFile as ArrayBuffer).map(chunk => this.aesCrypt(chunk, 'decrypt')))

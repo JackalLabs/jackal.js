@@ -15,3 +15,10 @@ export function estimateGas (msgArray: EncodeObject[]) {
   }, 0)
   return (gas + 60) * 1000
 }
+export function finalizeGas (msgArray: EncodeObject[]) {
+  const totalGas = estimateGas (msgArray)
+  return {
+    amount: [],
+    gas: totalGas.toString()
+  }
+}
