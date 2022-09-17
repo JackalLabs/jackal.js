@@ -12,6 +12,7 @@ import IEditorsViewers from '@/interfaces/IEditorsViewers'
 import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import IFileIo from '@/interfaces/classes/IFileIo'
 import IFolderDownload from '@/interfaces/IFolderDownload'
+import IProviderResponse from '@/interfaces/IProviderResponse'
 
 const defaultTxAddr26657 = 'http://localhost:26657'
 const defaultQueryAddr1317 = 'http://localhost:1317'
@@ -71,7 +72,7 @@ export default class FileIo implements IFileIo {
       const ids: IFileHandler[] = await Promise.all(toUpload.map(async (item: IFileHandler) => {
         const fileFormData = new FormData()
         fileFormData.set('file', await item.getForUpload())
-        const ret = await fetch(url, {method: 'POST', body: fileFormData})
+        const ret: IProviderResponse = await fetch(url, {method: 'POST', body: fileFormData})
           .then(resp => resp.json())
         item.setIds(ret)
         return item
