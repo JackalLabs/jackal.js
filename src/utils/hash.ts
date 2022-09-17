@@ -12,7 +12,7 @@ const hashMap: string[] = ['00','01','02','03','04','05','06','07','08','09','0a
   'fa','fb','fc','fd','fe','ff']
 
 /** @private */
-export async function hashAndHex (input: string) {
+export async function hashAndHex (input: string): Promise<string> {
   const { digest } = crypto.subtle
   const algo = 'SHA-256'
 

@@ -1,5 +1,6 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import IGasHashMap from '@/interfaces/IGasHashMap'
+import IGasRate from '@/interfaces/IGasRate'
 
 const hashMap: IGasHashMap = {
   // filetree
@@ -7,16 +8,17 @@ const hashMap: IGasHashMap = {
   // storage
   '/jackaldao.canine.storage.MsgPostContract': 55
 }
+const baseRate = 60
 
-/** @private */
-export function estimateGas (msgArray: EncodeObject[]) {
+export function estimateGas (msgArray: EncodeObject[]): number {
   const gas = msgArray.reduce((acc, curr) => {
     return acc + hashMap[curr.typeUrl]
   }, 0)
-  return (gas + 60) * 1000
+  return (gas + baseRate) * 1000
 }
-export function finalizeGas (msgArray: EncodeObject[]) {
-  const totalGas = estimateGas (msgArray)
+/** @private */
+export function finalizeGas (msgArray: EncodeObject[]): IGasRate {
+  const totalGas = estimateGas(msgArray)
   return {
     amount: [],
     gas: totalGas.toString()
