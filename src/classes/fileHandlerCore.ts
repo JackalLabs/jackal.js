@@ -8,7 +8,7 @@ const keyAlgo = {
   length: 256
 }
 
-export default class FileHandler implements IFileHandler {
+export default class FileHandlerCore implements IFileHandler {
   protected baseFile: File | ArrayBuffer
   protected isUpload: boolean
   protected readonly key: CryptoKey
@@ -21,7 +21,7 @@ export default class FileHandler implements IFileHandler {
   protected constructor (file: File | ArrayBuffer, mode: boolean, fileConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
     this.baseFile = file
     this.isUpload = mode
-    this.key = key
+    this.key = {} as unknown as CryptoKey
     this.iv = iv
     this.fileConfig = fileConfig
     this.path = path
@@ -39,7 +39,8 @@ export default class FileHandler implements IFileHandler {
     return new Uint8Array(await crypto.subtle.exportKey('raw', key))
   }
   protected static importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
-    return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, ['encrypt', 'decrypt'])
+    const test = Uint8Array.from(Object.values(rawExport))
+    return crypto.subtle.importKey('raw', test, 'AES-GCM', true, ['encrypt', 'decrypt'])
   }
   protected static genKey (): Promise<CryptoKey> {
     return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])

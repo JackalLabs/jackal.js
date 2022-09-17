@@ -11,6 +11,7 @@ import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 import IEditorsViewers from '@/interfaces/IEditorsViewers'
 import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import IFileIo from '@/interfaces/classes/IFileIo'
+import IFolderDownload from '@/interfaces/IFolderDownload'
 
 const defaultTxAddr26657 = 'http://localhost:26657'
 const defaultQueryAddr1317 = 'http://localhost:1317'
@@ -77,10 +78,11 @@ export default class FileIo implements IFileIo {
       }))
       await this.afterUpload(ids, wallet)
     }
-
   }
-  async downloadFile (fileAddress: string, wallet: IWalletHandler) {
+  async downloadFile (fileAddress: string, wallet: IWalletHandler, isFolder?: boolean): Promise<IFileHandler | IFolderDownload> {
     /**
+     * update to build fileAddress
+     *
      * fid to /d/
      * process
      */
@@ -106,7 +108,11 @@ export default class FileIo implements IFileIo {
             editors: JSON.parse(fileData.editAccess as string) as IEditorsViewers
           }
           const { key, iv } = config.editors[config.creator]
-          return FileHandler.trackFile(resp, config, fileAddress, wallet.asymmetricDecrypt(key), wallet.asymmetricDecrypt(iv))
+          if (isFolder) {
+            return {data: resp, config, key: wallet.asymmetricDecrypt(key), iv: wallet.asymmetricDecrypt(iv)}
+          } else {
+            return FileHandler.trackFile(resp, config, fileAddress, wallet.asymmetricDecrypt(key), wallet.asymmetricDecrypt(iv))
+          }
         })
     } else {
       throw new Error('No available providers!')
@@ -138,12 +144,9 @@ export default class FileIo implements IFileIo {
         creator,      // owner jkl address
         cid: obj.cid  // cid from above
       })
-
       return [msgPost, msgSign]
     }))
-
     const lastStep = await signAndBroadcast(ready.flat(), {fee: finalizeGas(ready.flat()),memo: ''})
     console.dir(lastStep)
   }
-
 }
