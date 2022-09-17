@@ -1,91 +1,76 @@
-import { AccountData } from '@cosmjs/proto-signing'
-import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing/build/directsecp256k1hdwallet'
+import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
 import { bech32, Decoded } from 'bech32'
-import { encrypt, decrypt } from 'eciesjs'
-import bs58check from 'bs58check'
-import ecc from 'tiny-secp256k1'
-import { BIP32Factory } from 'bip32'
+import { encrypt, decrypt, PrivateKey } from 'eciesjs'
+
+import { Window as KeplrWindow } from '@keplr-wallet/types'
+
 import IChainDetails from '@/interfaces/IChainDetails'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 
-const Bip32 = BIP32Factory(ecc)
+declare global {
+  interface Window extends KeplrWindow {}
+}
+
+const jackalChainId = 'canine-1'
+const defaultChains = [jackalChainId, 'osmo-1', 'cosmos-1']
 
 export default class WalletHandler implements IWalletHandler {
-  private wallet: DirectSecp256k1HdWallet
+  private signer: OfflineSigner
+  private keyPair: PrivateKey
   jackalAccount: AccountData
   deconstructedAccount: Decoded
-  enabledChains: AccountData[]
 
-  private constructor (wallet: DirectSecp256k1HdWallet, acct: AccountData) {
-    this.wallet = wallet
+  private constructor (signer: OfflineSigner, acct: AccountData, keyPair: PrivateKey) {
+    this.signer = signer
+    this.keyPair = keyPair
     this.jackalAccount = acct
     this.deconstructedAccount = bech32.decode(acct.address)
-    this.enabledChains = this.processStockChains()
   }
 
-  static async trackWallet (seed?: string | DirectSecp256k1HdWallet): Promise<WalletHandler> {
-    let wallet
-    if (!seed) {
-      wallet = await DirectSecp256k1HdWallet.generate(24, { prefix: 'jkl' })
-    } else if (typeof seed === 'string') {
-      wallet = await DirectSecp256k1HdWallet.fromMnemonic(seed, { prefix: 'jkl' })
+  static async trackWallet (enabledChains: string | string[] = defaultChains): Promise<IWalletHandler> {
+    if (!window) {
+      throw new Error('Jackal.js is only supported in the browser at this time!')
+    } else if (!window.keplr) {
+      throw new Error('Jackal.js requires Keplr to be installed!')
     } else {
-      wallet = seed
+
+      await window.keplr.enable(enabledChains)
+      const signer = window.keplr.getOfflineSigner(jackalChainId)
+      const acct = (await signer.getAccounts())[0]
+      const secret = await makeSecret(jackalChainId, acct.address)
+
+      const secretAsHex = Buffer.from(secret, 'base64').slice(0, 32).toString('hex')
+      const keyPair = PrivateKey.fromHex(secretAsHex)
+
+      return new WalletHandler(signer, acct, keyPair)
     }
-    const baseAccount = (await wallet.getAccounts())[0]
-    return new WalletHandler(wallet, baseAccount)
   }
 
-  getAccounts () {
-    return this.wallet.getAccounts()
+  getAccounts (): Promise<readonly AccountData[]> {
+    return this.signer.getAccounts()
+  }
+  getSigner () {
+    return this.signer
   }
   getJackalAddress (): string {
     return this.jackalAccount.address
   }
-  getChains () {
-    return this.enabledChains
-  }
   getPubkey () {
-    return this.jackalAccount.pubkey
+    return this.keyPair.publicKey.toHex()
   }
   asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string {
-    return encrypt(Buffer.from(pubKey), Buffer.from(toEncrypt)).toString('hex')
+    return encrypt(pubKey, Buffer.from(toEncrypt)).toString('hex')
   }
   asymmetricDecrypt (toDecrypt: string): ArrayBuffer {
-    const bipX = Bip32.fromSeed(Buffer.from(this.wallet.mnemonic))
-    const dec = Buffer.from(bs58check.decode(bipX.toBase58()))
-    const privKey = Bip32.fromBase58(bs58check.encode(dec)).derivePath(`m/44'/118'/0'/0/0`).privateKey
-    return new Uint8Array(decrypt(privKey as Buffer, Buffer.from(toDecrypt, 'hex')))
+    return new Uint8Array(decrypt(this.keyPair.toHex(), Buffer.from(toDecrypt, 'hex')))
   }
+}
 
-  processStockChains () {
-    const chains: IChainDetails[] = [
-      {
-        name: 'Jackal',
-        prefix: 'jkl',
-        ticker: 'jkl'
-      },
-      {
-        name: 'Cosmos',
-        prefix: 'cosmos',
-        ticker: 'atom'
-      },
-      {
-        name: 'Axelar USDC',
-        prefix: 'osmo',
-        ticker: 'usdc'
-      }
-    ]
-    return chains.map((deets: IChainDetails) => this.processChain(deets))
+async function makeSecret (chainId: string, acct: string): Promise<string> {
+  const memo = 'Initiate Jackal Session'
+  if (!window.keplr) {
+    throw new Error('Jackal.js requires Keplr to be installed!')
+  } else {
+    return (await window.keplr.signArbitrary(chainId, acct, memo)).signature
   }
-  private processChain (chainDetails: IChainDetails): AccountData {
-    return {...this.jackalAccount, address: bech32.encode(chainDetails.prefix, this.deconstructedAccount.words)}
-  }
-  addSupportedChain (chainDetails: IChainDetails): void {
-    this.enabledChains.push(this.processChain(chainDetails))
-  }
-  mutate (prefix: string): Promise<DirectSecp256k1HdWallet> {
-    return DirectSecp256k1HdWallet.fromMnemonic(this.wallet.mnemonic, { prefix })
-  }
-
 }

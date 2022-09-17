@@ -46,6 +46,7 @@
     "tiny-secp256k1": "^2.2.1"
   },
   "devDependencies": {
+    "@keplr-wallet/types": "^0.11.0",
     "@types/bs58check": "^2.1.0",
     "@typescript-eslint/eslint-plugin": "^4.18.0",
     "@typescript-eslint/parser": "^4.18.0",

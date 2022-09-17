@@ -9,16 +9,16 @@ const keyAlgo = {
 }
 
 export default class FileHandler implements IFileHandler {
-  private baseFile: File | ArrayBuffer
-  private isUpload: boolean
-  private readonly key: CryptoKey
-  private readonly iv: Uint8Array
+  protected baseFile: File | ArrayBuffer
+  protected isUpload: boolean
+  protected readonly key: CryptoKey
+  protected readonly iv: Uint8Array
   fileConfig: IFileConfigRaw
   path: string
   cid: string
   fid: string
 
-  private constructor (file: File | ArrayBuffer, mode: boolean, fileConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
+  protected constructor (file: File | ArrayBuffer, mode: boolean, fileConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
     this.baseFile = file
     this.isUpload = mode
     this.key = key
@@ -29,23 +29,22 @@ export default class FileHandler implements IFileHandler {
     this.fid = ''
   }
 
-  static async trackFile (file: File | ArrayBuffer, fileConfig: IFileConfigRaw, path: string, key?: ArrayBuffer, iv?: ArrayBuffer): Promise<FileHandler> {
+  static async trackFile (file: File | ArrayBuffer, fileConfig: IFileConfigRaw, path: string, key?: ArrayBuffer, iv?: ArrayBuffer): Promise<IFileHandler> {
     const pendUpload: boolean = !key
     const savedKey: CryptoKey = (key) ? await this.importJackalKey(new Uint8Array(key)) : await this.genKey()
     const savedIv: Uint8Array = new Uint8Array(iv as ArrayBuffer) || this.genIv()
     return new FileHandler(file, pendUpload, fileConfig, path, savedKey, savedIv)
   }
-  private static async exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
+  protected static async exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
     return new Uint8Array(await crypto.subtle.exportKey('raw', key))
   }
-  private static importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
-    const test = Uint8Array.from(Object.values(rawExport))
-    return crypto.subtle.importKey('raw', test, 'AES-GCM', true, ['encrypt', 'decrypt'])
+  protected static importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
+    return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, ['encrypt', 'decrypt'])
   }
-  private static genKey (): Promise<CryptoKey> {
+  protected static genKey (): Promise<CryptoKey> {
     return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])
   }
-  private static genIv (): Uint8Array {
+  protected static genIv (): Uint8Array {
     return crypto.getRandomValues(new Uint8Array(16))
   }
 
@@ -81,14 +80,14 @@ export default class FileHandler implements IFileHandler {
     }
   }
 
-  private async convertToEncryptedFile (): Promise<File> {
+  protected async convertToEncryptedFile (): Promise<File> {
     const read = await this.readFile()
     const chunks = this.encryptPrep(read.content)
     chunks.unshift((new TextEncoder()).encode(JSON.stringify(read.meta)).buffer)
     const encChunks: ArrayBuffer[] = await Promise.all(chunks.map((chunk: ArrayBuffer) => this.aesCrypt(chunk, 'encrypt')))
     return await this.assembleEncryptedFile(encChunks, read.meta.name)
   }
-  private async convertToOriginalFile (): Promise<File> {
+  protected async convertToOriginalFile (): Promise<File> {
     const decChunks: ArrayBuffer[] = await Promise.all(this.decryptPrep(this.baseFile as ArrayBuffer).map(chunk => this.aesCrypt(chunk, 'decrypt')))
     const rawMeta = decChunks[0]
     const data = decChunks.slice(1)
@@ -96,7 +95,7 @@ export default class FileHandler implements IFileHandler {
     return new File(data, meta.name, meta)
   }
 
-  private async aesCrypt (data: ArrayBuffer, mode: 'encrypt' | 'decrypt'): Promise<ArrayBuffer> {
+  protected async aesCrypt (data: ArrayBuffer, mode: 'encrypt' | 'decrypt'): Promise<ArrayBuffer> {
     const algo = {
       name: 'AES-GCM',
       iv: this.iv
@@ -115,7 +114,7 @@ export default class FileHandler implements IFileHandler {
         })
     }
   }
-  private encryptPrep (source: ArrayBuffer): ArrayBuffer[] {
+  protected encryptPrep (source: ArrayBuffer): ArrayBuffer[] {
     const chunkSize = 33554432 /** in bytes */
     const len = source.byteLength
     const count = Math.ceil(len / chunkSize)
@@ -132,7 +131,7 @@ export default class FileHandler implements IFileHandler {
       return ret
     }
   }
-  private decryptPrep (source: ArrayBuffer): ArrayBuffer[] {
+  protected decryptPrep (source: ArrayBuffer): ArrayBuffer[] {
     const parts: ArrayBuffer[] = []
     for (let i = 0; i + 1 < source.byteLength;) {
       const offset = i + 8
@@ -144,7 +143,7 @@ export default class FileHandler implements IFileHandler {
     }
     return parts
   }
-  private async assembleEncryptedFile (parts: ArrayBuffer[], name: string): Promise<File> {
+  protected async assembleEncryptedFile (parts: ArrayBuffer[], name: string): Promise<File> {
     const staged: ArrayBuffer[] = []
     for (let i = 0; i < parts.length; i++) {
       staged.push(
@@ -152,10 +151,10 @@ export default class FileHandler implements IFileHandler {
         parts[i]
       )
     }
-    return new File(staged, `${await hashAndHex(name)}.jkl`, { type: 'text/plain' })
+    return new File(staged, `${await hashAndHex(name + Date.now().toString())}.jkl`, { type: 'text/plain' })
   }
 
-  private async readFile (): Promise<IFileBuffer> {
+  protected async readFile (): Promise<IFileBuffer> {
     const workingFile = this.baseFile as File
     const meta = {
       lastModified: workingFile.lastModified as number,
