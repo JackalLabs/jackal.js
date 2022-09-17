@@ -5,8 +5,15 @@ import { encrypt, decrypt } from 'eciesjs'
 import bs58check from 'bs58check'
 import ecc from 'tiny-secp256k1'
 import { BIP32Factory } from 'bip32'
+
+import { Window as KeplrWindow } from '@keplr-wallet/types'
+
 import IChainDetails from '@/interfaces/IChainDetails'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
+
+declare global {
+  interface Window extends KeplrWindow {}
+}
 
 const Bip32 = BIP32Factory(ecc)
 
@@ -24,6 +31,11 @@ export default class WalletHandler implements IWalletHandler {
   }
 
   static async trackWallet (seed?: string | DirectSecp256k1HdWallet): Promise<WalletHandler> {
+    if (!window) {
+      throw new Error('Jackal.js is only supported in the browser at this time!')
+    } else {
+      window.keplr
+    }
     let wallet
     if (!seed) {
       wallet = await DirectSecp256k1HdWallet.generate(24, { prefix: 'jkl' })
