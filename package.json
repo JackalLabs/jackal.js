@@ -1,6 +1,6 @@
 {
   "name": "jackal.js",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Javascript library for interacting with the Jackal Canine Chain",
   "keywords": [
     "jackal",
@@ -11,6 +11,7 @@
   "scripts": {
     "build": "tsc",
     "packit": "tsc && npm pack --pack-destination packs",
+    "push": "tsc && npm publish",
     "test": "echo \"Error: no tests included\" && exit 1"
   },
   "contributors": [
