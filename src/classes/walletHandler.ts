@@ -1,17 +1,15 @@
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
 import { bech32, Decoded } from 'bech32'
 import { encrypt, decrypt, PrivateKey } from 'eciesjs'
-
 import { Window as KeplrWindow } from '@keplr-wallet/types'
 
-import IChainDetails from '@/interfaces/IChainDetails'
+import { jackalChainId } from '@/utils/globals'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 
 declare global {
   interface Window extends KeplrWindow {}
 }
 
-const jackalChainId = 'canine-1'
 const defaultChains = [jackalChainId, 'osmo-1', 'cosmos-1']
 
 export default class WalletHandler implements IWalletHandler {

@@ -1,4 +1,5 @@
 import { hashAndHex } from '@/utils/hash'
+import { keyAlgo } from '@/utils/globals'
 import IFileBuffer from '@/interfaces/IFileBuffer'
 import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import FileHandler from '@/classes/fileHandler'
@@ -7,11 +8,6 @@ import IFileIo from '@/interfaces/classes/IFileIo'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 import IFolderFileHandler from '@/interfaces/classes/IFolderFileHandler'
 import IFolderDownload from '@/interfaces/IFolderDownload'
-
-const keyAlgo = {
-  name: 'AES-GCM',
-  length: 256
-}
 
 export default class FolderFileHandler {
 

@@ -1,9 +1,7 @@
 import { OfflineSigner } from '@cosmjs/proto-signing'
 import { govTxClient, govQueryClient } from '@/raw'
+import { defaultQueryAddr1317, defaultTxAddr26657 } from '@/utils/globals'
 import IGovHandler from '@/interfaces/classes/IGovHandler'
-
-const defaultTxAddr26657 = 'http://localhost:26657'
-const defaultQueryAddr1317 = 'http://localhost:1317'
 
 export default class GovHandler implements IGovHandler {
   private walletRef: OfflineSigner

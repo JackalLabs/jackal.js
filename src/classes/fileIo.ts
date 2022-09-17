@@ -6,6 +6,7 @@ import { Api } from '@/protos/storage/rest'
 import FileHandler from '@/classes/fileHandler'
 import { finalizeGas } from '@/utils/gas'
 import { hashAndHex } from '@/utils/hash'
+import { defaultQueryAddr1317, defaultTxAddr26657 } from '@/utils/globals'
 import IFileHandler from '@/interfaces/classes/IFileHandler'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 import IEditorsViewers from '@/interfaces/IEditorsViewers'
@@ -13,9 +14,6 @@ import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import IFileIo from '@/interfaces/classes/IFileIo'
 import IFolderDownload from '@/interfaces/IFolderDownload'
 import IProviderResponse from '@/interfaces/IProviderResponse'
-
-const defaultTxAddr26657 = 'http://localhost:26657'
-const defaultQueryAddr1317 = 'http://localhost:1317'
 
 export default class FileIo implements IFileIo {
   walletRef: OfflineSigner
