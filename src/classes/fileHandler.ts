@@ -29,7 +29,7 @@ export default class FileHandler implements IFileHandler {
     this.fid = ''
   }
 
-  static async trackFile (file: File | ArrayBuffer, fileConfig: IFileConfigRaw, path: string, key?: ArrayBuffer, iv?: ArrayBuffer): Promise<FileHandler> {
+  static async trackFile (file: File | ArrayBuffer, fileConfig: IFileConfigRaw, path: string, key?: ArrayBuffer, iv?: ArrayBuffer): Promise<IFileHandler> {
     const pendUpload: boolean = !key
     const savedKey: CryptoKey = (key) ? await this.importJackalKey(new Uint8Array(key)) : await this.genKey()
     const savedIv: Uint8Array = new Uint8Array(iv as ArrayBuffer) || this.genIv()

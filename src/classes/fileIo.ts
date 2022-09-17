@@ -99,7 +99,7 @@ export default class FileIo implements IFileIo {
       const url = `${targetProvider.endsWith('/') ? targetProvider.slice(0, -1) : targetProvider}/d/${fileData.contents as string}`
       return await fetch(url)
         .then(resp => resp.arrayBuffer())
-        .then(resp => {
+        .then(async (resp): Promise<IFileHandler | IFolderDownload> => {
           const config: IFileConfigRaw = {
             creator: fileData.owner as string,
             hashpath: fileData.address as string,
@@ -111,7 +111,7 @@ export default class FileIo implements IFileIo {
           if (isFolder) {
             return {data: resp, config, key: wallet.asymmetricDecrypt(key), iv: wallet.asymmetricDecrypt(iv)}
           } else {
-            return FileHandler.trackFile(resp, config, fileAddress, wallet.asymmetricDecrypt(key), wallet.asymmetricDecrypt(iv))
+            return await FileHandler.trackFile(resp, config, fileAddress, wallet.asymmetricDecrypt(key), wallet.asymmetricDecrypt(iv))
           }
         })
     } else {
@@ -126,8 +126,8 @@ export default class FileIo implements IFileIo {
     const ready = await Promise.all(ids.flatMap(async (obj: IFileHandler) => {
       const crypt = await obj.getEnc()
       const partial = {
-        iv: wallet.asymmetricEncrypt(crypt.iv, (new TextDecoder()).decode(wallet.getPubkey())),
-        key: wallet.asymmetricEncrypt(crypt.key, (new TextDecoder()).decode(wallet.getPubkey()))
+        iv: wallet.asymmetricEncrypt(crypt.iv, wallet.getPubkey()),
+        key: wallet.asymmetricEncrypt(crypt.key, wallet.getPubkey())
       }
       const perms: any = {}
       perms[creator] = partial

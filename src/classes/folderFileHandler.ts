@@ -13,17 +13,12 @@ const keyAlgo = {
   length: 256
 }
 
-export default class FolderFileHandler extends FileHandler {
+export default class FolderFileHandler {
 
-  // protected constructor (file: File | ArrayBuffer, mode: boolean, fileConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
-  //   super(file, mode, fileConfig, path, key, iv)
-  //
-  // }
   private folderDetails: IFolderFileFrame
   private whoAmI: string
 
   constructor () {
-    super()
 
 
 
