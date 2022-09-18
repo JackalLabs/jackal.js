@@ -1,5 +1,5 @@
 import { OfflineSigner } from '@cosmjs/proto-signing'
-import { govTxClient, govQueryClient } from '@/raw'
+import { govTxClient, govQueryClient } from 'jackal.js-protos'
 import { defaultQueryAddr1317, defaultTxAddr26657 } from '@/utils/globals'
 import IGovHandler from '@/interfaces/classes/IGovHandler'
 
