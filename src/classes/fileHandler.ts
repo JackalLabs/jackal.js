@@ -1,12 +1,8 @@
 import { hashAndHex } from '@/utils/hash'
+import { keyAlgo } from '@/utils/globals'
 import IFileBuffer from '@/interfaces/IFileBuffer'
 import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import IFileHandler from '@/interfaces/classes/IFileHandler'
-
-const keyAlgo = {
-  name: 'AES-GCM',
-  length: 256
-}
 
 export default class FileHandler implements IFileHandler {
   protected baseFile: File | ArrayBuffer

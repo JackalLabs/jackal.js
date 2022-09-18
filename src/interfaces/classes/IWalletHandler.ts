@@ -1,7 +1,5 @@
-import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing/build/directsecp256k1hdwallet'
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
 import { Decoded } from 'bech32'
-import IChainDetails from '@/interfaces/IChainDetails'
 
 export default interface IWalletHandler {
   jackalAccount: AccountData
@@ -13,6 +11,5 @@ export default interface IWalletHandler {
   getPubkey (): string
   asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string
   asymmetricDecrypt (toDecrypt: string): ArrayBuffer
-
 
 }
