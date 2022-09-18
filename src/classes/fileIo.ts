@@ -1,8 +1,6 @@
 import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
 import { FormData } from 'formdata-node'
-import { storageQueryClient, storageTxClient, filetreeTxClient, filetreeQueryClient } from '@/raw'
-import { Miners } from '@/protos/storage/types/storage/miners'
-import { Api } from '@/protos/storage/rest'
+import { storageQueryApi, storageQueryClient, storageTxClient, filetreeTxClient, filetreeQueryClient } from 'jackal.js-protos'
 import FileHandler from '@/classes/fileHandler'
 import { finalizeGas } from '@/utils/gas'
 import { hashAndHex } from '@/utils/hash'
@@ -14,6 +12,7 @@ import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import IFileIo from '@/interfaces/classes/IFileIo'
 import IFolderDownload from '@/interfaces/IFolderDownload'
 import IProviderResponse from '@/interfaces/IProviderResponse'
+import IMiner from '@/interfaces/IMiner'
 
 export default class FileIo implements IFileIo {
   walletRef: OfflineSigner
@@ -21,10 +20,10 @@ export default class FileIo implements IFileIo {
   queryAddr1317: string
   fileTxClient: any
   storageTxClient: any
-  availableProviders: Miners[]
-  currentProvider: Miners
+  availableProviders: IMiner[]
+  currentProvider: IMiner
 
-  private constructor (wallet: OfflineSigner, tAddr: string, qAddr: string, fTxClient: any, sTxClient: any, providers: Miners[]) {
+  private constructor (wallet: OfflineSigner, tAddr: string, qAddr: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
     this.walletRef = wallet
     this.txAddr26657 = tAddr
     this.queryAddr1317 = qAddr
@@ -43,16 +42,16 @@ export default class FileIo implements IFileIo {
     return new FileIo(wallet, tAddr, qAddr, ftxClient, stxClient, providers)
   }
 
-  static async getProvider (queryClient: Api<any>): Promise<Miners[]> {
+  static async getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]> {
     const rawProviderReturn = await queryClient.queryMinersAll()
-    const rawProviderList = rawProviderReturn.data.miners as Miners[] || []
+    const rawProviderList = rawProviderReturn.data.miners as IMiner[] || []
     return rawProviderList.slice(0, 100)
   }
   async shuffle (): Promise<void> {
     this.availableProviders = await FileIo.getProvider(await storageQueryClient({ addr: this.queryAddr1317 }))
     this.currentProvider = this.availableProviders[Math.floor(Math.random() * this.availableProviders.length)]
   }
-  forceProvider (toSet: Miners): void {
+  forceProvider (toSet: IMiner): void {
     this.currentProvider = toSet
   }
 
