@@ -1,3 +1,9 @@
-export * from './classes/fileIo'
-export * from './classes/fileHandler'
-export * from './classes/walletHandler'
+import FileIo from './classes/fileIo'
+import FileHandler from './classes/fileHandler'
+import WalletHandler from './classes/walletHandler'
+
+export {
+  FileIo,
+  FileHandler,
+  WalletHandler
+}
