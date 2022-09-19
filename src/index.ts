@@ -1,15 +1,29 @@
 /** Classes */
-export * as FileHandler from './classes/fileHandler'
-export * as FileIo from './classes/fileIo'
-export * as FolderFileHandler from './classes/folderFileHandler'
-export * as GovHandler from './classes/govHandler'
-export * as WalletHandler from './classes/walletHandler'
+import FileHandler from './classes/fileHandler'
+import FileIo from './classes/fileIo'
+import FolderFileHandler from './classes/folderFileHandler'
+import GovHandler from './classes/govHandler'
+import WalletHandler from './classes/walletHandler'
 
 /** Interfaces */
-export * as IFileHandler from './interfaces/classes/IFileHandler'
-export * as IFileIo from './interfaces/classes/IFileIo'
-export * as IFolderFileHandler from './interfaces/classes/IFolderFileHandler'
-export * as IGovHandler from './interfaces/classes/IGovHandler'
-export * as IWalletHandler from './interfaces/classes/IWalletHandler'
+import IFileHandler from './interfaces/classes/IFileHandler'
+import IFileIo from './interfaces/classes/IFileIo'
+import IFolderFileHandler from './interfaces/classes/IFolderFileHandler'
+import IGovHandler from './interfaces/classes/IGovHandler'
+import IWalletHandler from './interfaces/classes/IWalletHandler'
 
 /** Types */
+
+/** Exports */
+export {
+  FileHandler,
+  IFileHandler,
+  FileIo,
+  IFileIo,
+  FolderFileHandler,
+  IFolderFileHandler,
+  GovHandler,
+  IGovHandler,
+  WalletHandler,
+  IWalletHandler
+}
