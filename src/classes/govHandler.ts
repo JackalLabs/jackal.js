@@ -1,7 +1,7 @@
 import { OfflineSigner } from '@cosmjs/proto-signing'
 import { govTxClient, govQueryClient } from 'jackal.js-protos'
-import { defaultQueryAddr1317, defaultTxAddr26657 } from '@/utils/globals'
-import IGovHandler from '@/interfaces/classes/IGovHandler'
+import { defaultQueryAddr1317, defaultTxAddr26657 } from '../utils/globals'
+import IGovHandler from '../interfaces/classes/IGovHandler'
 
 export default class GovHandler implements IGovHandler {
   private walletRef: OfflineSigner

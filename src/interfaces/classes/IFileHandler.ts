@@ -1,6 +1,6 @@
-import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
-import IFileMeta from '@/interfaces/IFileMeta'
-import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
+import IFileConfigRaw from '../IFileConfigRaw'
+import IFileMeta from '../IFileMeta'
+import IFileHandlerCore from './IFileHandlerCore'
 
 export default interface IFileHandler extends IFileHandlerCore {
 

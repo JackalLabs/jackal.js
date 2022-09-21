@@ -3,8 +3,8 @@ import { bech32, Decoded } from 'bech32'
 import { encrypt, decrypt, PrivateKey } from 'eciesjs'
 import { Window as KeplrWindow } from '@keplr-wallet/types'
 
-import { jackalChainId } from '@/utils/globals'
-import IWalletHandler from '@/interfaces/classes/IWalletHandler'
+import { jackalChainId } from '../utils/globals'
+import IWalletHandler from '../interfaces/classes/IWalletHandler'
 
 declare global {
   interface Window extends KeplrWindow {}

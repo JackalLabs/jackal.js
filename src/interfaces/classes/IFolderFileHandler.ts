@@ -1,10 +1,12 @@
-import IFolderFileFrame from '@/interfaces/IFolderFileFrame'
-import IFileMeta from '@/interfaces/IFileMeta'
-import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
+import IFolderFileFrame from '../IFolderFileFrame'
+import IFileMeta from '../IFileMeta'
+import IFileHandlerCore from './IFileHandlerCore'
 
 export default interface IFolderFileHandler extends IFileHandlerCore {
 
   getWhoAmI (): string
+  getWhereAmI (): string
+  merkleMeBro (): string[]
   getFolderDetails (): IFolderFileFrame
   getChildDirs (): string[]
   getChildFiles (): {[name: string]: IFileMeta}

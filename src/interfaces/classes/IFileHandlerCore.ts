@@ -1,4 +1,4 @@
-import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
+import IFileConfigRaw from '../IFileConfigRaw'
 
 export default interface IFileHandlerCore {
   fileConfig: IFileConfigRaw

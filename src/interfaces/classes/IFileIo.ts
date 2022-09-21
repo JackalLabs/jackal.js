@@ -1,8 +1,8 @@
 import { OfflineSigner } from '@cosmjs/proto-signing'
-import IMiner from '@/interfaces/IMiner'
-import IFileHandler from '@/interfaces/classes/IFileHandler'
-import IWalletHandler from '@/interfaces/classes/IWalletHandler'
-import IFolderDownload from '@/interfaces/IFolderDownload'
+import IMiner from '../IMiner'
+import IFileHandler from './IFileHandler'
+import IWalletHandler from './IWalletHandler'
+import IFolderDownload from '../IFolderDownload'
 
 export default interface IFileIo {
   walletRef: OfflineSigner

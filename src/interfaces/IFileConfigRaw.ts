@@ -1,4 +1,4 @@
-import IEditorsViewers from '@/interfaces/IEditorsViewers'
+import IEditorsViewers from './interfaces/IEditorsViewers'
 
 export default interface IFileConfigRaw {
   creator: string,  // SHA256 hash of owner wallet address
