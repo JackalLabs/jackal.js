@@ -1,5 +1,5 @@
 import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
-import { FormData } from 'formdata-node'
+import { FormData as NodeFormData } from 'formdata-node'
 import { storageQueryApi, storageQueryClient, storageTxClient, filetreeTxClient, filetreeQueryClient } from 'jackal.js-protos'
 import FileHandler from '../classes/fileHandler'
 import { finalizeGas } from '../utils/gas'
@@ -68,9 +68,9 @@ export default class FileIo implements IFileIo {
       const { ip } = this.currentProvider
       const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
       const ids: TFileOrFFile[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
-        const fileFormData = new FormData()
+        const fileFormData = new NodeFormData()
         fileFormData.set('file', await item.getForUpload())
-        const ret: IProviderResponse = await fetch(url, {method: 'POST', body: fileFormData})
+        const ret: IProviderResponse = await fetch(url, {method: 'POST', body: fileFormData as FormData})
           .then(resp => resp.json())
         item.setIds(ret)
         return item
@@ -78,6 +78,7 @@ export default class FileIo implements IFileIo {
       await this.afterUpload(ids, wallet)
     }
   }
+
   async downloadFile (fileAddress: string, wallet: IWalletHandler, isFolder?: boolean): Promise<IFileHandler | IFolderDownload> {
     /**
      * update to build fileAddress

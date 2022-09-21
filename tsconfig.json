@@ -1,8 +1,12 @@
 {
+  "extends": "@tsconfig/node16",
   "compilerOptions": {
+    "lib": [
+      "dom"
+    ],
     "module": "commonjs",
     "esModuleInterop": true,
-    "target": "es2020",
+    "target": "es6",
     "noImplicitAny": true,
     "moduleResolution": "node",
     "sourceMap": true,

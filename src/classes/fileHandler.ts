@@ -7,7 +7,7 @@ import IFileMeta from '../interfaces/IFileMeta'
 
 export default class FileHandler implements IFileHandler {
   protected baseFile: File | ArrayBuffer
-  protected isUpload: boolean
+  protected pendUpload: boolean
   protected readonly key: CryptoKey
   protected readonly iv: Uint8Array
   fileConfig: IFileConfigRaw
@@ -17,7 +17,7 @@ export default class FileHandler implements IFileHandler {
 
   protected constructor (file: File | ArrayBuffer, mode: boolean, fileConfig: IFileConfigRaw, path: string, key: CryptoKey, iv: Uint8Array) {
     this.baseFile = file
-    this.isUpload = mode
+    this.pendUpload = mode
     this.key = key
     this.iv = iv
     this.fileConfig = fileConfig
@@ -46,15 +46,16 @@ export default class FileHandler implements IFileHandler {
   }
 
   async getFile (): Promise<File> {
-    if (this.isUpload) {
-      return this.baseFile as File
+    if (this.pendUpload) {
+      // do nothing
     } else {
-      return this.convertToOriginalFile()
+      this.baseFile = await this.convertToOriginalFile()
     }
+    return this.baseFile as File
   }
   setFile (file: File): void {
     this.baseFile = file
-    this.isUpload = true
+    this.pendUpload = true
   }
   getName (): string {
     return (this.baseFile as File).name
@@ -76,7 +77,7 @@ export default class FileHandler implements IFileHandler {
     this.fid = idObj.fid
   }
   getForUpload (): Promise<File> {
-    if (this.isUpload) {
+    if (this.pendUpload) {
       return this.convertToEncryptedFile()
     } else {
       throw new Error('File not in upload-compatible state. Is this a downloaded file?')
