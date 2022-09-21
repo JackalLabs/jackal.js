@@ -1,16 +1,16 @@
-import { hashAndHex } from '@/utils/hash'
-import { keyAlgo } from '@/utils/globals'
-import IFileBuffer from '@/interfaces/IFileBuffer'
-import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
-import FileHandler from '@/classes/fileHandler'
-import IFolderFileFrame from '@/interfaces/IFolderFileFrame'
-import IFileIo from '@/interfaces/classes/IFileIo'
-import IWalletHandler from '@/interfaces/classes/IWalletHandler'
-import IFolderFileHandler from '@/interfaces/classes/IFolderFileHandler'
-import IFolderDownload from '@/interfaces/IFolderDownload'
-import { orderStrings } from '@/utils/misc'
-import IFileMeta from '@/interfaces/IFileMeta'
-import IEditorsViewers from '@/interfaces/IEditorsViewers'
+import { hashAndHex } from '../utils/hash'
+import { keyAlgo } from '../utils/globals'
+import IFileBuffer from '../interfaces/IFileBuffer'
+import IFileConfigRaw from '../interfaces/IFileConfigRaw'
+import FileHandler from '../classes/fileHandler'
+import IFolderFileFrame from '../interfaces/IFolderFileFrame'
+import IFileIo from '../interfaces/classes/IFileIo'
+import IWalletHandler from '../interfaces/classes/IWalletHandler'
+import IFolderFileHandler from '../interfaces/classes/IFolderFileHandler'
+import IFolderDownload from '../interfaces/IFolderDownload'
+import { orderStrings } from '../utils/misc'
+import IFileMeta from '../interfaces/IFileMeta'
+import IEditorsViewers from '../interfaces/IEditorsViewers'
 
 export default class FolderFileHandler implements IFolderFileHandler {
 
@@ -36,6 +36,7 @@ export default class FolderFileHandler implements IFolderFileHandler {
 
     this.folderDetails = {
       whoAmI: '',
+      whereAmI: '',
       dirChildren: [],
       fileChildren: {}
     }
@@ -44,6 +45,16 @@ export default class FolderFileHandler implements IFolderFileHandler {
 
   getWhoAmI (): string {
     return this.folderDetails.whoAmI
+  }
+  getWhereAmI (): string {
+    return this.folderDetails.whereAmI
+  }
+  merkleMeBro (): string[] {
+
+    // await hashAndHex(obj.path)
+
+
+    return []
   }
   getFolderDetails (): IFolderFileFrame {
     return this.folderDetails

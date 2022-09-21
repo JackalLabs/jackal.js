@@ -1,14 +1,12 @@
-import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
-import IFolderFileFrame from '@/interfaces/IFolderFileFrame'
-import IFileMeta from '@/interfaces/IFileMeta'
+import IFolderFileFrame from '../IFolderFileFrame'
+import IFileMeta from '../IFileMeta'
+import IFileHandlerCore from './IFileHandlerCore'
 
-export default interface IFolderFileHandler {
-  fileConfig: IFileConfigRaw
-  path: string
-  cid: string
-  fid: string
+export default interface IFolderFileHandler extends IFileHandlerCore {
 
   getWhoAmI (): string
+  getWhereAmI (): string
+  merkleMeBro (): string[]
   getFolderDetails (): IFolderFileFrame
   getChildDirs (): string[]
   getChildFiles (): {[name: string]: IFileMeta}
@@ -17,14 +15,5 @@ export default interface IFolderFileHandler {
   addChildFiles (newFiles: IFileMeta[]): void
   removeChildDirs (toRemove: string[]): void
   removeChildFiles (toRemove: string[]): void
-  getForUpload (): Promise<File>
-  getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}>
-  setIds (idObj: {cid: string, fid: string}): void
-
-
-  // getFile (): Promise<File>
-  // setFile (file: File): void
-  // setConfig (config: IFileConfigRaw): void
-  // getForUpload (): Promise<File>
 
 }
