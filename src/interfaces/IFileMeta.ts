@@ -1,5 +1,6 @@
 export default interface IFileMeta {
-  lastModified: number,
   name: string,
+  lastModified: number,
+  size: number,
   type: string
 }

@@ -13,6 +13,8 @@ import IFileIo from '@/interfaces/classes/IFileIo'
 import IFolderDownload from '@/interfaces/IFolderDownload'
 import IProviderResponse from '@/interfaces/IProviderResponse'
 import IMiner from '@/interfaces/IMiner'
+import IFolderFileHandler from '@/interfaces/classes/IFolderFileHandler'
+import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 
 export default class FileIo implements IFileIo {
   walletRef: OfflineSigner
@@ -55,7 +57,7 @@ export default class FileIo implements IFileIo {
     this.currentProvider = toSet
   }
 
-  async uploadFiles (toUpload: IFileHandler[], wallet: IWalletHandler) {
+  async uploadFiles (toUpload: TFileOrFFile[], wallet: IWalletHandler): Promise<void> {
     /**
      * http to provider
      * receive fid/cid
@@ -66,7 +68,7 @@ export default class FileIo implements IFileIo {
     } else {
       const { ip } = this.currentProvider
       const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
-      const ids: IFileHandler[] = await Promise.all(toUpload.map(async (item: IFileHandler) => {
+      const ids: TFileOrFFile[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
         const fileFormData = new FormData()
         fileFormData.set('file', await item.getForUpload())
         const ret: IProviderResponse = await fetch(url, {method: 'POST', body: fileFormData})
@@ -116,12 +118,12 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
-  private async afterUpload (ids: IFileHandler[], wallet: IWalletHandler) {
+  private async afterUpload (ids: TFileOrFFile[], wallet: IWalletHandler): Promise<void> {
     const { signAndBroadcast, msgPostFile } = await this.fileTxClient()
     const { msgSignContract } = await this.storageTxClient()
 
     const creator = await hashAndHex(wallet.getJackalAddress())
-    const ready = await Promise.all(ids.flatMap(async (obj: IFileHandler) => {
+    const ready = await Promise.all(ids.flatMap(async (obj: TFileOrFFile) => {
       const crypt = await obj.getEnc()
       const partial = {
         iv: wallet.asymmetricEncrypt(crypt.iv, wallet.getPubkey()),

@@ -3,6 +3,7 @@ import { keyAlgo } from '@/utils/globals'
 import IFileBuffer from '@/interfaces/IFileBuffer'
 import IFileConfigRaw from '@/interfaces/IFileConfigRaw'
 import IFileHandler from '@/interfaces/classes/IFileHandler'
+import IFileMeta from '@/interfaces/IFileMeta'
 
 export default class FileHandler implements IFileHandler {
   protected baseFile: File | ArrayBuffer
@@ -55,6 +56,18 @@ export default class FileHandler implements IFileHandler {
     this.baseFile = file
     this.isUpload = true
   }
+  getName (): string {
+    return (this.baseFile as File).name
+  }
+  getMetadata (): IFileMeta {
+    const prettyFile = this.baseFile as File
+    return {
+      name: prettyFile.name,
+      lastModified: prettyFile.lastModified,
+      type: prettyFile.type,
+      size: prettyFile.size,
+    }
+  }
   setConfig (config: IFileConfigRaw) {
     this.fileConfig = config
   }
@@ -79,9 +92,9 @@ export default class FileHandler implements IFileHandler {
   protected async convertToEncryptedFile (): Promise<File> {
     const read = await this.readFile()
     const chunks = this.encryptPrep(read.content)
-    chunks.unshift((new TextEncoder()).encode(JSON.stringify(read.meta)).buffer)
+    chunks.unshift((new TextEncoder()).encode(JSON.stringify(read.details)).buffer)
     const encChunks: ArrayBuffer[] = await Promise.all(chunks.map((chunk: ArrayBuffer) => this.aesCrypt(chunk, 'encrypt')))
-    return await this.assembleEncryptedFile(encChunks, read.meta.name)
+    return await this.assembleEncryptedFile(encChunks, read.details.name)
   }
   protected async convertToOriginalFile (): Promise<File> {
     const decChunks: ArrayBuffer[] = await Promise.all(this.decryptPrep(this.baseFile as ArrayBuffer).map(chunk => this.aesCrypt(chunk, 'decrypt')))
@@ -152,7 +165,7 @@ export default class FileHandler implements IFileHandler {
 
   protected async readFile (): Promise<IFileBuffer> {
     const workingFile = this.baseFile as File
-    const meta = {
+    const details = {
       lastModified: workingFile.lastModified as number,
       name: workingFile.name,
       type: workingFile.type
@@ -161,7 +174,7 @@ export default class FileHandler implements IFileHandler {
       const reader = new FileReader()
       reader.onload = () => {
         resolve({
-          meta,
+          details,
           content: (reader.result) ? reader.result as ArrayBuffer : new ArrayBuffer(0)
         })
       }

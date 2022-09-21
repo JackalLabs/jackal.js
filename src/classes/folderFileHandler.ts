@@ -8,22 +8,83 @@ import IFileIo from '@/interfaces/classes/IFileIo'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 import IFolderFileHandler from '@/interfaces/classes/IFolderFileHandler'
 import IFolderDownload from '@/interfaces/IFolderDownload'
+import { orderStrings } from '@/utils/misc'
+import IFileMeta from '@/interfaces/IFileMeta'
+import IEditorsViewers from '@/interfaces/IEditorsViewers'
 
-export default class FolderFileHandler {
+export default class FolderFileHandler implements IFolderFileHandler {
 
   private folderDetails: IFolderFileFrame
-  private whoAmI: string
+  fileConfig: IFileConfigRaw
+  path: string
+  cid: string
+  fid: string
+
 
   constructor () {
+    //tmp
+    this.path = ''
+    this.cid = ''
+    this.fid = ''
+    this.fileConfig = {
+      creator: '',
+      hashpath: '',
+      contents: '',
+      viewers: {},
+      editors: {}
+    }
 
     this.folderDetails = {
       whoAmI: '',
       dirChildren: [],
-      fileChildren: []
+      fileChildren: {}
     }
-    this.whoAmI = ''
 
   }
+
+  getWhoAmI (): string {
+    return this.folderDetails.whoAmI
+  }
+  getFolderDetails (): IFolderFileFrame {
+    return this.folderDetails
+  }
+  getChildDirs (): string[] {
+    return this.folderDetails.dirChildren
+  }
+  getChildFiles (): {[name: string]: IFileMeta} {
+    return this.folderDetails.fileChildren
+  }
+
+  addChildDirs (newDirs: string[]) {
+    this.folderDetails.dirChildren = orderStrings([...this.folderDetails.dirChildren, ...newDirs])
+  }
+  addChildFiles (newFiles: IFileMeta[]) {
+    const midStep = newFiles.reduce((acc: {[name: string]: IFileMeta}, curr: IFileMeta) => {
+      acc[curr.name] = curr
+      return acc
+    }, {})
+    this.folderDetails.fileChildren = {...this.folderDetails.fileChildren, ...midStep}
+  }
+  removeChildDirs (toRemove: string[]) {
+    this.folderDetails.dirChildren = this.folderDetails.dirChildren.filter((saved: string) => !toRemove.includes(saved))
+  }
+  removeChildFiles (toRemove: string[]) {
+    for (let i = 0; i < toRemove.length; i++) {
+      delete this.folderDetails.fileChildren[toRemove[i]]
+    }
+  }
+
+  async getForUpload (): Promise<File> {
+    return new File([], 'tmp')
+  }
+  async getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}> {
+    return {iv: new Uint8Array(1), key: new Uint8Array(1)}
+  }
+  setIds (idObj: {cid: string, fid: string}): void {
+
+  }
+
+
 
   // static async trackFolder (fileIo: IFileIo, wallet: IWalletHandler, whoAmI: string): Promise<IFolderFileHandler> {
   //   const cleanWhoAmI = whoAmI.endsWith('/') ? whoAmI : `${whoAmI}/`
