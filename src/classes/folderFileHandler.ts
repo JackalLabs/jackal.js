@@ -1,16 +1,9 @@
-import { hashAndHex } from '../utils/hash'
-import { keyAlgo } from '../utils/globals'
-import IFileBuffer from '../interfaces/IFileBuffer'
 import IFileConfigRaw from '../interfaces/IFileConfigRaw'
-import FileHandler from '../classes/fileHandler'
 import IFolderFileFrame from '../interfaces/IFolderFileFrame'
-import IFileIo from '../interfaces/classes/IFileIo'
-import IWalletHandler from '../interfaces/classes/IWalletHandler'
 import IFolderFileHandler from '../interfaces/classes/IFolderFileHandler'
-import IFolderDownload from '../interfaces/IFolderDownload'
 import { orderStrings } from '../utils/misc'
 import IFileMeta from '../interfaces/IFileMeta'
-import IEditorsViewers from '../interfaces/IEditorsViewers'
+import IChildDirInfo from '../interfaces/IChildDirInfo'
 
 export default class FolderFileHandler implements IFolderFileHandler {
 
@@ -21,7 +14,7 @@ export default class FolderFileHandler implements IFolderFileHandler {
   fid: string
 
 
-  constructor () {
+  private constructor () {
     //tmp
     this.path = ''
     this.cid = ''
@@ -43,6 +36,19 @@ export default class FolderFileHandler implements IFolderFileHandler {
 
   }
 
+  static async trackFolder (): Promise<IFolderFileHandler> {
+    // const pendUpload: boolean = !key
+    // const savedKey: CryptoKey = (key) ? await this.importJackalKey(new Uint8Array(key)) : await this.genKey()
+    // const savedIv: Uint8Array = new Uint8Array(iv as ArrayBuffer) || this.genIv()
+    return new FolderFileHandler()
+  }
+  static async trackNewFolder (): Promise<IFolderFileHandler> {
+    // const pendUpload: boolean = !key
+    // const savedKey: CryptoKey = (key) ? await this.importJackalKey(new Uint8Array(key)) : await this.genKey()
+    // const savedIv: Uint8Array = new Uint8Array(iv as ArrayBuffer) || this.genIv()
+    return new FolderFileHandler()
+  }
+
   getWhoAmI (): string {
     return this.folderDetails.whoAmI
   }
@@ -50,10 +56,7 @@ export default class FolderFileHandler implements IFolderFileHandler {
     return this.folderDetails.whereAmI
   }
   merkleMeBro (): string[] {
-
     // await hashAndHex(obj.path)
-
-
     return []
   }
   getFolderDetails (): IFolderFileFrame {
@@ -66,6 +69,11 @@ export default class FolderFileHandler implements IFolderFileHandler {
     return this.folderDetails.fileChildren
   }
 
+  makeChildDirInfo (childName: string): IChildDirInfo {
+    const myName = (childName.endsWith('/')) ? childName.replace(/\/+$/, '') : childName
+    const myParent = `${this.folderDetails.whereAmI}/${this.folderDetails.whoAmI}`
+    return {myName, myParent}
+  }
   addChildDirs (newDirs: string[]) {
     this.folderDetails.dirChildren = orderStrings([...this.folderDetails.dirChildren, ...newDirs])
   }
