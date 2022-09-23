@@ -14,9 +14,11 @@ import IFolderDownload from '../interfaces/IFolderDownload'
 import IProviderResponse from '../interfaces/IProviderResponse'
 import IMiner from '../interfaces/IMiner'
 import { TFileOrFFile } from '../types/TFoldersAndFiles'
+import FolderHandler from './folderHandler'
+import IFolderHandler from '../interfaces/classes/IFolderHandler'
 
 export default class FileIo implements IFileIo {
-  walletRef: OfflineSigner
+  walletRef: IWalletHandler
   txAddr26657: string
   queryAddr1317: string
   fileTxClient: any
@@ -24,7 +26,7 @@ export default class FileIo implements IFileIo {
   availableProviders: IMiner[]
   currentProvider: IMiner
 
-  private constructor (wallet: OfflineSigner, tAddr: string, qAddr: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
+  private constructor (wallet: IWalletHandler, tAddr: string, qAddr: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
     this.walletRef = wallet
     this.txAddr26657 = tAddr
     this.queryAddr1317 = qAddr
@@ -34,11 +36,11 @@ export default class FileIo implements IFileIo {
     this.currentProvider = providers[Math.floor(Math.random() * providers.length)]
   }
 
-  static async trackIo (wallet: OfflineSigner, txAddr?: string, queryAddr?: string): Promise<FileIo> {
+  static async trackIo (wallet: IWalletHandler, txAddr?: string, queryAddr?: string): Promise<FileIo> {
     const tAddr = txAddr || defaultTxAddr26657
     const qAddr = queryAddr || defaultQueryAddr1317
-    const ftxClient = await filetreeTxClient(wallet, { addr: tAddr })
-    const stxClient = await storageTxClient(wallet, { addr: tAddr })
+    const ftxClient = await filetreeTxClient(wallet.getSigner(), { addr: tAddr })
+    const stxClient = await storageTxClient(wallet.getSigner(), { addr: tAddr })
     const providers = await this.getProvider(await storageQueryClient({ addr: qAddr }))
     return new FileIo(wallet, tAddr, qAddr, ftxClient, stxClient, providers)
   }
@@ -56,7 +58,7 @@ export default class FileIo implements IFileIo {
     this.currentProvider = toSet
   }
 
-  async uploadFiles (toUpload: TFileOrFFile[], wallet: IWalletHandler): Promise<void> {
+  async uploadFiles (toUpload: TFileOrFFile[]): Promise<void> {
     /**
      * http to provider
      * receive fid/cid
@@ -75,11 +77,11 @@ export default class FileIo implements IFileIo {
         item.setIds(ret)
         return item
       }))
-      await this.afterUpload(ids, wallet)
+      await this.afterUpload(ids)
     }
   }
 
-  async downloadFile (fileAddress: string, wallet: IWalletHandler, isFolder?: boolean): Promise<IFileHandler | IFolderDownload> {
+  async downloadFile (fileAddress: string, isFolder?: boolean): Promise<IFileHandler | IFolderHandler> {
     /**
      * update to build fileAddress
      *
@@ -89,17 +91,17 @@ export default class FileIo implements IFileIo {
 
     const { queryFiles } = await filetreeQueryClient({ addr: this.queryAddr1317 })
     const { queryFindFile } = await storageQueryClient({ addr: this.queryAddr1317 })
-    const ftQueryResults = await queryFiles(await hashAndHex(fileAddress))
-    const fileData = ftQueryResults.data.files || {address: '', contents: '', owner: '', editAccess: '', viewingAccess: ''}
-    const sQueryResults = await queryFindFile(fileData.contents as string)
+    const filetreeQueryResults = await queryFiles(await hashAndHex(fileAddress))
+    const fileData = filetreeQueryResults.data.files || {address: '', contents: '', owner: '', editAccess: '', viewingAccess: ''}
+    const storageQueryResults = await queryFindFile(fileData.contents as string)
 
-    const providers = sQueryResults.data.minerIps || '[]'
+    const providers = storageQueryResults.data.minerIps || '[]'
     const targetProvider = JSON.parse(providers)
     if (targetProvider && targetProvider.length) {
       const url = `${targetProvider.endsWith('/') ? targetProvider.slice(0, -1) : targetProvider}/d/${fileData.contents as string}`
       return await fetch(url)
         .then(resp => resp.arrayBuffer())
-        .then(async (resp): Promise<IFileHandler | IFolderDownload> => {
+        .then(async (resp): Promise<IFileHandler | IFolderHandler> => {
           const config: IFileConfigRaw = {
             creator: fileData.owner as string,
             hashpath: fileData.address as string,
@@ -108,26 +110,28 @@ export default class FileIo implements IFileIo {
             editors: JSON.parse(fileData.editAccess as string) as IEditorsViewers
           }
           const { key, iv } = config.editors[config.creator]
+          const { asymmetricDecrypt } = this.walletRef
           if (isFolder) {
-            return {data: resp, config, key: wallet.asymmetricDecrypt(key), iv: wallet.asymmetricDecrypt(iv)}
+            return await FolderHandler.trackFolder(resp, config, asymmetricDecrypt(key), asymmetricDecrypt(iv))
           } else {
-            return await FileHandler.trackFile(resp, config, fileAddress, wallet.asymmetricDecrypt(key), wallet.asymmetricDecrypt(iv))
+            return await FileHandler.trackFile(resp, config, fileAddress, asymmetricDecrypt(key), asymmetricDecrypt(iv))
           }
         })
     } else {
       throw new Error('No available providers!')
     }
   }
-  private async afterUpload (ids: TFileOrFFile[], wallet: IWalletHandler): Promise<void> {
+  private async afterUpload (ids: TFileOrFFile[]): Promise<void> {
     const { signAndBroadcast, msgPostFile } = await this.fileTxClient()
     const { msgSignContract } = await this.storageTxClient()
+    const { getJackalAddress, asymmetricEncrypt, getPubkey } = this.walletRef
 
-    const creator = await hashAndHex(wallet.getJackalAddress())
+    const creator = await hashAndHex(getJackalAddress())
     const ready = await Promise.all(ids.flatMap(async (obj: TFileOrFFile) => {
       const crypt = await obj.getEnc()
       const partial = {
-        iv: wallet.asymmetricEncrypt(crypt.iv, wallet.getPubkey()),
-        key: wallet.asymmetricEncrypt(crypt.key, wallet.getPubkey())
+        iv: asymmetricEncrypt(crypt.iv, getPubkey()),
+        key: asymmetricEncrypt(crypt.key, getPubkey())
       }
       const perms: any = {}
       perms[creator] = partial

@@ -3,14 +3,14 @@ import IFileMeta from '../IFileMeta'
 import IFileHandlerCore from './IFileHandlerCore'
 import IChildDirInfo from '../IChildDirInfo'
 
-export default interface IFolderFileHandler extends IFileHandlerCore {
+export default interface IFolderHandler extends IFileHandlerCore {
 
   getWhoAmI (): string
   getWhereAmI (): string
-  merkleMeBro (): string[]
+  merkleMeBro (): Promise<string>
   getFolderDetails (): IFolderFileFrame
   getChildDirs (): string[]
-  getChildFiles (): {[name: string]: IFileMeta}
+  getChildFiles (): { [name: string]: IFileMeta }
 
   makeChildDirInfo (childName: string): IChildDirInfo
   addChildDirs (newDirs: string[]): void
