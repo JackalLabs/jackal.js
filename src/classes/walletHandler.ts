@@ -60,19 +60,22 @@ export default class WalletHandler implements IWalletHandler {
   getAccounts (): Promise<readonly AccountData[]> {
     return this.signer.getAccounts()
   }
-  getSigner () {
+  getSigner (): OfflineSigner {
     return this.signer
   }
   getJackalAddress (): string {
     return this.jackalAccount.address
   }
-  async getAllBalances () {
+  async getAllBalances (): Promise<any> {
     return await this.queryClient.queryAllBalances(this.jackalAccount.address)
   }
-  async getJackalBalance () {
+  async getJackalBalance (): Promise<any> {
     return await this.queryClient.queryBalance(this.jackalAccount.address, { denom: 'ujkl' })
   }
-  getPubkey () {
+  async getJewelBalance (): Promise<any> {
+    return await this.queryClient.queryBalance(this.jackalAccount.address, { denom: 'ujwl' })
+  }
+  getPubkey (): string {
     return this.keyPair.publicKey.toHex()
   }
   asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string {

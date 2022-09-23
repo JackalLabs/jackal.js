@@ -4,7 +4,6 @@ import { storageQueryApi, storageQueryClient, storageTxClient, filetreeTxClient,
 import FileHandler from '../classes/fileHandler'
 import { finalizeGas } from '../utils/gas'
 import { hashAndHex } from '../utils/hash'
-import { defaultQueryAddr1317, defaultTxAddr26657 } from '../utils/globals'
 import IFileHandler from '../interfaces/classes/IFileHandler'
 import IWalletHandler from '../interfaces/classes/IWalletHandler'
 import IEditorsViewers from '../interfaces/IEditorsViewers'

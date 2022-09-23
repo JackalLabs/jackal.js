@@ -12,6 +12,7 @@ export default interface IWalletHandler {
   getJackalAddress (): string
   getAllBalances (): Promise<any>
   getJackalBalance (): Promise<any>
+  getJewelBalance (): Promise<any>
   getPubkey (): string
   asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string
   asymmetricDecrypt (toDecrypt: string): ArrayBuffer
