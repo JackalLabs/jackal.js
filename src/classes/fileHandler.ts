@@ -1,4 +1,3 @@
-import { hashAndHex } from '../utils/hash'
 import IFileBuffer from '../interfaces/IFileBuffer'
 import IFileConfigRaw from '../interfaces/IFileConfigRaw'
 import IFileHandler from '../interfaces/classes/IFileHandler'

@@ -1,4 +1,4 @@
-import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
+import { EncodeObject } from '@cosmjs/proto-signing'
 import { FormData as NodeFormData } from 'formdata-node'
 import { storageQueryApi, storageQueryClient, storageTxClient, filetreeTxClient, filetreeQueryClient } from 'jackal.js-protos'
 import FileHandler from '../classes/fileHandler'
@@ -10,7 +10,6 @@ import IWalletHandler from '../interfaces/classes/IWalletHandler'
 import IEditorsViewers from '../interfaces/IEditorsViewers'
 import IFileConfigRaw from '../interfaces/IFileConfigRaw'
 import IFileIo from '../interfaces/classes/IFileIo'
-import IFolderDownload from '../interfaces/IFolderDownload'
 import IProviderResponse from '../interfaces/IProviderResponse'
 import IMiner from '../interfaces/IMiner'
 import { TFileOrFFile } from '../types/TFoldersAndFiles'
@@ -26,23 +25,23 @@ export default class FileIo implements IFileIo {
   availableProviders: IMiner[]
   currentProvider: IMiner
 
-  private constructor (wallet: IWalletHandler, tAddr: string, qAddr: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
+  private constructor (wallet: IWalletHandler, txAddr26657: string, queryAddr1317: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
     this.walletRef = wallet
-    this.txAddr26657 = tAddr
-    this.queryAddr1317 = qAddr
+    this.txAddr26657 = txAddr26657
+    this.queryAddr1317 = queryAddr1317
     this.fileTxClient = fTxClient
     this.storageTxClient = sTxClient
     this.availableProviders = providers
     this.currentProvider = providers[Math.floor(Math.random() * providers.length)]
   }
 
-  static async trackIo (wallet: IWalletHandler, txAddr?: string, queryAddr?: string): Promise<FileIo> {
-    const tAddr = txAddr || defaultTxAddr26657
-    const qAddr = queryAddr || defaultQueryAddr1317
-    const ftxClient = await filetreeTxClient(wallet.getSigner(), { addr: tAddr })
-    const stxClient = await storageTxClient(wallet.getSigner(), { addr: tAddr })
-    const providers = await this.getProvider(await storageQueryClient({ addr: qAddr }))
-    return new FileIo(wallet, tAddr, qAddr, ftxClient, stxClient, providers)
+  static async trackIo (wallet: IWalletHandler): Promise<FileIo> {
+    const txAddr = wallet.txAddr26657 // txAddr || defaultTxAddr26657
+    const queryAddr = wallet.queryAddr1317 // queryAddr || defaultQueryAddr1317
+    const ftxClient = await filetreeTxClient(wallet.getSigner(), { addr: txAddr })
+    const stxClient = await storageTxClient(wallet.getSigner(), { addr: txAddr })
+    const providers = await this.getProvider(await storageQueryClient({ addr: queryAddr }))
+    return new FileIo(wallet, txAddr, queryAddr, ftxClient, stxClient, providers)
   }
 
   static async getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]> {

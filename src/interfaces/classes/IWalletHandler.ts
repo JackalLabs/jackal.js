@@ -2,6 +2,8 @@ import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
 import { Decoded } from 'bech32'
 
 export default interface IWalletHandler {
+  txAddr26657: string
+  queryAddr1317: string
   jackalAccount: AccountData
   deconstructedAccount: Decoded
 

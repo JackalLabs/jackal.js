@@ -4,7 +4,7 @@ import { encrypt, decrypt, PrivateKey } from 'eciesjs'
 import { Window as KeplrWindow } from '@keplr-wallet/types'
 import { bankQueryApi, bankQueryClient } from 'jackal.js-protos'
 
-import { defaultQueryAddr1317, jackalChainId } from '../utils/globals'
+import { defaultQueryAddr1317, defaultTxAddr26657, jackalChainId } from '../utils/globals'
 import IWalletHandler from '../interfaces/classes/IWalletHandler'
 
 declare global {
@@ -17,26 +17,33 @@ export default class WalletHandler implements IWalletHandler {
   private signer: OfflineSigner
   private keyPair: PrivateKey
   private queryClient: bankQueryApi<unknown>
+  txAddr26657: string
+  queryAddr1317: string
   jackalAccount: AccountData
   deconstructedAccount: Decoded
 
-  private constructor (signer: OfflineSigner, queryClient: bankQueryApi<unknown>, keyPair: PrivateKey, acct: AccountData) {
+  private constructor (signer: OfflineSigner, tAddr: string, qAddr: string, queryClient: bankQueryApi<unknown>, keyPair: PrivateKey, acct: AccountData) {
     this.signer = signer
     this.keyPair = keyPair
     this.queryClient = queryClient
+    this.txAddr26657 = tAddr
+    this.queryAddr1317 = qAddr
     this.jackalAccount = acct
     this.deconstructedAccount = bech32.decode(acct.address)
   }
 
-  static async trackWallet (enabledChains: string | string[] = defaultChains, queryAddr?: string): Promise<IWalletHandler> {
+  static async trackWallet (config: { enabledChains?: string | string[], queryAddr?: string, txAddr?: string }): Promise<IWalletHandler> {
     if (!window) {
       throw new Error('Jackal.js is only supported in the browser at this time!')
     } else if (!window.keplr) {
       throw new Error('Jackal.js requires Keplr to be installed!')
     } else {
-      const qAddr = queryAddr || defaultQueryAddr1317
+      const { enabledChains, queryAddr, txAddr } = config
 
-      await window.keplr.enable(enabledChains)
+      const qAddr = queryAddr || defaultQueryAddr1317
+      const tAddr = txAddr || defaultTxAddr26657
+
+      await window.keplr.enable(enabledChains || defaultChains)
       const signer = window.keplr.getOfflineSigner(jackalChainId)
       const acct = (await signer.getAccounts())[0]
 
@@ -46,7 +53,7 @@ export default class WalletHandler implements IWalletHandler {
       const secretAsHex = Buffer.from(secret, 'base64').subarray(0, 32).toString('hex')
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
-      return new WalletHandler(signer, bank, keyPair, acct)
+      return new WalletHandler(signer, tAddr, qAddr, bank, keyPair, acct)
     }
   }
 
