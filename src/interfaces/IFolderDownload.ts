@@ -1,8 +1,8 @@
-import IFileConfigRaw from './IFileConfigRaw'
+import IFileConfigRelevant from './IFileConfigRelevant'
 
 export default interface IFolderDownload {
   data: ArrayBuffer,
-  config: IFileConfigRaw,
+  config: IFileConfigRelevant,
   key: ArrayBuffer,
   iv: ArrayBuffer
 }

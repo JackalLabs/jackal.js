@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Alpha Releases:
 ### [v0.0.1] - 2022 09 15
 #### Added
-- FileHandler
+- FileUploadHandler
   - Class managing lifecycle of a file
 - FileIo
   - Class managing interations of files and file metadata with the Canine chain

@@ -1,4 +1,4 @@
-import IFileHandler from '../interfaces/classes/IFileHandler'
+import IFileUploadHandler from '../interfaces/classes/IFileUploadHandler'
 import IFolderHandler from '../interfaces/classes/IFolderHandler'
 
-export type TFileOrFFile = IFileHandler | IFolderHandler
+export type TFileOrFFile = IFileUploadHandler | IFolderHandler

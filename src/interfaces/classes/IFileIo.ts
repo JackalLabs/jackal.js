@@ -1,7 +1,9 @@
 import IMiner from '../IMiner'
-import IFileHandler from './IFileHandler'
+import IFileUploadHandler from './IFileUploadHandler'
+import IFileDownloadHandler from './IFileDownloadHandler'
 import IWalletHandler from './IWalletHandler'
 import IFolderHandler from './IFolderHandler'
+import IFileMeta from '../IFileMeta'
 
 export default interface IFileIo {
   walletRef: IWalletHandler
@@ -15,7 +17,7 @@ export default interface IFileIo {
   shuffle (): Promise<void>
   forceProvider (toSet: IMiner): void
 
-  uploadFiles (toUpload: IFileHandler[]): Promise<void>
-  downloadFile (fileAddress: string, isFolder: boolean): Promise<IFileHandler | IFolderHandler>
+  uploadFiles (toUpload: IFileUploadHandler[], existingChildren: { [name: string]: IFileMeta }): Promise<void>
+  downloadFile (fileAddress: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler>
 
 }

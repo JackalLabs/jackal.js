@@ -7,13 +7,12 @@ export default interface IFolderHandler extends IFileHandlerCore {
 
   getWhoAmI (): string
   getWhereAmI (): string
-  merkleMeBro (): Promise<string>
+  getMerklePath (): Promise<string>
   getFolderDetails (): IFolderFileFrame
   getChildDirs (): string[]
   getChildFiles (): { [name: string]: IFileMeta }
 
   makeChildDirInfo (childName: string): IChildDirInfo
-  addChildDirs (newDirs: string[]): void
   addChildFiles (newFiles: IFileMeta[]): void
   removeChildDirs (toRemove: string[]): void
   removeChildFiles (toRemove: string[]): void
