@@ -90,14 +90,7 @@ export default class FileIo implements IFileIo {
         } else {
           file = await item.getForUpload()
         }
-        const fileFormData = new NodeFormData()
-        fileFormData.set('file', file)
-        const ret: IProviderModifiedResponse = await fetch(url, {method: 'POST', body: fileFormData as FormData})
-          .then((resp): Promise<IProviderResponse> => resp.json())
-          .then((resp) => {
-            return { fid: [resp.fid], cid: resp.cid }
-          })
-        item.setIds(ret)
+        item.setIds(await doUpload(url, file))
         return { handler: item, data: configData }
       }))
       await this.afterUpload(ids)
@@ -186,12 +179,80 @@ export default class FileIo implements IFileIo {
       })
       return [msgPost, msgSign]
     }))
-    const lastStep = await signAndBroadcast(ready.flat(), {fee: finalizeGas(ready.flat()),memo: ''})
+    const lastStep = await signAndBroadcast(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
+    console.dir(lastStep)
+  }
+  async generateInitialDirs (startingDirs?: string[]): Promise<void> {
+    const toGenerate = startingDirs || ['Home', 'Shared', 'WWW']
+    const folderHandlerList = [
+      await FolderHandler.trackNewFolder({ myName: '', myParent: '' })
+    ]
+    for (let i = 0; i < toGenerate.length; i++) {
+      folderHandlerList.push(await FolderHandler.trackNewFolder({ myName: toGenerate[i], myParent: '' }))
+    }
+    const {ip} = this.currentProvider
+    const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
+    const ids: IQueueItemPostUpload[] = await Promise.all(folderHandlerList.map(async (item: TFileOrFFile) => {
+      item.setIds(await doUpload(url, await item.getForUpload()))
+      return { handler: item, data: undefined }
+    }))
+    const { signAndBroadcast, msgPostFile } = await this.fileTxClient()
+    const { msgSignContract } = await this.storageTxClient()
+    const { getJackalAddress, asymmetricEncrypt, getPubkey } = this.walletRef
+    const creator = getJackalAddress()
+    const msgPostFileBundleTemplate: IMsgPostFileBundle = {
+      account: '',
+      editors: {},
+      viewers: {},
+      creator,
+      contents: [],
+      hashParent: '',
+      hashChild: '',
+      trackingNumber: ''
+    }
+    const final: EncodeObject[] = []
+    for (let i = 0; i < ids.length; i++) {
+      const { cid, fid } = ids[i].handler.getIds()
+      const frame = msgPostFileBundleTemplate
+      frame.account = await hexFullPath(ids[i].handler.getUUID(), creator)
+      if (i === 0) {
+        // do nothing
+      } else {
+        frame.hashChild = await hashAndHex(ids[0].handler.getWhoAmI())
+      }
+      const { iv, key } = await ids[0].handler.getEnc()
+      const pubKey = getPubkey()
+      const permissions: IEditorsViewers = {}
+      permissions[frame.account] = {
+        iv: asymmetricEncrypt(iv, pubKey),
+        key: asymmetricEncrypt(key, pubKey)
+      }
+      frame.editors = permissions
+      frame.viewers = permissions
+      frame.contents = fid
+      frame.trackingNumber = ids[i].handler.getUUID()
+      const msgPost: EncodeObject = await msgPostFile(JSON.stringify(frame))
+      const msgSign: EncodeObject = await msgSignContract({
+        creator, // tx initiator jkl address
+        cid // cid from above
+      })
+      final.push(msgPost, msgSign)
+    }
+    const lastStep = await signAndBroadcast(final, { fee: finalizeGas(final), memo: '' })
     console.dir(lastStep)
   }
 }
 
 /** Helpers */
+async function doUpload (url: string, file: File): Promise<IProviderModifiedResponse> {
+  const fileFormData = new NodeFormData()
+  fileFormData.set('file', file)
+  return await fetch(url, { method: 'POST', body: fileFormData as FormData })
+    .then((resp): Promise<IProviderResponse> => resp.json())
+    .then((resp) => {
+      return { fid: [resp.fid], cid: resp.cid }
+    })
+}
 async function getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]> {
   const rawProviderReturn = await queryClient.queryMinersAll()
 

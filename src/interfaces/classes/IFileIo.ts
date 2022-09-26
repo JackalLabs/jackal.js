@@ -19,5 +19,5 @@ export default interface IFileIo {
 
   uploadFiles (toUpload: IFileUploadHandler[], existingChildren: { [name: string]: IFileMeta }): Promise<void>
   downloadFile (fileAddress: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler>
-
+  generateInitialDirs (startingDirs?: string[]): Promise<void>
 }
