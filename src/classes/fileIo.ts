@@ -187,6 +187,7 @@ export default class FileIo implements IFileIo {
     const folderHandlerList = [
       await FolderHandler.trackNewFolder({ myName: '', myParent: '' })
     ]
+    folderHandlerList[0].addChildDirs(toGenerate)
     for (let i = 0; i < toGenerate.length; i++) {
       folderHandlerList.push(await FolderHandler.trackNewFolder({ myName: toGenerate[i], myParent: '' }))
     }
