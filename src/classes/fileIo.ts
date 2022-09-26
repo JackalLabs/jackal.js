@@ -4,21 +4,21 @@ import { storageQueryApi, storageQueryClient, storageTxClient, filetreeTxClient,
 import FileDownloadHandler from './fileDownloadHandler'
 import { finalizeGas } from '../utils/gas'
 import { hashAndHex, hexFullPath } from '../utils/hash'
-import IFileDownloadHandler from '../interfaces/classes/IFileDownloadHandler'
-import IWalletHandler from '../interfaces/classes/IWalletHandler'
-import IFileIo from '../interfaces/classes/IFileIo'
-import IProviderResponse from '../interfaces/IProviderResponse'
-import IMiner from '../interfaces/IMiner'
+import { IFileDownloadHandler, IFileIo, IFolderHandler, IWalletHandler } from '../interfaces/classes'
 import { TFileOrFFile } from '../types/TFoldersAndFiles'
 import FolderHandler from './folderHandler'
-import IFolderHandler from '../interfaces/classes/IFolderHandler'
-import IFileMeta from '../interfaces/IFileMeta'
 import { importJackalKey } from '../utils/crypt'
-import IProviderModifiedResponse from '../interfaces/IProviderModifiedResponse'
-import IQueueItemPostUpload from '../interfaces/IQueueItemPostUpload'
-import IMsgPostFileBundle from '../interfaces/IMsgPostFileBundle'
-import IEditorsViewers from '../interfaces/IEditorsViewers'
-import IFileConfigFull from '../interfaces/IFileConfigFull'
+import {
+  IEditorsViewers,
+  IFileConfigFull,
+  IFileConfigRaw,
+  IFileMeta,
+  IMiner,
+  IMsgPostFileBundle,
+  IProviderModifiedResponse,
+  IProviderResponse,
+  IQueueItemPostUpload
+} from '../interfaces'
 
 export default class FileIo implements IFileIo {
   walletRef: IWalletHandler
@@ -73,13 +73,14 @@ export default class FileIo implements IFileIo {
         let configData: IFileConfigFull | undefined
         if (existingChildren[fileName]) {
           const { data } = await getFileChainData(await hexFullPath(await item.getMerklePath(), fileName), this.queryAddr1317)
+          const typedData: IFileConfigRaw = data
           configData = {
-            address: data.address as string,
-            contents: data.contents as string,
-            owner: data.owner as string,
-            editAccess: JSON.parse(data.editAccess as string),
-            viewingAccess: JSON.parse(data.viewingAccess as string),
-            trackingNumber: data.trackingNumber as string
+            address: typedData.address,
+            contents: typedData.contents,
+            owner: typedData.owner,
+            editAccess: JSON.parse(typedData.editAccess),
+            viewingAccess: JSON.parse(typedData.viewingAccess),
+            trackingNumber: typedData.trackingNumber
           }
 
           const editorKeys = configData.editAccess[await hexFullPath(configData.trackingNumber, this.walletRef.getJackalAddress())]

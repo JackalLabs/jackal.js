@@ -1,5 +1,5 @@
-import IFileConfigRelevant from '../interfaces/IFileConfigRelevant'
-import IFileDownloadHandler from '../interfaces/classes/IFileDownloadHandler'
+import { IFileConfigRelevant } from '../interfaces'
+import { IFileDownloadHandler } from '../interfaces/classes'
 import {
   aesCrypt,
   decryptPrep,

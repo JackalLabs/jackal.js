@@ -5,7 +5,7 @@ import { Window as KeplrWindow } from '@keplr-wallet/types'
 import { bankQueryApi, bankQueryClient } from 'jackal.js-protos'
 
 import { defaultQueryAddr1317, defaultTxAddr26657, jackalChainId } from '../utils/globals'
-import IWalletHandler from '../interfaces/classes/IWalletHandler'
+import { IWalletHandler } from '../interfaces/classes'
 
 declare global {
   interface Window extends KeplrWindow {}

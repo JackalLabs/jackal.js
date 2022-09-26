@@ -1,7 +1,7 @@
 import { randomUUID } from 'make-random'
 
-import IFileBuffer from '../interfaces/IFileBuffer'
-import IFileUploadHandler from '../interfaces/classes/IFileUploadHandler'
+import { IFileBuffer } from '../interfaces'
+import { IFileUploadHandler } from '../interfaces/classes'
 import {
   exportJackalKey,
   genIv,

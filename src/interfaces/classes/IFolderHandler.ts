@@ -11,6 +11,7 @@ export default interface IFolderHandler extends IFileHandlerCore {
   getFolderDetails (): IFolderFileFrame
   getChildDirs (): string[]
   getChildFiles (): { [name: string]: IFileMeta }
+  addChildDirs (dirs: string[]): void
 
   makeChildDirInfo (childName: string): IChildDirInfo
   addChildFiles (newFiles: IFileMeta[]): void
