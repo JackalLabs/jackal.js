@@ -1,36 +1,26 @@
-import IFileConfigRelevant from '../interfaces/IFileConfigRelevant'
-import IFolderFileFrame from '../interfaces/IFolderFileFrame'
-import IFolderHandler from '../interfaces/classes/IFolderHandler'
-import { orderStrings, stripper } from '../utils/misc'
-import IFileMeta from '../interfaces/IFileMeta'
-import IChildDirInfo from '../interfaces/IChildDirInfo'
+import { IChildDirInfo, IFileConfigRelevant, IFileMeta, IFolderFileFrame } from '../interfaces'
+import { IFolderHandler } from '../interfaces/classes'
+import { stripper } from '../utils/misc'
 import {
   aesCrypt,
   assembleEncryptedFile,
   decryptPrep,
   encryptPrep,
-  exportJackalKey, genIv, genKey,
-  importJackalKey
+  exportJackalKey,
+  genIv, genKey
 } from '../utils/crypt'
-import { hashAndHex, merkleMeBro } from '../utils/hash'
+import { merkleMeBro } from '../utils/hash'
 
 export default class FolderHandler implements IFolderHandler {
 
-  private folderDetails: IFolderFileFrame
-  private key: CryptoKey
-  private iv: Uint8Array
   fileConfig: IFileConfigRelevant
-  path: string
-  private cid: string
-  private fid: string
-  private uuid: string
 
-  private readonly baseFile: File
   private readonly key: CryptoKey
   private readonly iv: Uint8Array
-  private readonly parentPath: string
+  private folderDetails: IFolderFileFrame
   private cid: string
-  private fid: string
+  private fid: string[]
+  private uuid: string
 
 
   private constructor (folderDetails: IFolderFileFrame, config: IFileConfigRelevant, jackalKey: CryptoKey, cleanIv: Uint8Array) {
@@ -39,9 +29,9 @@ export default class FolderHandler implements IFolderHandler {
     this.iv = cleanIv
 
     this.fileConfig = config
-    this.path = folderDetails.whereAmI
     this.cid = ''
-    this.fid = ''
+    this.fid = []
+    this.uuid = ''
   }
 
   static async trackFolder (data: ArrayBuffer, config: IFileConfigRelevant, key: CryptoKey, iv: Uint8Array): Promise<IFolderHandler> {
@@ -87,6 +77,9 @@ export default class FolderHandler implements IFolderHandler {
     const myParent = `${this.folderDetails.whereAmI}/${this.folderDetails.whoAmI}`
     return {myName, myParent}
   }
+  addChildDirs (dirs: string[]): void {
+    this.folderDetails.dirChildren = [...new Set([...this.folderDetails.dirChildren, ...dirs])]
+  }
   addChildFiles (newFiles: IFileMeta[]) {
     const midStep = newFiles.reduce((acc: {[name: string]: IFileMeta}, curr: IFileMeta) => {
       acc[stripper(curr.name)] = curr
@@ -103,18 +96,21 @@ export default class FolderHandler implements IFolderHandler {
     }
   }
 
-  setIds (idObj: {cid: string, fid: string}) {
+  setIds (idObj: { cid: string, fid: string[] }) {
     this.cid = idObj.cid
     this.fid = idObj.fid
   }
   setUUID (uuid: string) {
     this.uuid = uuid
   }
+  getIds () {
+    return { fid: this.fid, cid: this.cid }
+  }
   getUUID (): string {
     return this.uuid
   }
   getWhoAmI (): string {
-    return this.file.name
+    return this.folderDetails.whoAmI
   }
   async getForUpload (): Promise<File> {
     const chunks = encryptPrep((new TextEncoder()).encode(JSON.stringify(this.folderDetails)))
