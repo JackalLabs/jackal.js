@@ -56,7 +56,7 @@ export default class FileIo implements IFileIo {
     this.currentProvider = toSet
   }
 
-  async uploadFiles (toUpload: TFileOrFFile[], existingChildren: { [name: string]: IFileMeta }): Promise<void> {
+  async uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: { [name: string]: IFileMeta }): Promise<void> {
     /**
      * http to provider
      * receive fid/cid
@@ -72,8 +72,9 @@ export default class FileIo implements IFileIo {
         let file
         let configData: IFileConfigFull | undefined
         if (existingChildren[fileName]) {
-          const { data } = await getFileChainData(await hexFullPath(await item.getMerklePath(), fileName), this.queryAddr1317)
-          const typedData: IFileConfigRaw = data
+          const path = await hexFullPath(await item.getMerklePath(), fileName)
+          const { data } = await getFileChainData(path, owner, this.queryAddr1317)
+          const typedData = data as IFileConfigRaw
           configData = {
             address: typedData.address,
             contents: typedData.contents,
@@ -97,7 +98,7 @@ export default class FileIo implements IFileIo {
       await this.afterUpload(ids)
     }
   }
-  async downloadFile (hexAddress: string, isFolder?: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
+  async downloadFile (hexAddress: string, owner: string, isFolder?: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     /**
      * update to build fileAddress
      *
@@ -105,7 +106,7 @@ export default class FileIo implements IFileIo {
      * process
      */
     const { queryFindFile } = await storageQueryClient({ addr: this.queryAddr1317 })
-    const { version, data } = await getFileChainData(hexAddress, this.queryAddr1317)
+    const { version, data } = await getFileChainData(hexAddress, owner, this.queryAddr1317)
     const storageQueryResults = await queryFindFile(version)
 
     if (!storageQueryResults || !storageQueryResults.data.minerIps) throw new Error('No FID found!')
@@ -186,11 +187,13 @@ export default class FileIo implements IFileIo {
   async generateInitialDirs (startingDirs?: string[]): Promise<void> {
     const toGenerate = startingDirs || ['Home', 'Shared', 'WWW']
     const folderHandlerList = [
-      await FolderHandler.trackNewFolder({ myName: '', myParent: '' })
+      await FolderHandler.trackNewFolder({ myName: '', myParent: '', myOwner: this.walletRef.getJackalAddress() })
     ]
     folderHandlerList[0].addChildDirs(toGenerate)
     for (let i = 0; i < toGenerate.length; i++) {
-      folderHandlerList.push(await FolderHandler.trackNewFolder({ myName: toGenerate[i], myParent: '' }))
+      folderHandlerList.push(await FolderHandler.trackNewFolder(
+        { myName: toGenerate[i], myParent: '', myOwner: this.walletRef.getJackalAddress()
+        }))
     }
     const {ip} = this.currentProvider
     const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
@@ -262,9 +265,9 @@ async function getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]
   const rawProviderList = rawProviderReturn.data.miners as IMiner[]
   return rawProviderList.slice(0, 100)
 }
-async function getFileChainData (hexAddress: string, queryAddr1317: string) {
+async function getFileChainData (hexAddress: string, owner: string, queryAddr1317: string) {
   const { queryFiles } = await filetreeQueryClient({ addr: queryAddr1317 })
-  const filetreeQueryResults = await queryFiles(hexAddress)
+  const filetreeQueryResults = await queryFiles(hexAddress, owner)
 
   if (!filetreeQueryResults || !filetreeQueryResults.data.files) throw new Error('No address found!')
   const fileData = filetreeQueryResults.data.files

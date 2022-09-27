@@ -7,6 +7,7 @@ export default interface IFolderHandler extends IFileHandlerCore {
 
   getWhoAmI (): string
   getWhereAmI (): string
+  getWhoOwnsMe (): string
   getMerklePath (): Promise<string>
   getFolderDetails (): IFolderFileFrame
   getChildDirs (): string[]

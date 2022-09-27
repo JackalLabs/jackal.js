@@ -46,15 +46,14 @@ export default class FolderHandler implements IFolderHandler {
     const folderDetails: IFolderFileFrame = {
       whoAmI: stripper(dirInfo.myName),
       whereAmI: dirInfo.myParent,
+      whoOwnsMe: dirInfo.myOwner,
       dirChildren: [],
       fileChildren: {}
     }
     const startingConfig: IFileConfigRelevant = {
-      creator: '',
-      hashpath: '',
-      contents: '',
-      viewers: {},
-      editors: {}
+      editAccess: {}, // object of sha256 hash of wallet address:enc aes key
+      viewingAccess: {}, // object of sha256 hash of wallet address:enc aes key
+      trackingNumber: '' // uuid
     }
     return new FolderHandler(folderDetails, startingConfig, await genKey(), genIv())
   }
@@ -75,7 +74,8 @@ export default class FolderHandler implements IFolderHandler {
   makeChildDirInfo (childName: string): IChildDirInfo {
     const myName = stripper(childName)
     const myParent = `${this.folderDetails.whereAmI}/${this.folderDetails.whoAmI}`
-    return {myName, myParent}
+    const myOwner = this.folderDetails.whoOwnsMe
+    return {myName, myParent, myOwner}
   }
   addChildDirs (dirs: string[]): void {
     this.folderDetails.dirChildren = [...new Set([...this.folderDetails.dirChildren, ...dirs])]
@@ -111,6 +111,9 @@ export default class FolderHandler implements IFolderHandler {
   }
   getWhoAmI (): string {
     return this.folderDetails.whoAmI
+  }
+  getWhoOwnsMe (): string {
+    return this.folderDetails.whoOwnsMe
   }
   async getForUpload (): Promise<File> {
     const chunks = encryptPrep((new TextEncoder()).encode(JSON.stringify(this.folderDetails)))

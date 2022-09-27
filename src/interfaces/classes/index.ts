@@ -4,6 +4,7 @@ import IFileIo from './IFileIo'
 import IFileUploadHandler from './IFileUploadHandler'
 import IFolderHandler from './IFolderHandler'
 import IGovHandler from './IGovHandler'
+import IRnsHandler from './IRnsHandler'
 import IWalletHandler from './IWalletHandler'
 
 export {
@@ -13,5 +14,6 @@ export {
   IFileUploadHandler,
   IFolderHandler,
   IGovHandler,
+  IRnsHandler,
   IWalletHandler
 }

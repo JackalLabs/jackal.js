@@ -4,14 +4,14 @@ import { encrypt, decrypt, PrivateKey } from 'eciesjs'
 import { Window as KeplrWindow } from '@keplr-wallet/types'
 import { bankQueryApi, bankQueryClient } from 'jackal.js-protos'
 
-import { defaultQueryAddr1317, defaultTxAddr26657, jackalChainId } from '../utils/globals'
+import { defaultQueryAddr1317, defaultTxAddr26657, jackalMainnetChainId } from '../utils/globals'
 import { IWalletHandler } from '../interfaces/classes'
 
 declare global {
   interface Window extends KeplrWindow {}
 }
 
-const defaultChains = [jackalChainId, 'osmo-1', 'cosmoshub-4']
+const defaultChains = [jackalMainnetChainId, 'osmo-1', 'cosmoshub-4']
 
 export default class WalletHandler implements IWalletHandler {
   private signer: OfflineSigner
@@ -32,24 +32,24 @@ export default class WalletHandler implements IWalletHandler {
     this.deconstructedAccount = bech32.decode(acct.address)
   }
 
-  static async trackWallet (config: { enabledChains?: string | string[], queryAddr?: string, txAddr?: string }): Promise<IWalletHandler> {
+  static async trackWallet (config: { signerChain?: string, enabledChains?: string | string[], queryAddr?: string, txAddr?: string }): Promise<IWalletHandler> {
     if (!window) {
       throw new Error('Jackal.js is only supported in the browser at this time!')
     } else if (!window.keplr) {
       throw new Error('Jackal.js requires Keplr to be installed!')
     } else {
-      const { enabledChains, queryAddr, txAddr } = config
+      const { signerChain, enabledChains, queryAddr, txAddr } = config
 
       const qAddr = queryAddr || defaultQueryAddr1317
       const tAddr = txAddr || defaultTxAddr26657
 
       await window.keplr.enable(enabledChains || defaultChains)
-      const signer = window.keplr.getOfflineSigner(jackalChainId)
+      const signer = window.keplr.getOfflineSigner(jackalMainnetChainId)
       const acct = (await signer.getAccounts())[0]
 
       const bank = await bankQueryClient({addr: qAddr})
 
-      const secret = await makeSecret(jackalChainId, acct.address)
+      const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
       const secretAsHex = Buffer.from(secret, 'base64').subarray(0, 32).toString('hex')
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
