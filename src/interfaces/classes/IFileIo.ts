@@ -1,11 +1,12 @@
-import { OfflineSigner } from '@cosmjs/proto-signing'
 import IMiner from '../IMiner'
-import IFileHandler from './IFileHandler'
+import IFileDownloadHandler from './IFileDownloadHandler'
 import IWalletHandler from './IWalletHandler'
-import IFolderDownload from '../IFolderDownload'
+import IFolderHandler from './IFolderHandler'
+import IFileMeta from '../IFileMeta'
+import { TFileOrFFile } from '../../types/TFoldersAndFiles'
 
 export default interface IFileIo {
-  walletRef: OfflineSigner
+  walletRef: IWalletHandler
   txAddr26657: string
   queryAddr1317: string
   fileTxClient: any
@@ -16,7 +17,7 @@ export default interface IFileIo {
   shuffle (): Promise<void>
   forceProvider (toSet: IMiner): void
 
-  uploadFiles (toUpload: IFileHandler[], wallet: IWalletHandler): Promise<void>
-  downloadFile (fileAddress: string, wallet: IWalletHandler, isFolder: boolean): Promise<IFileHandler | IFolderDownload>
-
+  uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: { [name: string]: IFileMeta }): Promise<void>
+  downloadFile (fileAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler>
+  generateInitialDirs (startingDirs?: string[]): Promise<void>
 }

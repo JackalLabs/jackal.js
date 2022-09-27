@@ -1,22 +1,27 @@
-import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
-import { FormData } from 'formdata-node'
+import { EncodeObject } from '@cosmjs/proto-signing'
+import { FormData as NodeFormData } from 'formdata-node'
 import { storageQueryApi, storageQueryClient, storageTxClient, filetreeTxClient, filetreeQueryClient } from 'jackal.js-protos'
-import FileHandler from '../classes/fileHandler'
+import FileDownloadHandler from './fileDownloadHandler'
 import { finalizeGas } from '../utils/gas'
-import { hashAndHex } from '../utils/hash'
-import { defaultQueryAddr1317, defaultTxAddr26657 } from '../utils/globals'
-import IFileHandler from '../interfaces/classes/IFileHandler'
-import IWalletHandler from '../interfaces/classes/IWalletHandler'
-import IEditorsViewers from '../interfaces/IEditorsViewers'
-import IFileConfigRaw from '../interfaces/IFileConfigRaw'
-import IFileIo from '../interfaces/classes/IFileIo'
-import IFolderDownload from '../interfaces/IFolderDownload'
-import IProviderResponse from '../interfaces/IProviderResponse'
-import IMiner from '../interfaces/IMiner'
+import { hashAndHex, hexFullPath } from '../utils/hash'
+import { IFileDownloadHandler, IFileIo, IFolderHandler, IWalletHandler } from '../interfaces/classes'
 import { TFileOrFFile } from '../types/TFoldersAndFiles'
+import FolderHandler from './folderHandler'
+import { importJackalKey } from '../utils/crypt'
+import {
+  IEditorsViewers,
+  IFileConfigFull,
+  IFileConfigRaw,
+  IFileMeta,
+  IMiner,
+  IMsgPostFileBundle,
+  IProviderModifiedResponse,
+  IProviderResponse,
+  IQueueItemPostUpload
+} from '../interfaces'
 
 export default class FileIo implements IFileIo {
-  walletRef: OfflineSigner
+  walletRef: IWalletHandler
   txAddr26657: string
   queryAddr1317: string
   fileTxClient: any
@@ -24,39 +29,34 @@ export default class FileIo implements IFileIo {
   availableProviders: IMiner[]
   currentProvider: IMiner
 
-  private constructor (wallet: OfflineSigner, tAddr: string, qAddr: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
+  private constructor (wallet: IWalletHandler, txAddr26657: string, queryAddr1317: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
     this.walletRef = wallet
-    this.txAddr26657 = tAddr
-    this.queryAddr1317 = qAddr
+    this.txAddr26657 = txAddr26657
+    this.queryAddr1317 = queryAddr1317
     this.fileTxClient = fTxClient
     this.storageTxClient = sTxClient
     this.availableProviders = providers
     this.currentProvider = providers[Math.floor(Math.random() * providers.length)]
   }
 
-  static async trackIo (wallet: OfflineSigner, txAddr?: string, queryAddr?: string): Promise<FileIo> {
-    const tAddr = txAddr || defaultTxAddr26657
-    const qAddr = queryAddr || defaultQueryAddr1317
-    const ftxClient = await filetreeTxClient(wallet, { addr: tAddr })
-    const stxClient = await storageTxClient(wallet, { addr: tAddr })
-    const providers = await this.getProvider(await storageQueryClient({ addr: qAddr }))
-    return new FileIo(wallet, tAddr, qAddr, ftxClient, stxClient, providers)
+  static async trackIo (wallet: IWalletHandler): Promise<FileIo> {
+    const txAddr = wallet.txAddr26657 // txAddr || defaultTxAddr26657
+    const queryAddr = wallet.queryAddr1317 // queryAddr || defaultQueryAddr1317
+    const ftxClient = await filetreeTxClient(wallet.getSigner(), { addr: txAddr })
+    const stxClient = await storageTxClient(wallet.getSigner(), { addr: txAddr })
+    const providers = await getProvider(await storageQueryClient({ addr: queryAddr }))
+    return new FileIo(wallet, txAddr, queryAddr, ftxClient, stxClient, providers)
   }
 
-  static async getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]> {
-    const rawProviderReturn = await queryClient.queryMinersAll()
-    const rawProviderList = rawProviderReturn.data.miners as IMiner[] || []
-    return rawProviderList.slice(0, 100)
-  }
   async shuffle (): Promise<void> {
-    this.availableProviders = await FileIo.getProvider(await storageQueryClient({ addr: this.queryAddr1317 }))
+    this.availableProviders = await getProvider(await storageQueryClient({ addr: this.queryAddr1317 }))
     this.currentProvider = this.availableProviders[Math.floor(Math.random() * this.availableProviders.length)]
   }
   forceProvider (toSet: IMiner): void {
     this.currentProvider = toSet
   }
 
-  async uploadFiles (toUpload: TFileOrFFile[], wallet: IWalletHandler): Promise<void> {
+  async uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: { [name: string]: IFileMeta }): Promise<void> {
     /**
      * http to provider
      * receive fid/cid
@@ -67,85 +67,213 @@ export default class FileIo implements IFileIo {
     } else {
       const { ip } = this.currentProvider
       const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
-      const ids: TFileOrFFile[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
-        const fileFormData = new FormData()
-        fileFormData.set('file', await item.getForUpload())
-        const ret: IProviderResponse = await fetch(url, {method: 'POST', body: fileFormData})
-          .then(resp => resp.json())
-        item.setIds(ret)
-        return item
+      const ids: IQueueItemPostUpload[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
+        const fileName = item.getWhoAmI()
+        let file
+        let configData: IFileConfigFull | undefined
+        if (existingChildren[fileName]) {
+          const path = await hexFullPath(await item.getMerklePath(), fileName)
+          const { data } = await getFileChainData(path, owner, this.queryAddr1317)
+          const typedData = data as IFileConfigRaw
+          configData = {
+            address: typedData.address,
+            contents: typedData.contents,
+            owner: typedData.owner,
+            editAccess: JSON.parse(typedData.editAccess),
+            viewingAccess: JSON.parse(typedData.viewingAccess),
+            trackingNumber: typedData.trackingNumber
+          }
+
+          const editorKeys = configData.editAccess[await hexFullPath(configData.trackingNumber, this.walletRef.getJackalAddress())]
+          const { asymmetricDecrypt } = this.walletRef
+          const recoveredKey = await importJackalKey(new Uint8Array(asymmetricDecrypt(editorKeys.key)))
+          const recoveredIv = new Uint8Array(asymmetricDecrypt(editorKeys.iv))
+          file = await item.getForUpload(recoveredKey, recoveredIv)
+        } else {
+          file = await item.getForUpload()
+        }
+        item.setIds(await doUpload(url, file))
+        return { handler: item, data: configData }
       }))
-      await this.afterUpload(ids, wallet)
+      await this.afterUpload(ids)
     }
   }
-  async downloadFile (fileAddress: string, wallet: IWalletHandler, isFolder?: boolean): Promise<IFileHandler | IFolderDownload> {
+  async downloadFile (hexAddress: string, owner: string, isFolder?: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     /**
      * update to build fileAddress
      *
      * fid to /d/
      * process
      */
-
-    const { queryFiles } = await filetreeQueryClient({ addr: this.queryAddr1317 })
     const { queryFindFile } = await storageQueryClient({ addr: this.queryAddr1317 })
-    const ftQueryResults = await queryFiles(await hashAndHex(fileAddress))
-    const fileData = ftQueryResults.data.files || {address: '', contents: '', owner: '', editAccess: '', viewingAccess: ''}
-    const sQueryResults = await queryFindFile(fileData.contents as string)
+    const { version, data } = await getFileChainData(hexAddress, owner, this.queryAddr1317)
+    const storageQueryResults = await queryFindFile(version)
 
-    const providers = sQueryResults.data.minerIps || '[]'
+    if (!storageQueryResults || !storageQueryResults.data.minerIps) throw new Error('No FID found!')
+    const providers = storageQueryResults.data.minerIps
     const targetProvider = JSON.parse(providers)
     if (targetProvider && targetProvider.length) {
-      const url = `${targetProvider.endsWith('/') ? targetProvider.slice(0, -1) : targetProvider}/d/${fileData.contents as string}`
+      const url = `${targetProvider.endsWith('/') ? targetProvider.slice(0, -1) : targetProvider}/d/${version}`
       return await fetch(url)
         .then(resp => resp.arrayBuffer())
-        .then(async (resp): Promise<IFileHandler | IFolderDownload> => {
-          const config: IFileConfigRaw = {
-            creator: fileData.owner as string,
-            hashpath: fileData.address as string,
-            contents: fileData.contents as string,
-            viewers: JSON.parse(fileData.viewingAccess as string) as IEditorsViewers,
-            editors: JSON.parse(fileData.editAccess as string) as IEditorsViewers
+        .then(async (resp): Promise<IFileDownloadHandler | IFolderHandler> => {
+          const config = {
+            editAccess: JSON.parse(data.editAccess as string), // json stirng array of edit access object (to be discussed
+            viewingAccess: JSON.parse(data.viewingAccess as string), // json string of viewing access object (to be discussed)
+            trackingNumber: data.trackingNumber as string // uuid
           }
-          const { key, iv } = config.editors[config.creator]
+          const requestor = await hashAndHex(`${config.trackingNumber}${await hashAndHex(this.walletRef.getJackalAddress())}`)
+          const { key, iv } = config.editAccess[requestor]
+          const { asymmetricDecrypt } = this.walletRef
+          const recoveredKey = await importJackalKey(new Uint8Array(asymmetricDecrypt(key)))
+          const recoveredIv = new Uint8Array(asymmetricDecrypt(iv))
           if (isFolder) {
-            return {data: resp, config, key: wallet.asymmetricDecrypt(key), iv: wallet.asymmetricDecrypt(iv)}
+            return await FolderHandler.trackFolder(resp, config, recoveredKey, recoveredIv)
           } else {
-            return await FileHandler.trackFile(resp, config, fileAddress, wallet.asymmetricDecrypt(key), wallet.asymmetricDecrypt(iv))
+            return await FileDownloadHandler.trackFile(resp, config, recoveredKey, recoveredIv)
           }
         })
     } else {
       throw new Error('No available providers!')
     }
   }
-  private async afterUpload (ids: TFileOrFFile[], wallet: IWalletHandler): Promise<void> {
+  private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
     const { signAndBroadcast, msgPostFile } = await this.fileTxClient()
     const { msgSignContract } = await this.storageTxClient()
+    const { getJackalAddress, asymmetricEncrypt, getPubkey } = this.walletRef
 
-    const creator = await hashAndHex(wallet.getJackalAddress())
-    const ready = await Promise.all(ids.flatMap(async (obj: TFileOrFFile) => {
-      const crypt = await obj.getEnc()
-      const partial = {
-        iv: wallet.asymmetricEncrypt(crypt.iv, wallet.getPubkey()),
-        key: wallet.asymmetricEncrypt(crypt.key, wallet.getPubkey())
-      }
-      const perms: any = {}
-      perms[creator] = partial
-
-      const msgPost: EncodeObject = await msgPostFile(JSON.stringify({
+    const creator = getJackalAddress()
+    const ready = await Promise.all(ids.flatMap(async (item: IQueueItemPostUpload) => {
+      const { cid, fid } = item.handler.getIds()
+      const msgPostFileBundle: IMsgPostFileBundle = {
+        account: '',
+        editors: {},
+        viewers: {},
         creator,
-        hashpath: await hashAndHex(obj.path),
-        contents: obj.fid,
-        viewers: perms,
-        editors: perms
-      }))
+        contents: fid,
+        hashParent: await item.handler.getMerklePath(),
+        hashChild: await hashAndHex(item.handler.getWhoAmI()),
+        trackingNumber: item.handler.getUUID()
+      }
+      if (item.data) {
+        msgPostFileBundle.account = item.data.owner
+        msgPostFileBundle.editors = item.data.editAccess
+        msgPostFileBundle.viewers = item.data.viewingAccess
+      } else {
+        const { iv, key } = await item.handler.getEnc()
+        const pubKey = getPubkey()
+        const partial = {
+          iv: asymmetricEncrypt(iv, pubKey),
+          key: asymmetricEncrypt(key, pubKey)
+        }
+        const permissions: IEditorsViewers = {}
+        msgPostFileBundle.account = await hexFullPath(item.handler.getUUID(), getJackalAddress())
+        permissions[msgPostFileBundle.account] = partial
+        msgPostFileBundle.editors = permissions
+        msgPostFileBundle.viewers = permissions
+      }
+
+      const msgPost: EncodeObject = await msgPostFile(JSON.stringify(msgPostFileBundle as any))
 
       const msgSign: EncodeObject = await msgSignContract({
-        creator,      // owner jkl address
-        cid: obj.cid  // cid from above
+        creator, // tx initiator jkl address
+        cid // cid from above
       })
       return [msgPost, msgSign]
     }))
-    const lastStep = await signAndBroadcast(ready.flat(), {fee: finalizeGas(ready.flat()),memo: ''})
+    const lastStep = await signAndBroadcast(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
     console.dir(lastStep)
+  }
+  async generateInitialDirs (startingDirs?: string[]): Promise<void> {
+    const toGenerate = startingDirs || ['Home', 'Shared', 'WWW']
+    const folderHandlerList = [
+      await FolderHandler.trackNewFolder({ myName: '', myParent: '', myOwner: this.walletRef.getJackalAddress() })
+    ]
+    folderHandlerList[0].addChildDirs(toGenerate)
+    for (let i = 0; i < toGenerate.length; i++) {
+      folderHandlerList.push(await FolderHandler.trackNewFolder(
+        { myName: toGenerate[i], myParent: '', myOwner: this.walletRef.getJackalAddress()
+        }))
+    }
+    const {ip} = this.currentProvider
+    const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
+    const ids: IQueueItemPostUpload[] = await Promise.all(folderHandlerList.map(async (item: TFileOrFFile) => {
+      item.setIds(await doUpload(url, await item.getForUpload()))
+      return { handler: item, data: undefined }
+    }))
+    const { signAndBroadcast, msgPostFile } = await this.fileTxClient()
+    const { msgSignContract } = await this.storageTxClient()
+    const { getJackalAddress, asymmetricEncrypt, getPubkey } = this.walletRef
+    const creator = getJackalAddress()
+    const msgPostFileBundleTemplate: IMsgPostFileBundle = {
+      account: '',
+      editors: {},
+      viewers: {},
+      creator,
+      contents: [],
+      hashParent: '',
+      hashChild: '',
+      trackingNumber: ''
+    }
+    const final: EncodeObject[] = []
+    for (let i = 0; i < ids.length; i++) {
+      const { cid, fid } = ids[i].handler.getIds()
+      const frame = msgPostFileBundleTemplate
+      frame.account = await hexFullPath(ids[i].handler.getUUID(), creator)
+      if (i === 0) {
+        // do nothing
+      } else {
+        frame.hashChild = await hashAndHex(ids[0].handler.getWhoAmI())
+      }
+      const { iv, key } = await ids[0].handler.getEnc()
+      const pubKey = getPubkey()
+      const permissions: IEditorsViewers = {}
+      permissions[frame.account] = {
+        iv: asymmetricEncrypt(iv, pubKey),
+        key: asymmetricEncrypt(key, pubKey)
+      }
+      frame.editors = permissions
+      frame.viewers = permissions
+      frame.contents = fid
+      frame.trackingNumber = ids[i].handler.getUUID()
+      const msgPost: EncodeObject = await msgPostFile(JSON.stringify(frame))
+      const msgSign: EncodeObject = await msgSignContract({
+        creator, // tx initiator jkl address
+        cid // cid from above
+      })
+      final.push(msgPost, msgSign)
+    }
+    const lastStep = await signAndBroadcast(final, { fee: finalizeGas(final), memo: '' })
+    console.dir(lastStep)
+  }
+}
+
+/** Helpers */
+async function doUpload (url: string, file: File): Promise<IProviderModifiedResponse> {
+  const fileFormData = new NodeFormData()
+  fileFormData.set('file', file)
+  return await fetch(url, { method: 'POST', body: fileFormData as FormData })
+    .then((resp): Promise<IProviderResponse> => resp.json())
+    .then((resp) => {
+      return { fid: [resp.fid], cid: resp.cid }
+    })
+}
+async function getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]> {
+  const rawProviderReturn = await queryClient.queryMinersAll()
+
+  if (!rawProviderReturn || !rawProviderReturn.data.miners) throw new Error('Unable to get Storage Provider list!')
+  const rawProviderList = rawProviderReturn.data.miners as IMiner[]
+  return rawProviderList.slice(0, 100)
+}
+async function getFileChainData (hexAddress: string, owner: string, queryAddr1317: string) {
+  const { queryFiles } = await filetreeQueryClient({ addr: queryAddr1317 })
+  const filetreeQueryResults = await queryFiles(hexAddress, owner)
+
+  if (!filetreeQueryResults || !filetreeQueryResults.data.files) throw new Error('No address found!')
+  const fileData = filetreeQueryResults.data.files
+  const versions: string[] = JSON.parse(fileData.contents as string)
+  return {
+    version: versions[versions.length - 1],
+    data: fileData
   }
 }

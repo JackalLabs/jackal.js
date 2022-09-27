@@ -1,4 +1,4 @@
-export function orderStrings (sortable: string[]) {
+export function orderStrings (sortable: string[]): string[] {
   return sortable.sort((a: string, b: string) => {
     const lowerA = a.toLowerCase()
     const lowerB = b.toLowerCase()
@@ -10,4 +10,7 @@ export function orderStrings (sortable: string[]) {
       return 0
     }
   })
+}
+export function stripper (value: string): string {
+  return value.replace(/\/+/g, '')
 }

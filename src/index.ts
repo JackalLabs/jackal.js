@@ -1,14 +1,14 @@
 /** Classes */
-import FileHandler from './classes/fileHandler'
+import FileUploadHandler from './classes/fileUploadHandler'
 import FileIo from './classes/fileIo'
-import FolderFileHandler from './classes/folderFileHandler'
+import FolderHandler from './classes/folderHandler'
 import GovHandler from './classes/govHandler'
 import WalletHandler from './classes/walletHandler'
 
 /** Class Interfaces */
-import IFileHandler from './interfaces/classes/IFileHandler'
+import IFileUploadHandler from './interfaces/classes/IFileUploadHandler'
 import IFileIo from './interfaces/classes/IFileIo'
-import IFolderFileHandler from './interfaces/classes/IFolderFileHandler'
+import IFolderHandler from './interfaces/classes/IFolderHandler'
 import IGovHandler from './interfaces/classes/IGovHandler'
 import IWalletHandler from './interfaces/classes/IWalletHandler'
 
@@ -23,12 +23,12 @@ import { OfflineSigner } from '@cosmjs/proto-signing'
 
 /** Exports */
 export {
-  FileHandler,
-  IFileHandler,
+  FileUploadHandler,
+  IFileUploadHandler,
   FileIo,
   IFileIo,
-  FolderFileHandler,
-  IFolderFileHandler,
+  FolderHandler,
+  IFolderHandler,
   GovHandler,
   IGovHandler,
   WalletHandler,

@@ -1,9 +1,8 @@
-import IEditorsViewers from './IEditorsViewers'
-
 export default interface IFileConfigRaw {
-  creator: string,  // SHA256 hash of owner wallet address
-  hashpath: string, // SHA256 hash of file path
-  contents: string, // SHA256 hash of file id
-  viewers: IEditorsViewers,  // object of sha256 hash of wallet address:enc aes key
-  editors: IEditorsViewers   // object of sha256 hash of wallet address:enc aes key
+  address: string; // merkle path of entire file
+  contents: string; // contents (fid usually)
+  owner: string; // hashed (uuid + owner)
+  editAccess: string, // IEditorsViewers, // object of sha256 hash of wallet address:enc aes key
+  viewingAccess: string, // IEditorsViewers, // object of sha256 hash of wallet address:enc aes key
+  trackingNumber: string // uuid
 }
