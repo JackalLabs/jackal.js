@@ -1,11 +1,12 @@
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
-import { bech32, Decoded } from 'bech32'
 import { encrypt, decrypt, PrivateKey } from 'eciesjs'
 import { Window as KeplrWindow } from '@keplr-wallet/types'
-import { bankQueryApi, bankQueryClient } from 'jackal.js-protos'
+import { bankQueryApi, bankQueryClient, filetreeTxClient, rnsQueryApi, rnsQueryClient } from 'jackal.js-protos'
 
 import { defaultQueryAddr1317, defaultTxAddr26657, jackalMainnetChainId } from '../utils/globals'
 import { IWalletHandler } from '../interfaces/classes'
+import { finalizeGas } from '../utils/gas'
+import { hashAndHex } from '../utils/hash'
 
 declare global {
   interface Window extends KeplrWindow {}
@@ -16,20 +17,22 @@ const defaultChains = [jackalMainnetChainId, 'osmo-1', 'cosmoshub-4']
 export default class WalletHandler implements IWalletHandler {
   private signer: OfflineSigner
   private keyPair: PrivateKey
-  private queryClient: bankQueryApi<unknown>
+  private bankQueryClient: bankQueryApi<any>
+  private rnsQueryClient: rnsQueryApi<any>
+  private initComplete: boolean
   txAddr26657: string
   queryAddr1317: string
   jackalAccount: AccountData
-  deconstructedAccount: Decoded
 
-  private constructor (signer: OfflineSigner, tAddr: string, qAddr: string, queryClient: bankQueryApi<unknown>, keyPair: PrivateKey, acct: AccountData) {
+  private constructor (signer: OfflineSigner, tAddr: string, qAddr: string, bQueryClient: bankQueryApi<any>, rQueryClient: rnsQueryApi<any>, initComplete: boolean, keyPair: PrivateKey, acct: AccountData) {
     this.signer = signer
     this.keyPair = keyPair
-    this.queryClient = queryClient
+    this.bankQueryClient = bQueryClient
+    this.rnsQueryClient = rQueryClient
+    this.initComplete = initComplete
     this.txAddr26657 = tAddr
     this.queryAddr1317 = qAddr
     this.jackalAccount = acct
-    this.deconstructedAccount = bech32.decode(acct.address)
   }
 
   static async trackWallet (config: { signerChain?: string, enabledChains?: string | string[], queryAddr?: string, txAddr?: string }): Promise<IWalletHandler> {
@@ -44,17 +47,39 @@ export default class WalletHandler implements IWalletHandler {
       const tAddr = txAddr || defaultTxAddr26657
 
       await window.keplr.enable(enabledChains || defaultChains)
-      const signer = window.keplr.getOfflineSigner(jackalMainnetChainId)
+      const signer = window.keplr.getOfflineSigner(signerChain || jackalMainnetChainId)
       const acct = (await signer.getAccounts())[0]
 
       const bank = await bankQueryClient({addr: qAddr})
+      const rns = await rnsQueryClient({addr: qAddr})
+
+      const initComplete = (await rns.queryInit(acct.address)).data.init?.complete
 
       const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
       const secretAsHex = Buffer.from(secret, 'base64').subarray(0, 32).toString('hex')
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
-      return new WalletHandler(signer, tAddr, qAddr, bank, keyPair, acct)
+      return new WalletHandler(signer, tAddr, qAddr, bank, rns, !!initComplete, keyPair, acct)
     }
+  }
+
+  async initAccount (): Promise<void> {
+    const { msgInitAll, signAndBroadcast } = await filetreeTxClient(this.signer, { addr: this.txAddr26657 })
+    const initCall = msgInitAll({
+      creator: this.jackalAccount.address,
+      pubkey: this.keyPair.publicKey.toHex()
+    })
+    const lastStep = await signAndBroadcast([initCall], { fee: finalizeGas([initCall]), memo: '' })
+    console.dir(lastStep)
+    const initComplete = (await this.rnsQueryClient.queryInit(this.jackalAccount.address)).data.init?.complete
+    if (!initComplete) {
+      await this.initAccount()
+    } else {
+      this.initComplete = true
+    }
+  }
+  checkIfInit (): boolean {
+    return this.initComplete
   }
 
   getAccounts (): Promise<readonly AccountData[]> {
@@ -66,14 +91,17 @@ export default class WalletHandler implements IWalletHandler {
   getJackalAddress (): string {
     return this.jackalAccount.address
   }
+  async getHexJackalAddress (): Promise<string> {
+    return await hashAndHex(this.jackalAccount.address)
+  }
   async getAllBalances (): Promise<any> {
-    return await this.queryClient.queryAllBalances(this.jackalAccount.address)
+    return await this.bankQueryClient.queryAllBalances(this.jackalAccount.address)
   }
   async getJackalBalance (): Promise<any> {
-    return await this.queryClient.queryBalance(this.jackalAccount.address, { denom: 'ujkl' })
+    return await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujkl' })
   }
   async getJewelBalance (): Promise<any> {
-    return await this.queryClient.queryBalance(this.jackalAccount.address, { denom: 'ujwl' })
+    return await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujwl' })
   }
   getPubkey (): string {
     return this.keyPair.publicKey.toHex()

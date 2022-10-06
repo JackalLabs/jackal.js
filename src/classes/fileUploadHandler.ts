@@ -11,6 +11,7 @@ import {
   assembleEncryptedFile
 } from '../utils/crypt'
 import { merkleMeBro } from '../utils/hash'
+import { IFileMeta } from '../interfaces'
 
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File
@@ -66,6 +67,14 @@ export default class FileUploadHandler implements IFileUploadHandler {
   }
   getMerklePath () {
     return merkleMeBro(this.parentPath)
+  }
+  getMeta (): IFileMeta {
+    return {
+      name: this.file.name,
+      lastModified: this.file.lastModified,
+      size: this.file.size,
+      type: this.file.type
+    }
   }
 }
 

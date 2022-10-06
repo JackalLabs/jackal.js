@@ -22,6 +22,10 @@ export default class FileDownloadHandler implements IFileDownloadHandler {
     const decryptedFile: File = await convertToOriginalFile(file, key, iv)
     return new FileDownloadHandler(decryptedFile, fileConfig, key, iv)
   }
+
+  receiveBacon (): File {
+    return this.file
+  }
 }
 
 /** Helpers */

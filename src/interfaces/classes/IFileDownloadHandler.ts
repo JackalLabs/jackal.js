@@ -1,1 +1,3 @@
-export default interface IFileUploadHandler {}
+export default interface IFileUploadHandler {
+  receiveBacon (): File
+}

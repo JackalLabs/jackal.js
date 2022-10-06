@@ -6,6 +6,7 @@ import { finalizeGas } from '../utils/gas'
 import { hashAndHex, hexFullPath } from '../utils/hash'
 import { IFileDownloadHandler, IFileIo, IFolderHandler, IWalletHandler } from '../interfaces/classes'
 import { TFileOrFFile } from '../types/TFoldersAndFiles'
+import FileUploadHandler from './fileUploadHandler'
 import FolderHandler from './folderHandler'
 import { importJackalKey } from '../utils/crypt'
 import {
@@ -14,6 +15,7 @@ import {
   IFileConfigRaw,
   IFileMeta,
   IMiner,
+  IMsgFinalPostFileBundle,
   IMsgPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
@@ -21,13 +23,13 @@ import {
 } from '../interfaces'
 
 export default class FileIo implements IFileIo {
-  walletRef: IWalletHandler
-  txAddr26657: string
-  queryAddr1317: string
-  fileTxClient: any
-  storageTxClient: any
-  availableProviders: IMiner[]
-  currentProvider: IMiner
+  private walletRef: IWalletHandler
+  private txAddr26657: string
+  private queryAddr1317: string
+  private fileTxClient: any
+  private storageTxClient: any
+  private availableProviders: IMiner[]
+  private currentProvider: IMiner
 
   private constructor (wallet: IWalletHandler, txAddr26657: string, queryAddr1317: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
     this.walletRef = wallet
@@ -45,6 +47,7 @@ export default class FileIo implements IFileIo {
     const ftxClient = await filetreeTxClient(wallet.getSigner(), { addr: txAddr })
     const stxClient = await storageTxClient(wallet.getSigner(), { addr: txAddr })
     const providers = await getProvider(await storageQueryClient({ addr: queryAddr }))
+    console.dir(providers)
     return new FileIo(wallet, txAddr, queryAddr, ftxClient, stxClient, providers)
   }
 
@@ -173,7 +176,13 @@ export default class FileIo implements IFileIo {
         msgPostFileBundle.viewers = permissions
       }
 
-      const msgPost: EncodeObject = await msgPostFile(JSON.stringify(msgPostFileBundle as any))
+      const finalBundle: IMsgFinalPostFileBundle = {
+        ...msgPostFileBundle,
+        contents: JSON.stringify(msgPostFileBundle.contents),
+        editors: JSON.stringify(msgPostFileBundle.editors),
+        viewers: JSON.stringify(msgPostFileBundle.viewers)
+      }
+      const msgPost: EncodeObject = await msgPostFile(finalBundle)
 
       const msgSign: EncodeObject = await msgSignContract({
         creator, // tx initiator jkl address
@@ -184,19 +193,25 @@ export default class FileIo implements IFileIo {
     const lastStep = await signAndBroadcast(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
     console.dir(lastStep)
   }
-  async generateInitialDirs (startingDirs?: string[]): Promise<void> {
-    const toGenerate = startingDirs || ['Home', 'Shared', 'WWW']
-    const folderHandlerList = [
-      await FolderHandler.trackNewFolder({ myName: '', myParent: '', myOwner: this.walletRef.getJackalAddress() })
-    ]
-    folderHandlerList[0].addChildDirs(toGenerate)
+  async generateInitialDirs (rns: string, startingDirs?: string[]): Promise<void> {
+    const toGenerate = startingDirs || ['Config', 'Home', 'Shared', 'WWW']
+    const root = await FolderHandler.trackNewFolder({ myName: '', myParent: '', myOwner: this.walletRef.getJackalAddress() })
+    root.addChildDirs(toGenerate)
+    const folderHandlerList: TFileOrFFile[] = [root]
     for (let i = 0; i < toGenerate.length; i++) {
-      folderHandlerList.push(await FolderHandler.trackNewFolder(
+      const folder = await FolderHandler.trackNewFolder(
         { myName: toGenerate[i], myParent: '', myOwner: this.walletRef.getJackalAddress()
-        }))
+        })
+      if (folder.getWhoAmI() === 'Config') {
+        const configFile = new File([(new TextEncoder()).encode(JSON.stringify({primary: rns}))], 'rns.json', {type: 'application/json'})
+        const configHandler = await FileUploadHandler.trackFile(configFile, 'Config')
+        folder.addChildFiles([configHandler.getMeta()])
+        folderHandlerList.push(configHandler)
+      }
+      folderHandlerList.push(folder)
     }
-    const {ip} = this.currentProvider
-    const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
+    const { ip } = this.currentProvider
+    const url = `${ip.replace(/\/+$/, '')}/u`
     const ids: IQueueItemPostUpload[] = await Promise.all(folderHandlerList.map(async (item: TFileOrFFile) => {
       item.setIds(await doUpload(url, await item.getForUpload()))
       return { handler: item, data: undefined }
@@ -205,12 +220,12 @@ export default class FileIo implements IFileIo {
     const { msgSignContract } = await this.storageTxClient()
     const { getJackalAddress, asymmetricEncrypt, getPubkey } = this.walletRef
     const creator = getJackalAddress()
-    const msgPostFileBundleTemplate: IMsgPostFileBundle = {
+    const msgPostFileBundleTemplate: IMsgFinalPostFileBundle = {
       account: '',
-      editors: {},
-      viewers: {},
+      editors: '',
+      viewers: '',
       creator,
-      contents: [],
+      contents: '',
       hashParent: '',
       hashChild: '',
       trackingNumber: ''
@@ -218,7 +233,7 @@ export default class FileIo implements IFileIo {
     const final: EncodeObject[] = []
     for (let i = 0; i < ids.length; i++) {
       const { cid, fid } = ids[i].handler.getIds()
-      const frame = msgPostFileBundleTemplate
+      const frame = {...msgPostFileBundleTemplate}
       frame.account = await hexFullPath(ids[i].handler.getUUID(), creator)
       if (i === 0) {
         // do nothing
@@ -232,11 +247,11 @@ export default class FileIo implements IFileIo {
         iv: asymmetricEncrypt(iv, pubKey),
         key: asymmetricEncrypt(key, pubKey)
       }
-      frame.editors = permissions
-      frame.viewers = permissions
-      frame.contents = fid
+      frame.editors = JSON.stringify(permissions)
+      frame.viewers = JSON.stringify(permissions)
+      frame.contents = JSON.stringify(fid)
       frame.trackingNumber = ids[i].handler.getUUID()
-      const msgPost: EncodeObject = await msgPostFile(JSON.stringify(frame))
+      const msgPost: EncodeObject = await msgPostFile(frame)
       const msgSign: EncodeObject = await msgSignContract({
         creator, // tx initiator jkl address
         cid // cid from above

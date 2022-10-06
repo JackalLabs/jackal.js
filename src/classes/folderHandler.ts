@@ -9,7 +9,7 @@ import {
   exportJackalKey,
   genIv, genKey
 } from '../utils/crypt'
-import { merkleMeBro } from '../utils/hash'
+import { hexFullPath, merkleMeBro } from '../utils/hash'
 
 export default class FolderHandler implements IFolderHandler {
 
@@ -94,6 +94,12 @@ export default class FolderHandler implements IFolderHandler {
     for (let i = 0; i < toRemove.length; i++) {
       delete this.folderDetails.fileChildren[toRemove[i]]
     }
+  }
+  async getFullMerkle (): Promise<string> {
+    return await hexFullPath(await this.getMerklePath(), this.getWhoAmI())
+  }
+  async getChildMerkle (child: string): Promise<string> {
+    return await hexFullPath(await this.getFullMerkle(), child)
   }
 
   setIds (idObj: { cid: string, fid: string[] }) {

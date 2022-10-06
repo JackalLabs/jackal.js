@@ -30,7 +30,7 @@ export async function merkleMeBro (path: string): Promise<string> {
   const pathArray = path.split('/')
   let merkle = ''
   for (let i = 0; i < pathArray.length; i++) {
-    merkle = await hashAndHex(`${merkle}${await hashAndHex(pathArray[i])}`)
+    merkle = await hexFullPath(merkle, pathArray[i])
   }
   return merkle
 }
