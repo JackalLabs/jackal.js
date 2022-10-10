@@ -126,6 +126,7 @@ export default class FolderHandler implements IFolderHandler {
     const encChunks: ArrayBuffer[] = await Promise.all(
       chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, this.key, this.iv, 'encrypt'))
     )
+    console.dir(encChunks)
     return await assembleEncryptedFile(encChunks, this.folderDetails.whoAmI)
   }
   async getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}> {

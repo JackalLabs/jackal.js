@@ -16,6 +16,7 @@ import IMsgPostFileBundle from './IMsgPostFileBundle'
 import IProviderModifiedResponse from './IProviderModifiedResponse'
 import IProviderResponse from './IProviderResponse'
 import IQueueItemPostUpload from './IQueueItemPostUpload'
+import IWalletConfig from './IWalletConfig'
 
 export {
   IChildDirInfo,
@@ -35,5 +36,6 @@ export {
   IMsgPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
-  IQueueItemPostUpload
+  IQueueItemPostUpload,
+  IWalletConfig
 }

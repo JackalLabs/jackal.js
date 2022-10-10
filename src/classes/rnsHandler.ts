@@ -3,8 +3,8 @@ import { IRnsHandler, IWalletHandler } from '../interfaces/classes'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
-  private readonly txAddr26657: string
-  private readonly queryAddr1317: string
+  readonly txAddr26657: string
+  readonly queryAddr1317: string
   private readonly rnsTxClient: any
   private rnsQueryClient: rnsQueryApi<any>
 

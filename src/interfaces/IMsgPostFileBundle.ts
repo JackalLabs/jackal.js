@@ -8,5 +8,5 @@ export default interface IMsgPostFileBundle {
   contents: string[], // contents
   viewers: IEditorsViewers, // viewer list (to be discussed)
   editors: IEditorsViewers, // editor list (to be discussed )
-  trackingNumber: string, // uuid
+  trackingNumber: number // uuid
 }

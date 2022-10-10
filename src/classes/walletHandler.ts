@@ -6,7 +6,8 @@ import { bankQueryApi, bankQueryClient, filetreeTxClient, rnsQueryApi, rnsQueryC
 import { defaultQueryAddr1317, defaultTxAddr26657, jackalMainnetChainId } from '../utils/globals'
 import { IWalletHandler } from '../interfaces/classes'
 import { finalizeGas } from '../utils/gas'
-import { hashAndHex } from '../utils/hash'
+import { bufferToHex, hashAndHex } from '../utils/hash'
+import { IWalletConfig } from '../interfaces'
 
 declare global {
   interface Window extends KeplrWindow {}
@@ -35,7 +36,7 @@ export default class WalletHandler implements IWalletHandler {
     this.jackalAccount = acct
   }
 
-  static async trackWallet (config: { signerChain?: string, enabledChains?: string | string[], queryAddr?: string, txAddr?: string }): Promise<IWalletHandler> {
+  static async trackWallet (config: IWalletConfig): Promise<IWalletHandler> {
     if (!window) {
       throw new Error('Jackal.js is only supported in the browser at this time!')
     } else if (!window.keplr) {
@@ -53,10 +54,11 @@ export default class WalletHandler implements IWalletHandler {
       const bank = await bankQueryClient({addr: qAddr})
       const rns = await rnsQueryClient({addr: qAddr})
 
-      const initComplete = (await rns.queryInit(acct.address)).data.init?.complete
+      const initComplete = (await rns.queryInit(acct.address)).data.init
 
       const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
-      const secretAsHex = Buffer.from(secret, 'base64').subarray(0, 32).toString('hex')
+      const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
+      console.dir(secretAsHex)
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
       return new WalletHandler(signer, tAddr, qAddr, bank, rns, !!initComplete, keyPair, acct)
@@ -64,19 +66,27 @@ export default class WalletHandler implements IWalletHandler {
   }
 
   async initAccount (): Promise<void> {
-    const { msgInitAll, signAndBroadcast } = await filetreeTxClient(this.signer, { addr: this.txAddr26657 })
+    const { msgInitAll, msgInitAccount, signAndBroadcast } = await filetreeTxClient(this.signer, { addr: this.txAddr26657 })
     const initCall = msgInitAll({
       creator: this.jackalAccount.address,
       pubkey: this.keyPair.publicKey.toHex()
     })
-    const lastStep = await signAndBroadcast([initCall], { fee: finalizeGas([initCall]), memo: '' })
+    // const initCall = msgInitAccount({
+    //   creator: this.jackalAccount.address,
+    //   account: this.jackalAccount.address,
+    //   rootHashpath: await hashAndHex(await hashAndHex('Home')),
+    //   editors: '',
+    //   key: '',
+    //   trackingNumber: 0
+    // })
+    const lastStep = await signAndBroadcast([initCall], { fee: {amount: [], gas: '400000'}, memo: '' })
     console.dir(lastStep)
-    const initComplete = (await this.rnsQueryClient.queryInit(this.jackalAccount.address)).data.init?.complete
-    if (!initComplete) {
-      await this.initAccount()
-    } else {
-      this.initComplete = true
-    }
+    // const initComplete = (await this.rnsQueryClient.queryInit(this.jackalAccount.address)).data.init
+    // if (!initComplete) {
+    //   await this.initAccount()
+    // } else {
+    //   this.initComplete = true
+    // }
   }
   checkIfInit (): boolean {
     return this.initComplete
