@@ -3,12 +3,12 @@ import { FormData as NodeFormData } from 'formdata-node'
 import { storageQueryApi, storageQueryClient, storageTxClient, filetreeTxClient, filetreeQueryClient } from 'jackal.js-protos'
 import FileDownloadHandler from './fileDownloadHandler'
 import { finalizeGas } from '../utils/gas'
-import { hashAndHex, hexFullPath } from '../utils/hash'
+import { hashAndHex, hexFullPath, merkleMeBro } from '../utils/hash'
 import { IFileDownloadHandler, IFileIo, IFolderHandler, IWalletHandler } from '../interfaces/classes'
 import { TFileOrFFile } from '../types/TFoldersAndFiles'
 import FileUploadHandler from './fileUploadHandler'
 import FolderHandler from './folderHandler'
-import { importJackalKey } from '../utils/crypt'
+import { exportJackalKey, genIv, genKey, importJackalKey } from '../utils/crypt'
 import {
   IEditorsViewers,
   IFileConfigFull,
@@ -217,48 +217,70 @@ export default class FileIo implements IFileIo {
       item.setIds(await doUpload(url, this.walletRef.getJackalAddress(), await item.getForUpload()))
       return { handler: item, data: undefined }
     }))
-    const { signAndBroadcast, msgPostFile } = await this.fileTxClient
+    const { signAndBroadcast, msgMakeFolder } = await this.fileTxClient
     const { msgSignContract } = await this.storageTxClient
     const creator = this.walletRef.getJackalAddress()
-    const msgPostFileBundleTemplate: IMsgFinalPostFileBundle = {
-      account: 'abc',
-      editors: 'abc',
-      viewers: 'abc',
+    // const msgPostFileBundleTemplate: IMsgFinalPostFileBundle = {
+    //   account: 'abc',
+    //   editors: 'abc',
+    //   viewers: 'abc',
+    //   creator,
+    //   contents: 'abc',
+    //   hashParent: 'abc',
+    //   hashChild: 'abc',
+    //   trackingNumber: Date.now()
+    // }
+    const trackingNumber = Date.now()
+    const account = await hashAndHex(creator)
+    const pubKey = this.walletRef.getPubkey()
+
+    const permissions: IEditorsViewers = {}
+    permissions[account] = {
+      iv: this.walletRef.asymmetricEncrypt(genIv(), pubKey),
+      key: this.walletRef.asymmetricEncrypt(await exportJackalKey(await genKey()), pubKey)
+    }
+
+    const tst = await msgMakeFolder({
       creator,
-      contents: 'abc',
-      hashParent: 'abc',
-      hashChild: 'abc',
-      trackingNumber: Date.now()
-    }
-    const final: EncodeObject[] = []
-    for (let i = 0; i < ids.length; i++) {
-      const { cid, fid } = ids[i].handler.getIds()
-      const frame = {...msgPostFileBundleTemplate}
-      frame.account = await hexFullPath(ids[i].handler.getUUID(), creator)
-      if (i === 0) {
-        // do nothing
-      } else {
-        frame.hashChild = await hashAndHex(ids[0].handler.getWhoAmI())
-      }
-      const { iv, key } = await ids[0].handler.getEnc()
-      const pubKey = this.walletRef.getPubkey()
-      const permissions: IEditorsViewers = {}
-      permissions[frame.account] = {
-        iv: this.walletRef.asymmetricEncrypt(iv, pubKey),
-        key: this.walletRef.asymmetricEncrypt(key, pubKey)
-      }
-      frame.editors = JSON.stringify(permissions)
-      frame.viewers = JSON.stringify(permissions)
-      frame.contents = JSON.stringify(fid)
-      // frame.trackingNumber = ids[i].handler.getUUID()
-      const msgPost: EncodeObject = await msgPostFile(frame)
-      const msgSign: EncodeObject = await msgSignContract({
-        creator, // tx initiator jkl address
-        cid // cid from above
-      })
-      const lastStep = await signAndBroadcast([msgPost], { fee: finalizeGas(final), memo: '' })
-      await (await this.storageTxClient).signAndBroadcast([msgSign], { fee: finalizeGas(final), memo: '' })
-    }
+      account,
+      rootHashPath: await merkleMeBro('s'),
+      contents: JSON.stringify([]),
+      editors: JSON.stringify(permissions),
+      viewers: JSON.stringify(permissions),
+      trackingNumber: trackingNumber
+    })
+    await signAndBroadcast([tst], { fee: finalizeGas([]), memo: '' })
+
+    // const final: EncodeObject[] = []
+    // for (let i = 0; i < ids.length; i++) {
+    //   const { cid, fid } = ids[i].handler.getIds()
+    //   const frame = {...msgPostFileBundleTemplate}
+    //   frame.account = await hexFullPath(ids[i].handler.getUUID(), creator)
+    //   if (i === 0) {
+    //     // do nothing
+    //   } else {
+    //     frame.hashChild = await hashAndHex(ids[0].handler.getWhoAmI())
+    //   }
+    //   const { iv, key } = await ids[0].handler.getEnc()
+    //   const pubKey = this.walletRef.getPubkey()
+    //   const permissions: IEditorsViewers = {}
+    //   permissions[frame.account] = {
+    //     iv: this.walletRef.asymmetricEncrypt(iv, pubKey),
+    //     key: this.walletRef.asymmetricEncrypt(key, pubKey)
+    //   }
+    //   frame.editors = JSON.stringify(permissions)
+    //   frame.viewers = JSON.stringify(permissions)
+    //   frame.contents = JSON.stringify(fid)
+    //   // frame.trackingNumber = ids[i].handler.getUUID()
+    //   const msgPost: EncodeObject = await msgPostFile(frame)
+    //   const msgSign: EncodeObject = await msgSignContract({
+    //     creator, // tx initiator jkl address
+    //     cid // cid from above
+    //   })
+    //   console.dir(msgSign)
+    //   const lastStep = await signAndBroadcast([msgPost], { fee: finalizeGas(final), memo: '' })
+    //   await (await this.storageTxClient).signAndBroadcast([msgSign], { fee: finalizeGas(final), memo: '' })
+    // }
     // const lastStep = await signAndBroadcast([msgPost], { fee: finalizeGas(final), memo: '' })
     // const otherLast = (await this.storageTxClient.signAndBroadcast([msgSign], { fee: finalizeGas(final), memo: '' }))
     // console.dir(lastStep)
