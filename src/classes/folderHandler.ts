@@ -9,7 +9,7 @@ import {
   exportJackalKey,
   genIv, genKey
 } from '../utils/crypt'
-import { merkleMeBro } from '../utils/hash'
+import { hexFullPath, merkleMeBro } from '../utils/hash'
 
 export default class FolderHandler implements IFolderHandler {
 
@@ -95,6 +95,12 @@ export default class FolderHandler implements IFolderHandler {
       delete this.folderDetails.fileChildren[toRemove[i]]
     }
   }
+  async getFullMerkle (): Promise<string> {
+    return await hexFullPath(await this.getMerklePath(), this.getWhoAmI())
+  }
+  async getChildMerkle (child: string): Promise<string> {
+    return await hexFullPath(await this.getFullMerkle(), child)
+  }
 
   setIds (idObj: { cid: string, fid: string[] }) {
     this.cid = idObj.cid
@@ -120,6 +126,7 @@ export default class FolderHandler implements IFolderHandler {
     const encChunks: ArrayBuffer[] = await Promise.all(
       chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, this.key, this.iv, 'encrypt'))
     )
+    console.dir(encChunks)
     return await assembleEncryptedFile(encChunks, this.folderDetails.whoAmI)
   }
   async getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}> {

@@ -1,42 +1,32 @@
-import { OfflineSigner } from '@cosmjs/proto-signing'
 import { rnsTxClient, rnsQueryApi, rnsQueryClient } from 'jackal.js-protos'
-import { defaultQueryAddr1317, defaultTxAddr26657 } from '../utils/globals'
-import { IRnsHandler } from '../interfaces/classes'
+import { IRnsHandler, IWalletHandler } from '../interfaces/classes'
+import { RnsNames } from 'jackal.js-protos/dist/protos/jackal-dao/canine/jackaldao.canine.rns/module/rest'
 
 export default class RnsHandler implements IRnsHandler {
-  private walletRef: OfflineSigner
-  txAddr26657: string
-  queryAddr1317: string
-  rnsTxClient: any
-  rnsQueryClient: any
+  private readonly walletRef: IWalletHandler
+  readonly txAddr26657: string
+  readonly queryAddr1317: string
+  private readonly rnsTxClient: any
+  private rnsQueryClient: rnsQueryApi<any>
 
-  private constructor (signer: OfflineSigner, tAddr: string, qAddr: string, txClient: any, queryClient: any) {
-    this.walletRef = signer
-    this.txAddr26657 = tAddr
-    this.queryAddr1317 = qAddr
+  private constructor (wallet: IWalletHandler, txAddr: string, queryAddr: string, txClient: any, queryClient: rnsQueryApi<any>) {
+    this.walletRef = wallet
+    this.txAddr26657 = txAddr
+    this.queryAddr1317 = queryAddr
     this.rnsTxClient = txClient
     this.rnsQueryClient = queryClient
   }
 
-  static async trackRns (signer: OfflineSigner, txAddr?: string, queryAddr?: string): Promise<IRnsHandler> {
-    const tAddr = txAddr || defaultTxAddr26657
-    const qAddr = queryAddr || defaultQueryAddr1317
-    const txClient = await rnsTxClient(signer, { addr: tAddr })
-    const queryClient = await rnsQueryClient({ addr: qAddr })
-    return new RnsHandler(signer, tAddr, qAddr, txClient, queryClient)
-  }
-  static async checkIfExists (rnsName: string, queryAddr?: string) {
-    const qAddr = queryAddr || defaultQueryAddr1317
-    const queryClient = await rnsQueryClient({ addr: qAddr })
-    const result = await queryClient.queryNames(rnsName)
-    return !!result.data.names
+  static async trackRns (wallet: IWalletHandler): Promise<IRnsHandler> {
+    const txAddr = wallet.txAddr26657
+    const queryAddr = wallet.queryAddr1317
+    const txClient = await rnsTxClient(wallet.getSigner(), { addr: txAddr })
+    const queryClient = await rnsQueryClient({ addr: queryAddr })
+    return new RnsHandler(wallet, txAddr, queryAddr, txClient, queryClient)
   }
 
+  async findExistingNames (): Promise<RnsNames[]> {
+    return (await this.rnsQueryClient.queryListOwnedNames(this.walletRef.getJackalAddress())).data.names || []
+  }
 }
 
-async function checkIfExists (rnsName: string, queryAddr?: string) {
-  const qAddr = queryAddr || defaultQueryAddr1317
-  const queryClient = await rnsQueryClient({ addr: qAddr })
-  const result = await queryClient.queryNames(rnsName)
-  return !!result.data.names
-}

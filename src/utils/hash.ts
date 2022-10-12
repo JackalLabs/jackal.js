@@ -13,24 +13,27 @@ const hashMap: string[] = ['00','01','02','03','04','05','06','07','08','09','0a
 
 /** @private */
 export async function hashAndHex (input: string): Promise<string> {
-  const { digest } = crypto.subtle
   const algo = 'SHA-256'
-
-  const raw = await digest(algo, (new TextEncoder()).encode(input))
-  const hexed: string[] = new Uint8Array(raw).reduce((acc: string[], curr: number) => {
-    acc.push(hashMap[curr])
-    return acc
-  }, [])
-  return hexed.join('')
+  const raw = await crypto.subtle.digest(algo, (new TextEncoder()).encode(input))
+  return bufferToHex(new Uint8Array(raw))
 }
-export async function hexFullPath (path: string, fileName: string) {
+/** @private */
+export async function hexFullPath (path: string, fileName: string): Promise<string> {
   return await hashAndHex(`${path}${await hashAndHex(fileName)}`)
 }
+/** @private */
 export async function merkleMeBro (path: string): Promise<string> {
   const pathArray = path.split('/')
   let merkle = ''
   for (let i = 0; i < pathArray.length; i++) {
-    merkle = await hashAndHex(`${merkle}${await hashAndHex(pathArray[i])}`)
+    merkle = await hexFullPath(merkle, pathArray[i])
   }
   return merkle
+}
+/** @private */
+export function bufferToHex (buf: Uint8Array): string {
+  return (buf.reduce((acc: string[], curr: number) => {
+    acc.push(hashMap[curr])
+    return acc
+  }, [])).join('')
 }

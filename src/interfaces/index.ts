@@ -11,10 +11,12 @@ import IFolderFileFrame from './IFolderFileFrame'
 import IGasHashMap from './IGasHashMap'
 import IGasRate from './IGasRate'
 import IMiner from './IMiner'
+import IMsgFinalPostFileBundle from './IMsgFinalPostFileBundle'
 import IMsgPostFileBundle from './IMsgPostFileBundle'
 import IProviderModifiedResponse from './IProviderModifiedResponse'
 import IProviderResponse from './IProviderResponse'
 import IQueueItemPostUpload from './IQueueItemPostUpload'
+import IWalletConfig from './IWalletConfig'
 
 export {
   IChildDirInfo,
@@ -30,8 +32,10 @@ export {
   IGasHashMap,
   IGasRate,
   IMiner,
+  IMsgFinalPostFileBundle,
   IMsgPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
-  IQueueItemPostUpload
+  IQueueItemPostUpload,
+  IWalletConfig
 }

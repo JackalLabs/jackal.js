@@ -18,5 +18,7 @@ export default interface IFolderHandler extends IFileHandlerCore {
   addChildFiles (newFiles: IFileMeta[]): void
   removeChildDirs (toRemove: string[]): void
   removeChildFiles (toRemove: string[]): void
+  getFullMerkle (): Promise<string>
+  getChildMerkle (child: string): Promise<string>
 
 }

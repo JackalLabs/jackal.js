@@ -11,6 +11,7 @@ import {
   assembleEncryptedFile
 } from '../utils/crypt'
 import { merkleMeBro } from '../utils/hash'
+import { IFileMeta } from '../interfaces'
 
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File
@@ -67,6 +68,14 @@ export default class FileUploadHandler implements IFileUploadHandler {
   getMerklePath () {
     return merkleMeBro(this.parentPath)
   }
+  getMeta (): IFileMeta {
+    return {
+      name: this.file.name,
+      lastModified: this.file.lastModified,
+      size: this.file.size,
+      type: this.file.type
+    }
+  }
 }
 
 /** Helpers */
@@ -75,7 +84,9 @@ async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Ui
   const chunks = encryptPrep(read.content)
   chunks.unshift((new TextEncoder()).encode(JSON.stringify(read.details)).buffer)
   const encChunks: ArrayBuffer[] = await Promise.all(chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, key, iv, 'encrypt')))
-return await assembleEncryptedFile(encChunks, read.details.name)
+  console.log('file')
+  console.dir(encChunks)
+  return await assembleEncryptedFile(encChunks, read.details.name)
 }
 async function readFile (workingFile: File): Promise<IFileBuffer> {
   const details = {
