@@ -6,5 +6,5 @@ export default interface IMsgFinalPostFileBundle {
   contents: string, // contents array stringified
   viewers: string, // viewer IEditorsViewers stringified
   editors: string, // editor IEditorsViewers stringified
-  trackingNumber: number, // uuid
+  trackingNumber: string, // uuid
 }

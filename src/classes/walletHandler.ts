@@ -5,8 +5,7 @@ import { bankQueryApi, bankQueryClient, filetreeTxClient, rnsQueryApi, rnsQueryC
 
 import { defaultQueryAddr1317, defaultTxAddr26657, jackalMainnetChainId } from '../utils/globals'
 import { IWalletHandler } from '../interfaces/classes'
-import { finalizeGas } from '../utils/gas'
-import { bufferToHex, hashAndHex } from '../utils/hash'
+import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '../utils/hash'
 import { IWalletConfig } from '../interfaces'
 
 declare global {
@@ -64,29 +63,18 @@ export default class WalletHandler implements IWalletHandler {
       return new WalletHandler(signer, tAddr, qAddr, bank, rns, !!initComplete, keyPair, acct)
     }
   }
+  static async getAbitraryMerkle (path: string, item: string): Promise<string> {
+    return await hexFullPath(await merkleMeBro(path), item)
+  }
 
   async initAccount (): Promise<void> {
-    const { msgInitAll, msgInitAccount, signAndBroadcast } = await filetreeTxClient(this.signer, { addr: this.txAddr26657 })
+    const { msgInitAll, signAndBroadcast } = await filetreeTxClient(this.signer, { addr: this.txAddr26657 })
     const initCall = msgInitAll({
       creator: this.jackalAccount.address,
       pubkey: this.keyPair.publicKey.toHex()
     })
-    // const initCall = msgInitAccount({
-    //   creator: this.jackalAccount.address,
-    //   account: this.jackalAccount.address,
-    //   rootHashpath: await hashAndHex(await hashAndHex('Home')),
-    //   editors: '',
-    //   key: '',
-    //   trackingNumber: 0
-    // })
     const lastStep = await signAndBroadcast([initCall], { fee: {amount: [], gas: '400000'}, memo: '' })
     console.dir(lastStep)
-    // const initComplete = (await this.rnsQueryClient.queryInit(this.jackalAccount.address)).data.init
-    // if (!initComplete) {
-    //   await this.initAccount()
-    // } else {
-    //   this.initComplete = true
-    // }
   }
   checkIfInit (): boolean {
     return this.initComplete

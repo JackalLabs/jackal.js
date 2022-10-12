@@ -1,5 +1,6 @@
 import { rnsTxClient, rnsQueryApi, rnsQueryClient } from 'jackal.js-protos'
 import { IRnsHandler, IWalletHandler } from '../interfaces/classes'
+import { RnsNames } from 'jackal.js-protos/dist/protos/jackal-dao/canine/jackaldao.canine.rns/module/rest'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
@@ -24,7 +25,7 @@ export default class RnsHandler implements IRnsHandler {
     return new RnsHandler(wallet, txAddr, queryAddr, txClient, queryClient)
   }
 
-  async findExistingNames (): Promise<any[]> {
+  async findExistingNames (): Promise<RnsNames[]> {
     return (await this.rnsQueryClient.queryListOwnedNames(this.walletRef.getJackalAddress())).data.names || []
   }
 }

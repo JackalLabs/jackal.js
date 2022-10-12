@@ -22,7 +22,7 @@ export function finalizeGas (msgArray: EncodeObject[]): IGasRate {
   // const totalGas = estimateGas(msgArray)
   return {
     amount: [],
-    gas: '100000'
+    gas: '500000'
     // gas: totalGas.toString()
   }
 }
