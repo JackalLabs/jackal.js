@@ -9,7 +9,7 @@ import {
   exportJackalKey,
   genIv, genKey
 } from '../utils/crypt'
-import { hexFullPath, merkleMeBro } from '../utils/hash'
+import { hashAndHex, hexFullPath, merkleMeBro } from '../utils/hash'
 
 export default class FolderHandler implements IFolderHandler {
 
@@ -39,7 +39,9 @@ export default class FolderHandler implements IFolderHandler {
       decryptPrep(data)
         .map((chunk: ArrayBuffer) => aesCrypt(chunk, key, iv, 'decrypt')
     ))
-    const folderDetails = JSON.parse((new TextDecoder()).decode(await (new Blob([...decChunks])).arrayBuffer()))
+    const result = (new TextDecoder()).decode(await (new Blob([...decChunks])).arrayBuffer())
+    console.log(`result : ${result}`)
+    const folderDetails = JSON.parse(result.slice(0, result.lastIndexOf('}') + 1))
     return new FolderHandler(folderDetails, config, key, iv)
   }
   static async trackNewFolder (dirInfo: IChildDirInfo): Promise<IFolderHandler> {

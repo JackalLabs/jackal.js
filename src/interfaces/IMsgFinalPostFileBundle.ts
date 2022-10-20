@@ -7,4 +7,8 @@ export default interface IMsgFinalPostFileBundle {
   viewers: string, // viewer IEditorsViewers stringified
   editors: string, // editor IEditorsViewers stringified
   trackingNumber: string, // uuid
+  viewersToNotify: string,
+  editorsToNotify: string,
+  notiForViewers: string,
+  notiForEditors: string
 }

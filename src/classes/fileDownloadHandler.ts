@@ -4,6 +4,7 @@ import {
   aesCrypt,
   decryptPrep,
 } from '../utils/crypt'
+import { removePadding } from '../utils/misc'
 
 export default class FileDownloadHandler implements IFileDownloadHandler {
   private readonly file: File
@@ -30,7 +31,13 @@ export default class FileDownloadHandler implements IFileDownloadHandler {
 
 /** Helpers */
 async function convertToOriginalFile (file: ArrayBuffer, key: CryptoKey, iv: Uint8Array): Promise<File> {
-  const decChunks: ArrayBuffer[] = await Promise.all(decryptPrep(file).map(chunk => aesCrypt(chunk, key, iv, 'decrypt')))
+  const decChunks: ArrayBuffer[] = await Promise.all(decryptPrep(file).map(async (chunk) => {
+    // const preppedChunk = removePadding(chunk)
+    // console.log('preppedChunk')
+    // console.log(preppedChunk)
+    // return aesCrypt(preppedChunk, key, iv, 'decrypt')
+    return removePadding(await aesCrypt(chunk, key, iv, 'decrypt'))
+  }))
   const rawMeta = decChunks[0]
   const data = decChunks.slice(1)
   const meta = JSON.parse((new TextDecoder()).decode(rawMeta))

@@ -1,4 +1,5 @@
 import IChildDirInfo from './IChildDirInfo'
+import ICoin from './ICoin'
 import IEditorsViewers from './IEditorsViewers'
 import IFileBuffer from './IFileBuffer'
 import IFileConfigFull from './IFileConfigFull'
@@ -12,7 +13,7 @@ import IGasHashMap from './IGasHashMap'
 import IGasRate from './IGasRate'
 import IMiner from './IMiner'
 import IMsgFinalPostFileBundle from './IMsgFinalPostFileBundle'
-import IMsgPostFileBundle from './IMsgPostFileBundle'
+import IMsgPartialPostFileBundle from './IMsgPartialPostFileBundle'
 import IProviderModifiedResponse from './IProviderModifiedResponse'
 import IProviderResponse from './IProviderResponse'
 import IQueueItemPostUpload from './IQueueItemPostUpload'
@@ -20,6 +21,7 @@ import IWalletConfig from './IWalletConfig'
 
 export {
   IChildDirInfo,
+  ICoin,
   IEditorsViewers,
   IFileBuffer,
   IFileConfigFull,
@@ -33,7 +35,7 @@ export {
   IGasRate,
   IMiner,
   IMsgFinalPostFileBundle,
-  IMsgPostFileBundle,
+  IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
   IQueueItemPostUpload,

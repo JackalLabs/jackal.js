@@ -6,7 +6,7 @@ import { bankQueryApi, bankQueryClient, filetreeTxClient, rnsQueryApi, rnsQueryC
 import { defaultQueryAddr1317, defaultTxAddr26657, jackalMainnetChainId } from '../utils/globals'
 import { IWalletHandler } from '../interfaces/classes'
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '../utils/hash'
-import { IWalletConfig } from '../interfaces'
+import { ICoin, IWalletConfig } from '../interfaces'
 
 declare global {
   interface Window extends KeplrWindow {}
@@ -92,14 +92,18 @@ export default class WalletHandler implements IWalletHandler {
   async getHexJackalAddress (): Promise<string> {
     return await hashAndHex(this.jackalAccount.address)
   }
-  async getAllBalances (): Promise<any> {
-    return await this.bankQueryClient.queryAllBalances(this.jackalAccount.address)
+  async getAllBalances (): Promise<ICoin[]> {
+    const res: any = await this.bankQueryClient.queryAllBalances(this.jackalAccount.address)
+    return res.balances as ICoin[]
   }
-  async getJackalBalance (): Promise<any> {
-    return await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujkl' })
+  async getJackalBalance (): Promise<ICoin> {
+    const res: any = await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujkl' })
+    console.dir(res)
+    return res.balance as ICoin
   }
-  async getJewelBalance (): Promise<any> {
-    return await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujwl' })
+  async getJewelBalance (): Promise<ICoin> {
+    const res: any = await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujwl' })
+    return res.balance as ICoin
   }
   getPubkey (): string {
     return this.keyPair.publicKey.toHex()
