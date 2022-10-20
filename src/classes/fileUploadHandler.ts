@@ -10,8 +10,9 @@ import {
   encryptPrep,
   assembleEncryptedFile
 } from '../utils/crypt'
-import { merkleMeBro } from '../utils/hash'
+import { hexFullPath, merkleMeBro } from '../utils/hash'
 import { IFileMeta } from '../interfaces'
+import { addPadding } from '../utils/misc'
 
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File
@@ -38,11 +39,11 @@ export default class FileUploadHandler implements IFileUploadHandler {
     return new FileUploadHandler(file, parentPath, uuid, savedKey, savedIv)
   }
 
-  setIds (idObj: { cid: string, fid: string[] }) {
+  setIds (idObj: { cid: string, fid: string[] }): void {
     this.cid = idObj.cid
     this.fid = idObj.fid
   }
-  setUUID (uuid: string) {
+  setUUID (uuid: string): void {
     this.uuid = uuid
   }
   getIds () {
@@ -65,7 +66,10 @@ export default class FileUploadHandler implements IFileUploadHandler {
       key: await exportJackalKey(this.key)
     }
   }
-  getMerklePath () {
+  async getFullMerkle (): Promise<string> {
+    return await hexFullPath(await this.getMerklePath(), this.getWhoAmI())
+  }
+  getMerklePath (): Promise<string> {
     return merkleMeBro(this.parentPath)
   }
   getMeta (): IFileMeta {
@@ -82,7 +86,7 @@ export default class FileUploadHandler implements IFileUploadHandler {
 async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Uint8Array): Promise<File> {
   const read = await readFile(workingFile)
   const chunks = encryptPrep(read.content)
-  chunks.unshift((new TextEncoder()).encode(JSON.stringify(read.details)).buffer)
+  chunks.unshift(addPadding((new TextEncoder()).encode(JSON.stringify(read.details)).buffer))
   const encChunks: ArrayBuffer[] = await Promise.all(chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, key, iv, 'encrypt')))
   console.log('file')
   console.dir(encChunks)

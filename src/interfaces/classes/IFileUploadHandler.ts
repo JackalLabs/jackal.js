@@ -3,4 +3,5 @@ import { IFileMeta } from '../'
 
 export default interface IFileUploadHandler extends IFileHandlerCore {
   getMeta (): IFileMeta
+  getFullMerkle (): Promise<string>
 }

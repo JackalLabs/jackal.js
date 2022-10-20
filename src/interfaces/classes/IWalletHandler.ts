@@ -1,4 +1,5 @@
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
+import { ICoin } from '../'
 
 export default interface IWalletHandler {
   txAddr26657: string
@@ -12,9 +13,9 @@ export default interface IWalletHandler {
   getSigner (): OfflineSigner
   getJackalAddress (): string
   getHexJackalAddress (): Promise<string>
-  getAllBalances (): Promise<any>
-  getJackalBalance (): Promise<any>
-  getJewelBalance (): Promise<any>
+  getAllBalances (): Promise<ICoin[]>
+  getJackalBalance (): Promise<ICoin>
+  getJewelBalance (): Promise<ICoin>
   getPubkey (): string
   asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string
   asymmetricDecrypt (toDecrypt: string): ArrayBuffer
