@@ -22,6 +22,7 @@ export default class FileUploadHandler implements IFileUploadHandler {
   private uuid: string
   private cid: string
   private fid: string[]
+  readonly isFolder: boolean
 
   private constructor (file: File, parentPath: string, uuid: string, key: CryptoKey, iv: Uint8Array) {
     this.file = file
@@ -31,6 +32,7 @@ export default class FileUploadHandler implements IFileUploadHandler {
     this.uuid = uuid
     this.cid = ''
     this.fid = []
+    this.isFolder = false
   }
   static async trackFile (file: File, parentPath: string): Promise<IFileUploadHandler> {
     const savedKey = await genKey()

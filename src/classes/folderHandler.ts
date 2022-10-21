@@ -7,13 +7,15 @@ import {
   decryptPrep,
   encryptPrep,
   exportJackalKey,
-  genIv, genKey
+  genIv,
+  genKey
 } from '../utils/crypt'
-import { hashAndHex, hexFullPath, merkleMeBro } from '../utils/hash'
+import { hexFullPath, merkleMeBro } from '../utils/hash'
 
 export default class FolderHandler implements IFolderHandler {
 
   fileConfig: IFileConfigRelevant
+  readonly isFolder: boolean
 
   private readonly key: CryptoKey
   private readonly iv: Uint8Array
@@ -29,6 +31,7 @@ export default class FolderHandler implements IFolderHandler {
     this.iv = cleanIv
 
     this.fileConfig = config
+    this.isFolder = true
     this.cid = ''
     this.fid = []
     this.uuid = ''
@@ -88,6 +91,7 @@ export default class FolderHandler implements IFolderHandler {
       return acc
     }, {})
     this.folderDetails.fileChildren = {...this.folderDetails.fileChildren, ...midStep}
+    console.dir(this.folderDetails)
   }
   removeChildDirs (toRemove: string[]) {
     this.folderDetails.dirChildren = this.folderDetails.dirChildren.filter((saved: string) => !toRemove.includes(saved))
@@ -124,7 +128,9 @@ export default class FolderHandler implements IFolderHandler {
     return this.folderDetails.whoOwnsMe
   }
   async getForUpload (): Promise<File> {
-    const chunks = encryptPrep((new TextEncoder()).encode(JSON.stringify(this.folderDetails)))
+    const str = JSON.stringify(this.folderDetails)
+    console.log(str)
+    const chunks = encryptPrep((new TextEncoder()).encode(str))
     const encChunks: ArrayBuffer[] = await Promise.all(
       chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, this.key, this.iv, 'encrypt'))
     )

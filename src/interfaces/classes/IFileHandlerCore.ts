@@ -1,4 +1,5 @@
 export default interface IFileHandlerCore {
+  isFolder: boolean
 
   setIds (idObj: { cid: string, fid: string[] }): void
   setUUID (uuid: string): void
