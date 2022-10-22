@@ -21,6 +21,7 @@ import {
   IQueueItemPostUpload
 } from '../interfaces'
 import { randomUUID } from 'make-random'
+import IDeleteItem from '../interfaces/IDeleteItem'
 
 export default class FileIo implements IFileIo {
   private walletRef: IWalletHandler
@@ -101,6 +102,82 @@ export default class FileIo implements IFileIo {
       await this.afterUpload(ids)
     }
   }
+  private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
+    const { masterBroadcaster } = await makeMasterBroadcaster(this.walletRef.getSigner(), { addr: this.txAddr26657 })
+    const { msgPostFile } = await this.fileTxClient
+    const { msgSignContract } = await this.storageTxClient
+
+    const creator = this.walletRef.getJackalAddress()
+
+    const needingReset: EncodeObject[] = []
+    const ready = await Promise.all(ids.flatMap(async (item: IQueueItemPostUpload) => {
+      const { cid, fid } = item.handler.getIds()
+      const msgPostFileBundle: IMsgPartialPostFileBundle = {
+        creator,
+        // account: (item.data?.owner) ? item.data.owner : await hashAndHex(creator),
+        account: await hashAndHex(creator),
+        hashParent: await item.handler.getMerklePath(),
+        hashChild: await hashAndHex(item.handler.getWhoAmI()),
+        contents: JSON.stringify(fid),
+        viewers: '',
+        editors: '',
+        trackingNumber: ''
+      }
+      if (item.data) {
+        msgPostFileBundle.viewers = JSON.stringify(item.data.viewingAccess)
+        msgPostFileBundle.editors = JSON.stringify(item.data.editAccess)
+        msgPostFileBundle.trackingNumber = item.data.trackingNumber
+        const delItem = await makeDelete(
+          this.walletRef.getJackalAddress(),
+          [
+            {
+              location: item.handler.getWhereAmI(),
+              name: item.handler.getWhoAmI()
+            }
+          ],
+          await this.fileTxClient
+        )
+        needingReset.push(...delItem)
+      } else {
+        const pubKey = this.walletRef.getPubkey()
+        const { iv, key } = await item.handler.getEnc()
+        const folderView: IEditorsViewers = {}
+        const folderEdit: IEditorsViewers = {}
+        const perms = JSON.stringify({
+          iv: this.walletRef.asymmetricEncrypt(iv, pubKey),
+          key: this.walletRef.asymmetricEncrypt(key, pubKey)
+        })
+        const workingUUID = await randomUUID()
+        folderView[await hashAndHex(`v${workingUUID}${creator}`)] = JSON.parse(perms)
+        folderEdit[await hashAndHex(`e${workingUUID}${creator}`)] = JSON.parse(perms)
+        msgPostFileBundle.viewers = JSON.stringify(folderView)
+        msgPostFileBundle.editors = JSON.stringify(folderEdit)
+        msgPostFileBundle.trackingNumber = workingUUID
+      }
+      console.log(Object.keys(msgPostFileBundle))
+      const finalBundle: IMsgFinalPostFileBundle = {
+        ...msgPostFileBundle,
+        viewersToNotify: '',
+        editorsToNotify: '',
+        notiForViewers: '',
+        notiForEditors: ''
+      }
+      console.log(Object.keys(finalBundle))
+
+      const msgPost: EncodeObject = await msgPostFile(finalBundle)
+      const msgSign: EncodeObject = await msgSignContract({ creator, cid })
+      console.log('msgSign')
+      console.dir(msgSign)
+      return [msgPost, msgSign]
+    }))
+
+    const readyToBroadcast = [...needingReset, ...ready.flat()]
+    const lastStep = await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' })
+    console.dir(lastStep)
+    if (lastStep.gasUsed > lastStep.gasWanted) {
+      alert('Ran out of gas. Please refresh page and try again with fewer items.')
+    }
+  }
   async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
     const { queryFindFile } = await storageQueryClient({ addr: this.queryAddr1317 })
@@ -144,64 +221,15 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
-  private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
+  async deleteTargets (targets: IDeleteItem[], parent?: IFolderHandler): Promise<void> {
     const { masterBroadcaster } = await makeMasterBroadcaster(this.walletRef.getSigner(), { addr: this.txAddr26657 })
-    const { msgPostFile } = await this.fileTxClient
-    const { msgSignContract } = await this.storageTxClient
+    const msgs = await makeDelete(this.walletRef.getJackalAddress(), targets, await this.fileTxClient)
 
-    const creator = this.walletRef.getJackalAddress()
+    if (parent) {
+      // todo - logic here
+    }
 
-    const ready = await Promise.all(ids.flatMap(async (item: IQueueItemPostUpload) => {
-      const { cid, fid } = item.handler.getIds()
-      const msgPostFileBundle: IMsgPartialPostFileBundle = {
-        creator,
-        // account: (item.data?.owner) ? item.data.owner : await hashAndHex(creator),
-        account: await hashAndHex(creator),
-        hashParent: await item.handler.getMerklePath(),
-        hashChild: await hashAndHex(item.handler.getWhoAmI()),
-        contents: JSON.stringify(fid),
-        viewers: '',
-        editors: '',
-        trackingNumber: ''
-      }
-      if (item.data) {
-        msgPostFileBundle.viewers = JSON.stringify(item.data.viewingAccess)
-        msgPostFileBundle.editors = JSON.stringify(item.data.editAccess)
-        msgPostFileBundle.trackingNumber = item.data.trackingNumber
-      } else {
-        const pubKey = this.walletRef.getPubkey()
-        const { iv, key } = await item.handler.getEnc()
-        const folderView: IEditorsViewers = {}
-        const folderEdit: IEditorsViewers = {}
-        const perms = JSON.stringify({
-          iv: this.walletRef.asymmetricEncrypt(iv, pubKey),
-          key: this.walletRef.asymmetricEncrypt(key, pubKey)
-        })
-        const workingUUID = await randomUUID()
-        folderView[await hashAndHex(`v${workingUUID}${creator}`)] = JSON.parse(perms)
-        folderEdit[await hashAndHex(`e${workingUUID}${creator}`)] = JSON.parse(perms)
-        msgPostFileBundle.viewers = JSON.stringify(folderView)
-        msgPostFileBundle.editors = JSON.stringify(folderEdit)
-        msgPostFileBundle.trackingNumber = workingUUID
-      }
-      console.log(Object.keys(msgPostFileBundle))
-      const finalBundle: IMsgFinalPostFileBundle = {
-        ...msgPostFileBundle,
-        viewersToNotify: '',
-        editorsToNotify: '',
-        notiForViewers: '',
-        notiForEditors: ''
-      }
-      console.log(Object.keys(finalBundle))
-
-      const msgPost: EncodeObject = await msgPostFile(finalBundle)
-      const msgSign: EncodeObject = await msgSignContract({ creator, cid })
-      console.log('msgSign')
-      console.dir(msgSign)
-      return [msgPost, msgSign]
-    }))
-    const lastStep = await masterBroadcaster(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
-    console.dir(lastStep)
+    console.dir(await masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo: '' }))
   }
   async generateInitialDirs (startingDirs?: string[]): Promise<void> {
     const { masterBroadcaster } = await makeMasterBroadcaster(this.walletRef.getSigner(), { addr: this.txAddr26657 })
@@ -234,7 +262,7 @@ export default class FileIo implements IFileIo {
       trackingNumber: rootTrackingNumber
     })
 
-    console.dir(await masterBroadcaster([msgRoot], { fee: finalizeGas([]), memo: '' }))
+    // console.dir(await masterBroadcaster([msgRoot], { fee: finalizeGas([]), memo: '' }))
 
     const folderHandlerList: TFileOrFFile[] = []
     for (let i = 0; i < toGenerate.length; i++) {
@@ -282,7 +310,7 @@ export default class FileIo implements IFileIo {
     }))
     // console.dir(msgs)
     console.dir(msgs.flat())
-    console.dir(await masterBroadcaster(msgs.flat(), { fee: finalizeGas([]), memo: '' }))
+    console.dir(await masterBroadcaster([msgRoot, ...msgs.flat()], { fee: finalizeGas([]), memo: '' }))
     // console.dir(await masterBroadcaster([msgs.flat()[0]], { fee: finalizeGas([]), memo: '' }))
 
   }
@@ -298,6 +326,16 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
     .then((resp) => {
       return { fid: [resp.FID], cid: resp.CID }
     })
+}
+async function makeDelete (owner: string, targets: IDeleteItem[], filetreeTxClient: any): Promise<EncodeObject[]> {
+  const { msgDeleteFile } = await filetreeTxClient
+  return Promise.all(targets.map(async (target: IDeleteItem) => {
+    return await msgDeleteFile({
+      creator: owner,
+      hashPath: await hexFullPath(await merkleMeBro(target.location), target.name),
+      account: await hashAndHex(owner),
+    })
+  }))
 }
 async function getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]> {
   const rawProviderReturn = await queryClient.queryProvidersAll()

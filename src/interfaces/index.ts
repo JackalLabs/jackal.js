@@ -1,5 +1,6 @@
 import IChildDirInfo from './IChildDirInfo'
 import ICoin from './ICoin'
+import IDeleteItem from './IDeleteItem'
 import IEditorsViewers from './IEditorsViewers'
 import IFileBuffer from './IFileBuffer'
 import IFileConfigFull from './IFileConfigFull'
@@ -22,6 +23,7 @@ import IWalletConfig from './IWalletConfig'
 export {
   IChildDirInfo,
   ICoin,
+  IDeleteItem,
   IEditorsViewers,
   IFileBuffer,
   IFileConfigFull,

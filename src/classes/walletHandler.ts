@@ -99,7 +99,7 @@ export default class WalletHandler implements IWalletHandler {
   async getJackalBalance (): Promise<ICoin> {
     const res: any = await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujkl' })
     console.dir(res)
-    return res.balance as ICoin
+    return res.data.balance as ICoin
   }
   async getJewelBalance (): Promise<ICoin> {
     const res: any = await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujwl' })
