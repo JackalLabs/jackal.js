@@ -29,15 +29,17 @@ export default class FileIo implements IFileIo {
   private queryAddr1317: string
   private fileTxClient: any
   private storageTxClient: any
+  private storageQueryClient: any
   private availableProviders: IMiner[]
   private currentProvider: IMiner
 
-  private constructor (wallet: IWalletHandler, txAddr26657: string, queryAddr1317: string, fTxClient: any, sTxClient: any, providers: IMiner[]) {
+  private constructor (wallet: IWalletHandler, txAddr26657: string, queryAddr1317: string, fTxClient: any, sTxClient: any, sQClient: any, providers: IMiner[]) {
     this.walletRef = wallet
     this.txAddr26657 = txAddr26657
     this.queryAddr1317 = queryAddr1317
     this.fileTxClient = fTxClient
     this.storageTxClient = sTxClient
+    this.storageQueryClient = sQClient
     this.availableProviders = providers
     this.currentProvider = providers[Math.floor(Math.random() * providers.length)]
   }
@@ -47,9 +49,10 @@ export default class FileIo implements IFileIo {
     const queryAddr = wallet.queryAddr1317 // queryAddr || defaultQueryAddr1317
     const ftxClient = await filetreeTxClient(wallet.getSigner(), { addr: txAddr })
     const stxClient = await storageTxClient(wallet.getSigner(), { addr: txAddr })
-    const providers = await getProvider(await storageQueryClient({ addr: queryAddr }))
+    const sqClient = await storageQueryClient({ addr: queryAddr })
+    const providers = await getProvider(sqClient)
     console.dir(providers)
-    return new FileIo(wallet, txAddr, queryAddr, ftxClient, stxClient, providers)
+    return new FileIo(wallet, txAddr, queryAddr, ftxClient, stxClient, sqClient, providers)
   }
 
   async shuffle (): Promise<void> {
@@ -75,8 +78,9 @@ export default class FileIo implements IFileIo {
           console.log(item.getWhoAmI())
           const hexAddress = await hexFullPath(await item.getMerklePath(), fileName)
           const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
-          const { data } = await getFileChainData(hexAddress, hexedOwner, this.queryAddr1317)
-          const typedData = data as IFileConfigRaw
+          const fileChainResult = await getFileChainData(hexAddress, hexedOwner, this.queryAddr1317)
+          console.dir(fileChainResult)
+          const typedData = fileChainResult.data as IFileConfigRaw
           configData = {
             address: typedData.address,
             contents: typedData.contents,
@@ -127,15 +131,15 @@ export default class FileIo implements IFileIo {
         msgPostFileBundle.viewers = JSON.stringify(item.data.viewingAccess)
         msgPostFileBundle.editors = JSON.stringify(item.data.editAccess)
         msgPostFileBundle.trackingNumber = item.data.trackingNumber
-        const delItem = await makeDelete(
-          this.walletRef.getJackalAddress(),
+        const delItem = await this.makeDelete(
+          await hashAndHex(
+            `o${await item.handler.getFullMerkle()}${await hashAndHex(creator)}`),
           [
             {
               location: item.handler.getWhereAmI(),
               name: item.handler.getWhoAmI()
             }
-          ],
-          await this.fileTxClient
+          ]
         )
         needingReset.push(...delItem)
       } else {
@@ -171,7 +175,9 @@ export default class FileIo implements IFileIo {
       return [msgPost, msgSign]
     }))
 
-    const readyToBroadcast = [...needingReset, ...ready.flat()]
+    // ready.unshift(ready.pop() as EncodeObject[])
+    // const readyToBroadcast = [...needingReset, ...ready.flat()]
+    const readyToBroadcast = [...ready.flat()]
     const lastStep = await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' })
     console.dir(lastStep)
     if (lastStep.gasUsed > lastStep.gasWanted) {
@@ -180,9 +186,8 @@ export default class FileIo implements IFileIo {
   }
   async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
-    const { queryFindFile } = await storageQueryClient({ addr: this.queryAddr1317 })
     const { version, data } = await getFileChainData(hexAddress, hexedOwner, this.queryAddr1317)
-    const storageQueryResults = await queryFindFile(version)
+    const storageQueryResults = await this.storageQueryClient.queryFindFile(version)
 
     if (!storageQueryResults || !storageQueryResults.data.providerIps) throw new Error('No FID found!')
     const providers = storageQueryResults.data.providerIps
@@ -221,9 +226,18 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
-  async deleteTargets (targets: IDeleteItem[], parent?: IFolderHandler): Promise<void> {
+  async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
     const { masterBroadcaster } = await makeMasterBroadcaster(this.walletRef.getSigner(), { addr: this.txAddr26657 })
-    const msgs = await makeDelete(this.walletRef.getJackalAddress(), targets, await this.fileTxClient)
+
+    const names = targets.map((target:IDeleteItem) => target.name)
+    parent.removeChildDirs(names)
+    parent.removeChildFiles(names)
+    targets.push({
+      location: parent.getWhereAmI(),
+      name: parent.getWhoAmI()
+    })
+
+    const msgs = await this.makeDelete(this.walletRef.getJackalAddress(), targets)
 
     if (parent) {
       // todo - logic here
@@ -314,6 +328,28 @@ export default class FileIo implements IFileIo {
     // console.dir(await masterBroadcaster([msgs.flat()[0]], { fee: finalizeGas([]), memo: '' }))
 
   }
+
+  private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
+    const { msgDeleteFile } = await this.fileTxClient
+    const { msgCancelContract } = await this.storageTxClient
+
+    const readyToDelete: EncodeObject[][] = await Promise.all(targets.map(async (target: IDeleteItem) => {
+      const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
+      const { version } = await getFileChainData(hexPath, creator, this.queryAddr1317)
+      const possibleCids = await this.storageQueryClient.queryFidCid(version)
+      const cidToRemove = JSON.parse(possibleCids.data.fidCid?.cids || '[]')
+      const cancelContractsArr = await Promise.all(cidToRemove.map(async (cid: string) => {
+        return msgCancelContract({ creator, cid })
+      }))
+      const msgDelFile = await msgDeleteFile({
+        creator,
+        hashPath: hexPath,
+        account: await hashAndHex(creator),
+      })
+      return [...cancelContractsArr, msgDelFile]
+    }))
+    return readyToDelete.flat()
+  }
 }
 
 /** Helpers */
@@ -327,16 +363,7 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
       return { fid: [resp.FID], cid: resp.CID }
     })
 }
-async function makeDelete (owner: string, targets: IDeleteItem[], filetreeTxClient: any): Promise<EncodeObject[]> {
-  const { msgDeleteFile } = await filetreeTxClient
-  return Promise.all(targets.map(async (target: IDeleteItem) => {
-    return await msgDeleteFile({
-      creator: owner,
-      hashPath: await hexFullPath(await merkleMeBro(target.location), target.name),
-      account: await hashAndHex(owner),
-    })
-  }))
-}
+
 async function getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]> {
   const rawProviderReturn = await queryClient.queryProvidersAll()
 
@@ -347,6 +374,7 @@ async function getProvider (queryClient: storageQueryApi<any>): Promise<IMiner[]
 async function getFileChainData (hexAddress: string, owner: string, queryAddr1317: string) {
   const { queryFiles } = await filetreeQueryClient({ addr: queryAddr1317 })
   const filetreeQueryResults = await queryFiles(hexAddress, owner)
+  console.dir(filetreeQueryResults)
 
   if (!filetreeQueryResults || !filetreeQueryResults.data.files) throw new Error('No address found!')
   const fileData = filetreeQueryResults.data.files
