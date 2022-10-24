@@ -44,7 +44,7 @@
     "bs58check": "^2.1.2",
     "eciesjs": "^0.3.15",
     "formdata-node": "^5.0.0",
-    "jackal.js-protos": "^1.0.0",
+    "jackal.js-protos": "^1.1.0",
     "make-random": "^3.0.2",
     "tiny-secp256k1": "^2.2.1"
   },
