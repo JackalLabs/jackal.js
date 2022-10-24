@@ -1,5 +1,6 @@
 import IChildDirInfo from './IChildDirInfo'
 import ICoin from './ICoin'
+import IDelegationRewards from './IDelegationRewards'
 import IDeleteItem from './IDeleteItem'
 import IEditorsViewers from './IEditorsViewers'
 import IFileBuffer from './IFileBuffer'
@@ -18,11 +19,13 @@ import IMsgPartialPostFileBundle from './IMsgPartialPostFileBundle'
 import IProviderModifiedResponse from './IProviderModifiedResponse'
 import IProviderResponse from './IProviderResponse'
 import IQueueItemPostUpload from './IQueueItemPostUpload'
+import IStakingValidator from './IStakingValidator'
 import IWalletConfig from './IWalletConfig'
 
 export {
   IChildDirInfo,
   ICoin,
+  IDelegationRewards,
   IDeleteItem,
   IEditorsViewers,
   IFileBuffer,
@@ -41,5 +44,6 @@ export {
   IProviderModifiedResponse,
   IProviderResponse,
   IQueueItemPostUpload,
+  IStakingValidator,
   IWalletConfig
 }
