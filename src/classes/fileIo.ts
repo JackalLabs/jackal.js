@@ -13,6 +13,7 @@ import {
   IFileConfigFull,
   IFileConfigRaw,
   IFileMeta,
+  IFiletreeParsedContents,
   IMiner,
   IMsgFinalPostFileBundle,
   IMsgPartialPostFileBundle,
@@ -83,7 +84,7 @@ export default class FileIo implements IFileIo {
           const typedData = fileChainResult.data as IFileConfigRaw
           configData = {
             address: typedData.address,
-            contents: typedData.contents,
+            contents: JSON.parse(typedData.contents),
             owner: typedData.owner,
             editAccess: JSON.parse(typedData.editAccess),
             viewingAccess: JSON.parse(typedData.viewingAccess),
@@ -122,7 +123,7 @@ export default class FileIo implements IFileIo {
         account: await hashAndHex(creator),
         hashParent: await item.handler.getMerklePath(),
         hashChild: await hashAndHex(item.handler.getWhoAmI()),
-        contents: JSON.stringify(fid),
+        contents: JSON.stringify({ fids: fid }),
         viewers: '',
         editors: '',
         trackingNumber: ''
@@ -270,7 +271,7 @@ export default class FileIo implements IFileIo {
       creator,
       account,
       rootHashPath: await merkleMeBro('s'),
-      contents: JSON.stringify([]),
+      contents: JSON.stringify({ fids: [] }),
       editors: rootPerms,
       viewers: '',
       trackingNumber: rootTrackingNumber
@@ -308,7 +309,7 @@ export default class FileIo implements IFileIo {
         account,
         hashParent: await item.getMerklePath(),
         hashChild: await hashAndHex(item.getWhoAmI()),
-        contents: JSON.stringify(fid),
+        contents: JSON.stringify({ fids: fid }),
         viewers: JSON.stringify(folderView),
         editors: JSON.stringify(folderEdit),
         trackingNumber: workingUUID,
@@ -378,9 +379,9 @@ async function getFileChainData (hexAddress: string, owner: string, queryAddr131
 
   if (!filetreeQueryResults || !filetreeQueryResults.data.files) throw new Error('No address found!')
   const fileData = filetreeQueryResults.data.files
-  const versions: string[] = JSON.parse(fileData.contents as string)
+  const parsedContents: IFiletreeParsedContents = JSON.parse(fileData.contents as string)
   return {
-    version: versions[versions.length - 1],
+    version: parsedContents.fids[parsedContents.fids.length - 1],
     data: fileData
   }
 }
