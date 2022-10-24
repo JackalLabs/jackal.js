@@ -132,17 +132,16 @@ export default class FileIo implements IFileIo {
         msgPostFileBundle.viewers = JSON.stringify(item.data.viewingAccess)
         msgPostFileBundle.editors = JSON.stringify(item.data.editAccess)
         msgPostFileBundle.trackingNumber = item.data.trackingNumber
-        const delItem = await this.makeDelete(
-          await hashAndHex(
-            `o${await item.handler.getFullMerkle()}${await hashAndHex(creator)}`),
-          [
-            {
-              location: item.handler.getWhereAmI(),
-              name: item.handler.getWhoAmI()
-            }
-          ]
-        )
-        needingReset.push(...delItem)
+        // const delItem = await this.makeDelete(
+        //   creator,
+        //   [
+        //     {
+        //       location: item.handler.getWhereAmI(),
+        //       name: item.handler.getWhoAmI()
+        //     }
+        //   ]
+        // )
+        // needingReset.push(...delItem)
       } else {
         const pubKey = this.walletRef.getPubkey()
         const { iv, key } = await item.handler.getEnc()
@@ -176,14 +175,16 @@ export default class FileIo implements IFileIo {
       return [msgPost, msgSign]
     }))
 
-    // ready.unshift(ready.pop() as EncodeObject[])
-    // const readyToBroadcast = [...needingReset, ...ready.flat()]
-    const readyToBroadcast = [...ready.flat()]
-    const lastStep = await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' })
-    console.dir(lastStep)
-    if (lastStep.gasUsed > lastStep.gasWanted) {
-      alert('Ran out of gas. Please refresh page and try again with fewer items.')
-    }
+    ready.unshift(ready.pop() as EncodeObject[])
+    const readyToBroadcast = [...needingReset, ...ready.flat()]
+    // const readyToBroadcast = [...ready.flat()]
+    // const lastStep = await masterBroadcaster(needingReset, { fee: finalizeGas(readyToBroadcast), memo: '' })
+    // console.dir(lastStep)
+    const lastStep2 = await masterBroadcaster(ready.flat(), { fee: finalizeGas(readyToBroadcast), memo: '' })
+    console.dir(lastStep2)
+    // if (lastStep.gasUsed > lastStep.gasWanted) {
+    //   alert('Ran out of gas. Please refresh page and try again with fewer items.')
+    // }
   }
   async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
@@ -331,14 +332,17 @@ export default class FileIo implements IFileIo {
   }
 
   private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
+
     const { msgDeleteFile } = await this.fileTxClient
     const { msgCancelContract } = await this.storageTxClient
 
     const readyToDelete: EncodeObject[][] = await Promise.all(targets.map(async (target: IDeleteItem) => {
       const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
-      const { version } = await getFileChainData(hexPath, creator, this.queryAddr1317)
+      const hexedOwner = await hashAndHex(`o${hexPath}${await hashAndHex(creator)}`)
+      const { version } = await getFileChainData(hexPath, hexedOwner, this.queryAddr1317)
       const possibleCids = await this.storageQueryClient.queryFidCid(version)
       const cidToRemove = JSON.parse(possibleCids.data.fidCid?.cids || '[]')
+      console.dir(cidToRemove)
       const cancelContractsArr = await Promise.all(cidToRemove.map(async (cid: string) => {
         return msgCancelContract({ creator, cid })
       }))
@@ -361,6 +365,8 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
   return await fetch(url, { method: 'POST', body: fileFormData as FormData })
     .then((resp): Promise<IProviderResponse> => resp.json())
     .then((resp) => {
+      console.log('fid/cid')
+      console.dir(resp)
       return { fid: [resp.FID], cid: resp.CID }
     })
 }
