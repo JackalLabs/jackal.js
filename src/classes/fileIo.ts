@@ -133,8 +133,7 @@ export default class FileIo implements IFileIo {
         msgPostFileBundle.editors = JSON.stringify(item.data.editAccess)
         msgPostFileBundle.trackingNumber = item.data.trackingNumber
         const delItem = await this.makeDelete(
-          await hashAndHex(
-            `o${await item.handler.getFullMerkle()}${await hashAndHex(creator)}`),
+          creator,
           [
             {
               location: item.handler.getWhereAmI(),
@@ -176,11 +175,13 @@ export default class FileIo implements IFileIo {
       return [msgPost, msgSign]
     }))
 
-    // ready.unshift(ready.pop() as EncodeObject[])
-    // const readyToBroadcast = [...needingReset, ...ready.flat()]
-    const readyToBroadcast = [...ready.flat()]
-    const lastStep = await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' })
+    ready.unshift(ready.pop() as EncodeObject[])
+    const readyToBroadcast = [...needingReset, ...ready.flat()]
+    // const readyToBroadcast = [...ready.flat()]
+    const lastStep = await masterBroadcaster(needingReset, { fee: finalizeGas(readyToBroadcast), memo: '' })
     console.dir(lastStep)
+    const lastStep2 = await masterBroadcaster(ready.flat(), { fee: finalizeGas(readyToBroadcast), memo: '' })
+    console.dir(lastStep2)
     if (lastStep.gasUsed > lastStep.gasWanted) {
       alert('Ran out of gas. Please refresh page and try again with fewer items.')
     }
