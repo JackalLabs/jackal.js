@@ -182,12 +182,9 @@ export default class FileIo implements IFileIo {
     console.dir(readyToBroadcast)
     // const lastStep = await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' })
     const lastStep = await masterBroadcaster(needingReset, { fee: finalizeGas(needingReset), memo: '' })
-    console.dir(lastStep)
+    checkResults(lastStep)
     const lastStep2 = await masterBroadcaster(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
-    console.dir(lastStep2)
-    if (lastStep.gasUsed > lastStep.gasWanted) {
-      alert('Ran out of gas. Please refresh page and try again with fewer items.')
-    }
+    checkResults(lastStep2)
   }
   async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
@@ -338,7 +335,8 @@ export default class FileIo implements IFileIo {
 
     const readyToDelete: EncodeObject[][] = await Promise.all(targets.map(async (target: IDeleteItem) => {
       const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
-      const { version } = await getFileChainData(hexPath, creator, this.queryAddr1317)
+      const hexOwner = await hashAndHex(`o${hexPath}${await hashAndHex(creator)}`)
+      const { version } = await getFileChainData(hexPath, hexOwner, this.queryAddr1317)
       const possibleCids = await this.storageQueryClient.queryFidCid(version)
       const cidsToRemove = JSON.parse(possibleCids.data.fidCid?.cids || '[]')
       const strays: IStray[] = (await this.storageQueryClient.queryStraysAll()).data.strays || []
@@ -388,5 +386,12 @@ async function getFileChainData (hexAddress: string, owner: string, queryAddr131
   return {
     version: parsedContents.fids[parsedContents.fids.length - 1],
     data: fileData
+  }
+}
+function checkResults (response: any) {
+  console.dir(response)
+  if (response.gasUsed > response.gasWanted) {
+    console.log('Out Of Gas')
+    alert('Ran out of gas. Please refresh page and try again with fewer items.')
   }
 }
