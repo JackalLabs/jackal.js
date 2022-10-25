@@ -3,5 +3,5 @@ import IFileConfigFull from './IFileConfigFull'
 
 export default interface IQueueItemPostUpload {
   handler: TFileOrFFile,
-  data: IFileConfigFull | undefined
+  data: IFileConfigFull | null
 }

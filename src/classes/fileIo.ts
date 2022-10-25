@@ -66,6 +66,20 @@ export default class FileIo implements IFileIo {
     this.currentProvider = toSet
   }
 
+  async uploadFolders (toUpload: IFolderHandler[], owner: string): Promise<void> {
+    const { ip } = this.currentProvider
+    const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
+    const jackalAddr = this.walletRef.getJackalAddress()
+
+    toUpload[0].setIds(await doUpload(url, jackalAddr, await toUpload[0].getForUpload()))
+    const { cfg, file } = await prepExistingUpload(toUpload[1], owner, this.walletRef)
+    toUpload[1].setIds(await doUpload(url, jackalAddr, file))
+
+    await this.afterUpload([
+      { handler: toUpload[0], data: null },
+      { handler: toUpload[1], data: cfg }
+    ])
+  }
   async uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: { [name: string]: IFileMeta }): Promise<void> {
     if (!toUpload.length) {
       throw new Error('Empty File array submitted for upload')
@@ -73,40 +87,16 @@ export default class FileIo implements IFileIo {
       const { ip } = this.currentProvider
       const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
       const ids: IQueueItemPostUpload[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
-        const fileName = item.getWhoAmI()
-        let file
-        let configData: IFileConfigFull | undefined
-        if (existingChildren[fileName] || item.isFolder) {
-          console.log('existing record')
-          console.log(item.getWhoAmI())
+        const itemName = item.getWhoAmI()
+        const jackalAddr = this.walletRef.getJackalAddress()
+        const { cfg, file } = (!existingChildren[itemName] && !item.isFolder)
+          ? { cfg: null, file: await item.getForUpload()}
+          : await prepExistingUpload(item, owner, this.walletRef)
 
-          // todo - match this to download version
-          const hexAddress = await hexFullPath(await item.getMerklePath(), fileName)
-          const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
-          const fileChainResult = await getFileChainData(hexAddress, hexedOwner, this.queryAddr1317)
-          console.dir(fileChainResult)
-          const typedData = fileChainResult.data as IFileConfigRaw
-          configData = {
-            address: typedData.address,
-            contents: JSON.parse(typedData.contents),
-            owner: typedData.owner,
-            editAccess: JSON.parse(typedData.editAccess),
-            viewingAccess: JSON.parse(typedData.viewingAccess),
-            trackingNumber: typedData.trackingNumber
-          }
-          const editorKeys = configData.editAccess[
-            await hashAndHex(`e${configData.trackingNumber}${this.walletRef.getJackalAddress()}`)
-          ]
-          const recoveredKey = await importJackalKey(new Uint8Array(this.walletRef.asymmetricDecrypt(editorKeys.key)))
-          const recoveredIv = new Uint8Array(this.walletRef.asymmetricDecrypt(editorKeys.iv))
-          file = await item.getForUpload(recoveredKey, recoveredIv)
-        } else {
-          file = await item.getForUpload()
-        }
-        item.setIds(await doUpload(url, this.walletRef.getJackalAddress(), file))
-        return { handler: item, data: configData }
-        console.log(item.getWhoAmI())
+        item.setIds(await doUpload(url, jackalAddr, file))
+        console.log(itemName)
         console.dir(item.getIds())
+        return { handler: item, data: cfg }
       }))
       await this.afterUpload(ids)
     }
@@ -360,6 +350,31 @@ export default class FileIo implements IFileIo {
 }
 
 /** Helpers */
+async function prepExistingUpload (data: TFileOrFFile, ownerAddr: string, walletRef: IWalletHandler): Promise<{ file: File, cfg: IFileConfigFull }> {
+  const hexedOwner = await hashAndHex(`o${await data.getFullMerkle()}${await hashAndHex(ownerAddr)}`)
+  const fileChainResult = await getFileChainData(await data.getFullMerkle(), hexedOwner, walletRef.queryAddr1317)
+  const typedData = fileChainResult.data as IFileConfigRaw
+
+  const configData: IFileConfigFull = {
+    address: typedData.address,
+    contents: JSON.parse(typedData.contents),
+    owner: typedData.owner,
+    editAccess: JSON.parse(typedData.editAccess),
+    viewingAccess: JSON.parse(typedData.viewingAccess),
+    trackingNumber: typedData.trackingNumber
+  }
+
+  const editorKeys = configData.editAccess[
+    await hashAndHex(`e${configData.trackingNumber}${walletRef.getJackalAddress()}`)
+    ]
+  const recoveredKey = await importJackalKey(new Uint8Array(walletRef.asymmetricDecrypt(editorKeys.key)))
+  const recoveredIv = new Uint8Array(walletRef.asymmetricDecrypt(editorKeys.iv))
+
+  return {
+    cfg: configData,
+    file: await data.getForUpload(recoveredKey, recoveredIv)
+  }
+}
 async function doUpload (url: string, sender: string, file: File): Promise<IProviderModifiedResponse> {
   const fileFormData = new NodeFormData()
   fileFormData.set('file', file)

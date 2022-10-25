@@ -9,6 +9,7 @@ export default interface IFileIo {
   shuffle (): Promise<void>
   forceProvider (toSet: IMiner): void
 
+  uploadFolders (toUpload: IFolderHandler[], owner: string): Promise<void>
   uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: { [name: string]: IFileMeta }): Promise<void>
   downloadFile (fileAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler>
   deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void>
