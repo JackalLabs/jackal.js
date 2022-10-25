@@ -19,7 +19,8 @@ import {
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
-  IQueueItemPostUpload
+  IQueueItemPostUpload,
+  IStray
 } from '../interfaces'
 import { randomUUID } from 'make-random'
 import IDeleteItem from '../interfaces/IDeleteItem'
@@ -339,8 +340,11 @@ export default class FileIo implements IFileIo {
       const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
       const { version } = await getFileChainData(hexPath, creator, this.queryAddr1317)
       const possibleCids = await this.storageQueryClient.queryFidCid(version)
-      const cidToRemove = JSON.parse(possibleCids.data.fidCid?.cids || '[]')
-      const cancelContractsArr = await Promise.all(cidToRemove.map(async (cid: string) => {
+      const cidsToRemove = JSON.parse(possibleCids.data.fidCid?.cids || '[]')
+      const strays: IStray[] = (await this.storageQueryClient.queryStraysAll()).data.strays || []
+      const strayCids = strays.map((stray: IStray) => stray.cid)
+      const finalCids = cidsToRemove.filter((cid: string) => !strayCids.includes(cid))
+      const cancelContractsArr = await Promise.all(finalCids.map(async (cid: string) => {
         return msgCancelContract({ creator, cid })
       }))
       const msgDelFile = await msgDeleteFile({

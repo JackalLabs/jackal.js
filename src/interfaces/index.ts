@@ -21,6 +21,7 @@ import IProviderModifiedResponse from './IProviderModifiedResponse'
 import IProviderResponse from './IProviderResponse'
 import IQueueItemPostUpload from './IQueueItemPostUpload'
 import IStakingValidator from './IStakingValidator'
+import IStray from './IStray'
 import IWalletConfig from './IWalletConfig'
 
 export {
@@ -47,5 +48,6 @@ export {
   IProviderResponse,
   IQueueItemPostUpload,
   IStakingValidator,
+  IStray,
   IWalletConfig
 }
