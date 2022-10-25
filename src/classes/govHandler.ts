@@ -75,4 +75,17 @@ export default class GovHandler implements IGovHandler {
     })
     console.dir(await masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo: '' }))
   }
+  async delegateTokens (delegator_address: string, validator_address: string, amount: number): Promise<void> {
+    const { masterBroadcaster } = await makeMasterBroadcaster(this.walletRef.getSigner(), { addr: this.txAddr26657 })
+    const { msgDelegate } = await this.stakingTxClient
+    const msgs = msgDelegate({
+        delegator_address: this.walletRef.getJackalAddress(),
+        validator_address,
+        amount: {
+          denom: 'ujkl',
+          amount: amount.toString()
+        }
+      })
+    console.dir(await masterBroadcaster([msgs], { fee: finalizeGas([msgs]), memo: '' }))
+  }
 }
