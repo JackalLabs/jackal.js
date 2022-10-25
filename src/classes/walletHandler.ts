@@ -86,15 +86,13 @@ export default class WalletHandler implements IWalletHandler {
   static async getAbitraryMerkle (path: string, item: string): Promise<string> {
     return await hexFullPath(await merkleMeBro(path), item)
   }
-
-  async initAccount (): Promise<void> {
-    const { msgInitAll, signAndBroadcast } = await filetreeTxClient(this.signer, { addr: this.txAddr26657 })
+  static async initAccount (wallet: IWalletHandler, filetreeTxClient: any): Promise<EncodeObject> {
+    const { msgInitAll } = await filetreeTxClient
     const initCall = msgInitAll({
-      creator: this.jackalAccount.address,
-      pubkey: this.keyPair.publicKey.toHex()
+      creator: wallet.getJackalAddress(),
+      pubkey: wallet.getPubkey()
     })
-    const lastStep = await signAndBroadcast([initCall], { fee: {amount: [], gas: '400000'}, memo: '' })
-    console.dir(lastStep)
+    return initCall
   }
   checkIfInit (): boolean {
     return this.initComplete

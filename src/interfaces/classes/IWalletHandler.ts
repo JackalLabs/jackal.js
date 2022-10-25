@@ -6,7 +6,6 @@ export default interface IWalletHandler {
   queryAddr1317: string
   jackalAccount: AccountData
 
-  initAccount (): Promise<void>
   checkIfInit (): boolean
 
   getAccounts (): Promise<readonly AccountData[]>

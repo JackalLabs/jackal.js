@@ -25,6 +25,7 @@ import {
 import { randomUUID } from 'make-random'
 import IDeleteItem from '../interfaces/IDeleteItem'
 import { checkResults } from '../utils/misc'
+import WalletHandler from './walletHandler'
 
 export default class FileIo implements IFileIo {
   private walletRef: IWalletHandler
@@ -173,11 +174,11 @@ export default class FileIo implements IFileIo {
     const readyToBroadcast = [...needingReset, ...ready.flat()]
     // const readyToBroadcast = [...ready.flat()]
     console.dir(readyToBroadcast)
-    // const lastStep = await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' })
-    const lastStep = await masterBroadcaster(needingReset, { fee: finalizeGas(needingReset), memo: '' })
-    checkResults(lastStep)
-    const lastStep2 = await masterBroadcaster(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
-    checkResults(lastStep2)
+    checkResults(await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' }))
+    // const lastStep = await masterBroadcaster(needingReset, { fee: finalizeGas(needingReset), memo: '' })
+    // checkResults(lastStep)
+    // const lastStep2 = await masterBroadcaster(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
+    // checkResults(lastStep2)
   }
   async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
@@ -252,6 +253,8 @@ export default class FileIo implements IFileIo {
     const pubKey = this.walletRef.getPubkey()
     const account = await hashAndHex(creator)
 
+    const initMsg = await WalletHandler.initAccount(this.walletRef, this.fileTxClient)
+
     const rootTrackingNumber = await randomUUID()
     const rootPermissions: IEditorsViewers = {}
     rootPermissions[await hashAndHex(`e${rootTrackingNumber}${creator}`)] = {
@@ -318,7 +321,7 @@ export default class FileIo implements IFileIo {
       return [ msgPost, msgSign ]
     }))
     console.dir(msgs.flat())
-    const readyToBroadcast = [msgRoot, ...msgs.flat()]
+    const readyToBroadcast = [initMsg, msgRoot, ...msgs.flat()]
     console.dir(await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' }))
   }
 
