@@ -4,10 +4,10 @@ import IGasRate from '../interfaces/IGasRate'
 
 const hashMap: IGasHashMap = {
   // filetree
-  '/jackaldao.canine.filetree.MsgPostFile': 45,
+  '/jackaldao.canine.filetree.MsgPostFile': 75,
   '/jackaldao.canine.filetree.MsgDeleteFile': 10,
   '/jackaldao.canine.filetree.MsgInitAll': 25,
-  '/jackaldao.canine.filetree.MsgMakeRoot': 30,
+  '/jackaldao.canine.filetree.MsgMakeRoot': 60,
   // storage
   '/jackaldao.canine.storage.MsgPostContract': 25,
   '/jackaldao.canine.storage.MsgSignContract': 65,
@@ -27,7 +27,7 @@ export function finalizeGas (msgArray: EncodeObject[]): IGasRate {
   const totalGas = estimateGas(msgArray)
   return {
     amount: [],
-    gas: '2000000'
-    // gas: totalGas.toString()
+    // gas: '2000000'
+    gas: totalGas.toString()
   }
 }
