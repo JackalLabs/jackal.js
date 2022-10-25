@@ -179,9 +179,11 @@ export default class FileIo implements IFileIo {
     ready.unshift(ready.pop() as EncodeObject[])
     const readyToBroadcast = [...needingReset, ...ready.flat()]
     // const readyToBroadcast = [...ready.flat()]
-    const lastStep = await masterBroadcaster(needingReset, { fee: finalizeGas(readyToBroadcast), memo: '' })
+    console.dir(readyToBroadcast)
+    // const lastStep = await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' })
+    const lastStep = await masterBroadcaster(needingReset, { fee: finalizeGas(needingReset), memo: '' })
     console.dir(lastStep)
-    const lastStep2 = await masterBroadcaster(ready.flat(), { fee: finalizeGas(readyToBroadcast), memo: '' })
+    const lastStep2 = await masterBroadcaster(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
     console.dir(lastStep2)
     if (lastStep.gasUsed > lastStep.gasWanted) {
       alert('Ran out of gas. Please refresh page and try again with fewer items.')
@@ -325,11 +327,9 @@ export default class FileIo implements IFileIo {
       const msgSign: EncodeObject = await msgSignContract({ creator, cid })
       return [ msgPost, msgSign ]
     }))
-    // console.dir(msgs)
     console.dir(msgs.flat())
-    console.dir(await masterBroadcaster([msgRoot, ...msgs.flat()], { fee: finalizeGas([]), memo: '' }))
-    // console.dir(await masterBroadcaster([msgs.flat()[0]], { fee: finalizeGas([]), memo: '' }))
-
+    const readyToBroadcast = [msgRoot, ...msgs.flat()]
+    console.dir(await masterBroadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' }))
   }
 
   private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
