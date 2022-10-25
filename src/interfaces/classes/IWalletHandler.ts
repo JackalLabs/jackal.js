@@ -1,5 +1,5 @@
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
-import { ICoin } from '../'
+import { ICoin, IPayBlock, IPayData, IStorageClientUsage } from '../'
 
 export default interface IWalletHandler {
   txAddr26657: string
@@ -19,5 +19,11 @@ export default interface IWalletHandler {
   getPubkey (): string
   asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string
   asymmetricDecrypt (toDecrypt: string): ArrayBuffer
+
+  // billing
+  buyStorage (forAddress: string, duration: string, bytes: string): Promise<void>
+  getClientUsage (address: string): Promise<IStorageClientUsage | null>
+  getGetPayData (address: string): Promise<IPayData | null>
+  getPayBlocks (blockid: string): Promise<IPayBlock | null>
 
 }

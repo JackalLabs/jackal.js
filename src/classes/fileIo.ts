@@ -24,6 +24,7 @@ import {
 } from '../interfaces'
 import { randomUUID } from 'make-random'
 import IDeleteItem from '../interfaces/IDeleteItem'
+import { checkResults } from '../utils/misc'
 
 export default class FileIo implements IFileIo {
   private walletRef: IWalletHandler
@@ -78,6 +79,8 @@ export default class FileIo implements IFileIo {
         if (existingChildren[fileName] || item.isFolder) {
           console.log('existing record')
           console.log(item.getWhoAmI())
+
+          // todo - match this to download version
           const hexAddress = await hexFullPath(await item.getMerklePath(), fileName)
           const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
           const fileChainResult = await getFileChainData(hexAddress, hexedOwner, this.queryAddr1317)
@@ -386,12 +389,5 @@ async function getFileChainData (hexAddress: string, owner: string, queryAddr131
   return {
     version: parsedContents.fids[parsedContents.fids.length - 1],
     data: fileData
-  }
-}
-function checkResults (response: any) {
-  console.dir(response)
-  if (response.gasUsed > response.gasWanted) {
-    console.log('Out Of Gas')
-    alert('Ran out of gas. Please refresh page and try again with fewer items.')
   }
 }

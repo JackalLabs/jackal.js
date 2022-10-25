@@ -17,10 +17,13 @@ import IGasRate from './IGasRate'
 import IMiner from './IMiner'
 import IMsgFinalPostFileBundle from './IMsgFinalPostFileBundle'
 import IMsgPartialPostFileBundle from './IMsgPartialPostFileBundle'
+import IPayBlock from './IPayBlock'
+import IPayData from './IPayData'
 import IProviderModifiedResponse from './IProviderModifiedResponse'
 import IProviderResponse from './IProviderResponse'
 import IQueueItemPostUpload from './IQueueItemPostUpload'
 import IStakingValidator from './IStakingValidator'
+import IStorageClientUsage from './IStorageClientUsage'
 import IStray from './IStray'
 import IWalletConfig from './IWalletConfig'
 
@@ -44,10 +47,13 @@ export {
   IMiner,
   IMsgFinalPostFileBundle,
   IMsgPartialPostFileBundle,
+  IPayBlock,
+  IPayData,
   IProviderModifiedResponse,
   IProviderResponse,
   IQueueItemPostUpload,
   IStakingValidator,
+  IStorageClientUsage,
   IStray,
   IWalletConfig
 }

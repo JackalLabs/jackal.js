@@ -37,3 +37,10 @@ export function removePadding (chunk: ArrayBuffer): ArrayBuffer {
   console.log(padCount)
   return workingChunk.slice(0, workingChunk.byteLength - padCount).buffer
 }
+export function checkResults (response: any) {
+  console.dir(response)
+  if (response.gasUsed > response.gasWanted) {
+    console.log('Out Of Gas')
+    alert('Ran out of gas. Please refresh page and try again with fewer items.')
+  }
+}
