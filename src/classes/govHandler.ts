@@ -13,6 +13,7 @@ import {
 import { IGovHandler, IWalletHandler } from '../interfaces/classes'
 import {
   IDelegationRewards,
+  IDelegationSummary,
   IStakingValidator
 } from '../interfaces'
 import { finalizeGas } from '../utils/gas'
@@ -55,6 +56,17 @@ export default class GovHandler implements IGovHandler {
   async getTotalRewards (): Promise<IDelegationRewards> {
     return await this.distributionQueryClient.queryDelegationTotalRewards(this.walletRef.getJackalAddress())
   }
+  async getRewards (): Promise<IDelegationRewards> {
+    return await this.distributionQueryClient.queryDelegation(this.walletRef.getJackalAddress())
+  }
+  async getTotalStaked (): Promise<number> {
+    const delegations: IDelegationSummary[] = (await this.stakingQueryClient.queryDelegatorDelegations(this.walletRef.getJackalAddress())).data.delegation_responses
+    return delegations.reduce((acc: number, del: IDelegationSummary) => {
+      acc += Number(del.balance.amount)
+      return acc
+    }, 0)
+  }
+
   async getMyValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
     return (await this.stakingQueryClient.queryDelegatorValidator(this.walletRef.getJackalAddress(), validatorAddress)).validator
   }
@@ -63,6 +75,9 @@ export default class GovHandler implements IGovHandler {
   }
   async getAllValidatorDetails (): Promise<IStakingValidator[]> {
     return (await this.stakingQueryClient.queryValidators()).validator
+  }
+  async delegatedValidators (): Promise<IStakingValidator[]> {
+    return (await this.stakingQueryClient.queryDelegatorValidators(this.walletRef.getJackalAddress())).validators
   }
   async claimDelegatorRewards (validatorAddresses: string[]): Promise<void> {
     const { masterBroadcaster } = await makeMasterBroadcaster(this.walletRef.getSigner(), { addr: this.txAddr26657 })

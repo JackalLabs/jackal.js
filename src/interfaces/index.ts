@@ -1,6 +1,7 @@
 import IChildDirInfo from './IChildDirInfo'
 import ICoin from './ICoin'
 import IDelegationRewards from './IDelegationRewards'
+import IDelegationSummary from './IDelegationSummary'
 import IDeleteItem from './IDeleteItem'
 import IEditorsViewers from './IEditorsViewers'
 import IFileBuffer from './IFileBuffer'
@@ -31,6 +32,7 @@ export {
   IChildDirInfo,
   ICoin,
   IDelegationRewards,
+  IDelegationSummary,
   IDeleteItem,
   IEditorsViewers,
   IFileBuffer,

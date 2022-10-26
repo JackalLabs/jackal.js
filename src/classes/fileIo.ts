@@ -247,7 +247,7 @@ export default class FileIo implements IFileIo {
     const { msgSignContract } = await this.storageTxClient
     const { ip } = this.currentProvider
     const url = `${ip.replace(/\/+$/, '')}/u`
-    const toGenerate = startingDirs || ['Config', 'Home', 'Shared', 'WWW']
+    const toGenerate = startingDirs || ['Config', 'Home', 'WWW']
 
     const creator = this.walletRef.getJackalAddress()
     const pubKey = this.walletRef.getPubkey()

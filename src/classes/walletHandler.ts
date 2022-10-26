@@ -19,6 +19,7 @@ import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '../utils/hash
 import { ICoin, IPayBlock, IPayData, IStorageClientUsage, IWalletConfig } from '../interfaces'
 import { finalizeGas } from '../utils/gas'
 import { checkResults } from '../utils/misc'
+import { DeliverTxResponse } from '@cosmjs/stargate'
 
 declare global {
   interface Window extends KeplrWindow {}
@@ -140,7 +141,7 @@ export default class WalletHandler implements IWalletHandler {
    * queryGetPayData
    * queryPayBlocks
    */
-  async buyStorage (forAddress: string, duration: string, bytes: string): Promise<void> {
+  async buyStorage (forAddress: string, duration: string, bytes: string): Promise<DeliverTxResponse> {
     const { masterBroadcaster } = await makeMasterBroadcaster(this.signer, { addr: this.txAddr26657 })
     const { msgBuyStorage } = await this.storageTxClient
 
@@ -151,7 +152,8 @@ export default class WalletHandler implements IWalletHandler {
       bytes,
       paymentDenom: 'ujkl'
     })
-    checkResults(await masterBroadcaster([msg], { fee: finalizeGas([msg]), memo: '' }))
+    // checkResults(await masterBroadcaster([msg], { fee: finalizeGas([msg]), memo: '' }))
+    return await masterBroadcaster([msg], { fee: finalizeGas([msg]), memo: '' })
   }
   async getClientUsage (address: string): Promise<IStorageClientUsage | null> {
     return (await this.storageQueryClient.queryClientUsage(address)).data.clientUsage as IStorageClientUsage || null

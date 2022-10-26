@@ -1,5 +1,6 @@
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
 import { ICoin, IPayBlock, IPayData, IStorageClientUsage } from '../'
+import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default interface IWalletHandler {
   txAddr26657: string
@@ -20,7 +21,7 @@ export default interface IWalletHandler {
   asymmetricDecrypt (toDecrypt: string): ArrayBuffer
 
   // billing
-  buyStorage (forAddress: string, duration: string, bytes: string): Promise<void>
+  buyStorage (forAddress: string, duration: string, bytes: string): Promise<DeliverTxResponse>
   getClientUsage (address: string): Promise<IStorageClientUsage | null>
   getGetPayData (address: string): Promise<IPayData | null>
   getPayBlocks (blockid: string): Promise<IPayBlock | null>
