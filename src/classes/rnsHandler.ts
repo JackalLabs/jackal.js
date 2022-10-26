@@ -28,5 +28,9 @@ export default class RnsHandler implements IRnsHandler {
   async findExistingNames (): Promise<RnsNames[]> {
     return (await this.rnsQueryClient.queryListOwnedNames(this.walletRef.getJackalAddress())).data.names || []
   }
+  async findMatchingAddress (rns: string): Promise<string> {
+    const trueRns = (rns.endsWith('.jkl')) ? rns : `${rns}.jkl`
+    return (await this.rnsQueryClient.queryNames(trueRns)).data.names?.value || ''
+  }
 }
 

@@ -57,6 +57,9 @@ export default class FileUploadHandler implements IFileUploadHandler {
   getWhoAmI (): string {
     return this.file.name
   }
+  getWhereAmI (): string {
+    return this.parentPath
+  }
   getForUpload (key?: CryptoKey, iv?: Uint8Array): Promise<File> {
     this.key = key || this.key
     this.iv = iv || this.iv

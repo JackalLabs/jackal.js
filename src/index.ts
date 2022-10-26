@@ -17,7 +17,7 @@ import IRnsHandler from './interfaces/classes/IRnsHandler'
 import IWalletHandler from './interfaces/classes/IWalletHandler'
 
 /** Misc Interfaces */
-import { IFileMeta, IWalletConfig } from './interfaces'
+import { IFileMeta, IPayBlock, IPayData, IStorageClientUsage, IWalletConfig } from './interfaces'
 
 /** Types */
 import { TFileOrFFile } from './types/TFoldersAndFiles'
@@ -43,6 +43,9 @@ export {
   IWalletHandler,
   // Misc Interfaces
   IFileMeta,
+  IPayBlock,
+  IPayData,
+  IStorageClientUsage,
   IWalletConfig,
   // Types
   TFileOrFFile,
