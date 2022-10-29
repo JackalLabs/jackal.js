@@ -20,6 +20,7 @@ import IMsgFinalPostFileBundle from './IMsgFinalPostFileBundle'
 import IMsgPartialPostFileBundle from './IMsgPartialPostFileBundle'
 import IPayBlock from './IPayBlock'
 import IPayData from './IPayData'
+import IProtoReqs from './IProtoReqs'
 import IProviderModifiedResponse from './IProviderModifiedResponse'
 import IProviderResponse from './IProviderResponse'
 import IQueueItemPostUpload from './IQueueItemPostUpload'
@@ -51,6 +52,7 @@ export {
   IMsgPartialPostFileBundle,
   IPayBlock,
   IPayData,
+  IProtoReqs,
   IProviderModifiedResponse,
   IProviderResponse,
   IQueueItemPostUpload,
