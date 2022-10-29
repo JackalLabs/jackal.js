@@ -20,6 +20,7 @@ import { ICoin, IPayBlock, IPayData, IStorageClientUsage, IWalletConfig } from '
 import { finalizeGas } from '../utils/gas'
 import { checkResults } from '../utils/misc'
 import { DeliverTxResponse } from '@cosmjs/stargate'
+import ProtoHandler from './protoHandler'
 
 declare global {
   interface Window extends KeplrWindow {}
@@ -38,8 +39,9 @@ export default class WalletHandler implements IWalletHandler {
   txAddr26657: string
   queryAddr1317: string
   jackalAccount: AccountData
+  pH: any
 
-  private constructor (signer: OfflineSigner, tAddr: string, qAddr: string, bQueryClient: bankQueryApi<any>, rQueryClient: rnsQueryApi<any>, storageQ: storageQueryApi<any>, storageTx: any, initComplete: boolean, keyPair: PrivateKey, acct: AccountData) {
+  private constructor (signer: OfflineSigner, tAddr: string, qAddr: string, bQueryClient: bankQueryApi<any>, rQueryClient: rnsQueryApi<any>, storageQ: storageQueryApi<any>, storageTx: any, initComplete: boolean, keyPair: PrivateKey, acct: AccountData, pH: any) {
     this.signer = signer
     this.keyPair = keyPair
     this.bankQueryClient = bQueryClient
@@ -50,6 +52,7 @@ export default class WalletHandler implements IWalletHandler {
     this.storageQueryClient = storageQ
     this.storageTxClient = storageTx
     this.jackalAccount = acct
+    this.pH = pH
   }
 
   static async trackWallet (config: IWalletConfig): Promise<IWalletHandler> {
@@ -67,12 +70,13 @@ export default class WalletHandler implements IWalletHandler {
       const signer = window.keplr.getOfflineSigner(signerChain || jackalMainnetChainId)
       const acct = (await signer.getAccounts())[0]
 
-      const bank = await bankQueryClient({addr: qAddr})
-      const rns = await rnsQueryClient({addr: qAddr})
+      const pH = await ProtoHandler.trackProto({ signer, queryAddr1317:qAddr, txAddr26657: tAddr })
 
-      const storageQ = await storageQueryClient({addr: qAddr})
-      const storageTx = await storageTxClient(signer, { addr: tAddr })
+      const bank = pH.bankQuery
+      const rns = pH.rnsQuery
 
+      const storageQ = pH.storageQuery
+      const storageTx = pH.storageTx
 
       const initComplete = (await rns.queryInit(acct.address)).data.init
 
@@ -81,7 +85,7 @@ export default class WalletHandler implements IWalletHandler {
       console.dir(secretAsHex)
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
-      return new WalletHandler(signer, tAddr, qAddr, bank, rns, storageQ, storageTx, !!initComplete, keyPair, acct)
+      return new WalletHandler(signer, tAddr, qAddr, bank, rns, storageQ, storageTx, !!initComplete, keyPair, acct, pH)
     }
   }
   static async getAbitraryMerkle (path: string, item: string): Promise<string> {
