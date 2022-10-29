@@ -1,17 +1,6 @@
 import { AccountData, EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
 import { encrypt, decrypt, PrivateKey } from 'eciesjs'
 import { Window as KeplrWindow } from '@keplr-wallet/types'
-import {
-  makeMasterBroadcaster,
-  bankQueryApi,
-  bankQueryClient,
-  filetreeTxClient,
-  rnsQueryApi,
-  rnsQueryClient,
-  storageQueryApi,
-  storageQueryClient,
-  storageTxClient
-} from 'jackal.js-protos'
 
 import { defaultQueryAddr1317, defaultTxAddr26657, jackalMainnetChainId } from '../utils/globals'
 import { IWalletHandler } from '../interfaces/classes'
@@ -31,26 +20,14 @@ const defaultChains = [jackalMainnetChainId, 'osmo-1', 'cosmoshub-4']
 export default class WalletHandler implements IWalletHandler {
   private signer: OfflineSigner
   private keyPair: PrivateKey
-  private bankQueryClient: bankQueryApi<any>
-  private rnsQueryClient: rnsQueryApi<any>
-  private storageQueryClient: storageQueryApi<any>
-  private storageTxClient: any
   private initComplete: boolean
-  txAddr26657: string
-  queryAddr1317: string
   jackalAccount: AccountData
   pH: any
 
-  private constructor (signer: OfflineSigner, tAddr: string, qAddr: string, bQueryClient: bankQueryApi<any>, rQueryClient: rnsQueryApi<any>, storageQ: storageQueryApi<any>, storageTx: any, initComplete: boolean, keyPair: PrivateKey, acct: AccountData, pH: any) {
+  private constructor (signer: OfflineSigner, keyPair: PrivateKey, initComplete: boolean, acct: AccountData, pH: any) {
     this.signer = signer
     this.keyPair = keyPair
-    this.bankQueryClient = bQueryClient
-    this.rnsQueryClient = rQueryClient
     this.initComplete = initComplete
-    this.txAddr26657 = tAddr
-    this.queryAddr1317 = qAddr
-    this.storageQueryClient = storageQ
-    this.storageTxClient = storageTx
     this.jackalAccount = acct
     this.pH = pH
   }
@@ -72,20 +49,14 @@ export default class WalletHandler implements IWalletHandler {
 
       const pH = await ProtoHandler.trackProto({ signer, queryAddr1317:qAddr, txAddr26657: tAddr })
 
-      const bank = pH.bankQuery
-      const rns = pH.rnsQuery
-
-      const storageQ = pH.storageQuery
-      const storageTx = pH.storageTx
-
-      const initComplete = (await rns.queryInit(acct.address)).data.init
+      const initComplete = (await pH.rnsQuery.queryInit(acct.address)).data.init
 
       const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
       const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
       console.dir(secretAsHex)
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
-      return new WalletHandler(signer, tAddr, qAddr, bank, rns, storageQ, storageTx, !!initComplete, keyPair, acct, pH)
+      return new WalletHandler(signer, keyPair, !!initComplete, acct, pH)
     }
   }
   static async getAbitraryMerkle (path: string, item: string): Promise<string> {
@@ -116,16 +87,16 @@ export default class WalletHandler implements IWalletHandler {
     return await hashAndHex(this.jackalAccount.address)
   }
   async getAllBalances (): Promise<ICoin[]> {
-    const res: any = await this.bankQueryClient.queryAllBalances(this.jackalAccount.address)
+    const res: any = await this.pH.bankQuery.queryAllBalances(this.jackalAccount.address)
     return res.balances as ICoin[]
   }
   async getJackalBalance (): Promise<ICoin> {
-    const res: any = await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujkl' })
+    const res: any = await this.pH.bankQuery.queryBalance(this.jackalAccount.address, { denom: 'ujkl' })
     console.dir(res)
     return res.data.balance as ICoin
   }
   async getJewelBalance (): Promise<ICoin> {
-    const res: any = await this.bankQueryClient.queryBalance(this.jackalAccount.address, { denom: 'ujwl' })
+    const res: any = await this.pH.bankQuery.queryBalance(this.jackalAccount.address, { denom: 'ujwl' })
     return res.balance as ICoin
   }
   getPubkey (): string {
@@ -146,8 +117,7 @@ export default class WalletHandler implements IWalletHandler {
    * queryPayBlocks
    */
   async buyStorage (forAddress: string, duration: string, bytes: string): Promise<DeliverTxResponse> {
-    const { masterBroadcaster } = await makeMasterBroadcaster(this.signer, { addr: this.txAddr26657 })
-    const { msgBuyStorage } = await this.storageTxClient
+    const { msgBuyStorage } = await this.pH.storageTx
 
     const msg: EncodeObject = await msgBuyStorage({
       creator: this.jackalAccount.address,
@@ -156,19 +126,19 @@ export default class WalletHandler implements IWalletHandler {
       bytes,
       paymentDenom: 'ujkl'
     })
-    // checkResults(await masterBroadcaster([msg], { fee: finalizeGas([msg]), memo: '' }))
-    return await masterBroadcaster([msg], { fee: finalizeGas([msg]), memo: '' })
+    // checkResults(await this.pH.broadcaster([msg], { fee: finalizeGas([msg]), memo: '' }))
+    return await this.pH.broadcaster([msg], { fee: finalizeGas([msg]), memo: '' })
   }
   async getClientUsage (address: string): Promise<IStorageClientUsage | null> {
-    return (await this.storageQueryClient.queryClientUsage(address)).data.clientUsage as IStorageClientUsage || null
+    return (await this.pH.storageQuery.queryClientUsage(address)).data.clientUsage as IStorageClientUsage || null
 
   }
   async getGetPayData (address: string): Promise<IPayData | null> {
-    return (await this.storageQueryClient.queryGetPayData(address)).data as IPayData || null
+    return (await this.pH.storageQuery.queryGetPayData(address)).data as IPayData || null
 
   }
   async getPayBlocks (blockid: string): Promise<IPayBlock | null> {
-    return (await this.storageQueryClient.queryPayBlocks(blockid)).data.payBlocks as IPayBlock || null
+    return (await this.pH.storageQuery.queryPayBlocks(blockid)).data.payBlocks as IPayBlock || null
   }
 }
 

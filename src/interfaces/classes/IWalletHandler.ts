@@ -3,9 +3,8 @@ import { ICoin, IPayBlock, IPayData, IStorageClientUsage } from '../'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default interface IWalletHandler {
-  txAddr26657: string
-  queryAddr1317: string
   jackalAccount: AccountData
+  pH: any
 
   checkIfInit (): boolean
 
