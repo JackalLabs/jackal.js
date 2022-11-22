@@ -17,7 +17,7 @@
     "stripInternal": true,
     "skipLibCheck": true,
     "paths": {
-      "./*": [
+      "@/*": [
         "src/*"
       ]
     }
