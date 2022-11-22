@@ -18,6 +18,7 @@ import IGasRate from '@/interfaces/IGasRate'
 import IMiner from '@/interfaces/IMiner'
 import IMsgFinalPostFileBundle from '@/interfaces/IMsgFinalPostFileBundle'
 import IMsgPartialPostFileBundle from '@/interfaces/IMsgPartialPostFileBundle'
+import INames from '@/interfaces/INames'
 import IPayBlock from '@/interfaces/IPayBlock'
 import IPayData from '@/interfaces/IPayData'
 import IProtoReqs from '@/interfaces/IProtoReqs'
@@ -51,6 +52,7 @@ export {
   IMiner,
   IMsgFinalPostFileBundle,
   IMsgPartialPostFileBundle,
+  INames,
   IPayBlock,
   IPayData,
   IProtoReqs,

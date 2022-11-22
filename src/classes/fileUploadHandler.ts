@@ -1,7 +1,7 @@
 import { randomUUID } from 'make-random'
 
-import { IFileBuffer } from '../interfaces'
-import { IFileUploadHandler } from '../interfaces/classes'
+import { IFileBuffer } from '@/interfaces'
+import { IFileUploadHandler } from '@/interfaces/classes'
 import {
   exportJackalKey,
   genIv,
@@ -9,10 +9,10 @@ import {
   aesCrypt,
   encryptPrep,
   assembleEncryptedFile
-} from '../utils/crypt'
-import { hexFullPath, merkleMeBro } from '../utils/hash'
-import { IFileMeta } from '../interfaces'
-import { addPadding } from '../utils/misc'
+} from '@/utils/crypt'
+import { hexFullPath, merkleMeBro } from '@/utils/hash'
+import { IFileMeta } from '@/interfaces'
+import { addPadding } from '@/utils/misc'
 
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File

@@ -1,5 +1,5 @@
 import { IRnsHandler, IWalletHandler } from '@/interfaces/classes'
-import INames from '@/interfaces/INames'
+import { INames } from '@/interfaces'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
