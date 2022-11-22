@@ -6,6 +6,7 @@ import IFolderHandler from './IFolderHandler'
 import IGovHandler from './IGovHandler'
 import IProtoHandler from './IProtoHandler'
 import IRnsHandler from './IRnsHandler'
+import IStorageHandler from './IStorageHandler'
 import IWalletHandler from './IWalletHandler'
 
 export {
@@ -17,5 +18,6 @@ export {
   IGovHandler,
   IProtoHandler,
   IRnsHandler,
+  IStorageHandler,
   IWalletHandler
 }
