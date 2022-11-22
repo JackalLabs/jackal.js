@@ -1,9 +1,9 @@
-import IMiner from '../IMiner'
+import IMiner from '@/interfaces/IMiner'
 import IFileDownloadHandler from './IFileDownloadHandler'
 import IFolderHandler from './IFolderHandler'
-import IFileMeta from '../IFileMeta'
-import { TFileOrFFile } from '../../types/TFoldersAndFiles'
-import IDeleteItem from '../IDeleteItem'
+import IFileMeta from '@/interfaces/IFileMeta'
+import { TFileOrFFile } from '@/types/TFoldersAndFiles'
+import IDeleteItem from '@/interfaces/IDeleteItem'
 
 export default interface IFileIo {
   shuffle (): Promise<void>

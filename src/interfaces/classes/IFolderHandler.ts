@@ -1,7 +1,7 @@
-import IFolderFileFrame from '../IFolderFileFrame'
-import IFileMeta from '../IFileMeta'
-import IFileHandlerCore from './IFileHandlerCore'
-import IChildDirInfo from '../IChildDirInfo'
+import IFolderFileFrame from '@/interfaces/IFolderFileFrame'
+import IFileMeta from '@/interfaces/IFileMeta'
+import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
+import IChildDirInfo from '@/interfaces/IChildDirInfo'
 
 export default interface IFolderHandler extends IFileHandlerCore {
 

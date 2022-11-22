@@ -1,4 +1,4 @@
-import { IDelegationRewards, IStakingValidator } from '../'
+import { IDelegationRewards, IStakingValidator } from '@/interfaces/'
 
 export default interface IGovHandler {
 
