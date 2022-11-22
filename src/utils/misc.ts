@@ -1,6 +1,3 @@
-import { arrayBuffer } from 'stream/consumers'
-import ArrayBufferView = NodeJS.ArrayBufferView
-
 export function orderStrings (sortable: string[]): string[] {
   return sortable.sort((a: string, b: string) => {
     const lowerA = a.toLowerCase()
