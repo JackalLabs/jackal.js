@@ -53,7 +53,7 @@ export default class WalletHandler implements IWalletHandler {
 
       const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
       const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
-      console.dir(secretAsHex)
+      // console.dir(secretAsHex)
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
       return new WalletHandler(signer, keyPair, !!initComplete, acct, pH)
