@@ -1,4 +1,4 @@
-import IValidatorDescription from './IValidatorDescription'
+import IValidatorDescription from '@/interfaces/IValidatorDescription'
 
 export default interface IStakingValidator {
   operator_address: string;
