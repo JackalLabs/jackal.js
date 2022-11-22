@@ -1,13 +1,13 @@
-import IFileDownloadHandler from './IFileDownloadHandler'
-import IFileHandlerCore from './IFileHandlerCore'
-import IFileIo from './IFileIo'
-import IFileUploadHandler from './IFileUploadHandler'
-import IFolderHandler from './IFolderHandler'
-import IGovHandler from './IGovHandler'
-import IProtoHandler from './IProtoHandler'
-import IRnsHandler from './IRnsHandler'
-import IStorageHandler from './IStorageHandler'
-import IWalletHandler from './IWalletHandler'
+import IFileDownloadHandler from '@/interfaces/classes/IFileDownloadHandler'
+import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
+import IFileIo from '@/interfaces/classes/IFileIo'
+import IFileUploadHandler from '@/interfaces/classes/IFileUploadHandler'
+import IFolderHandler from '@/interfaces/classes/IFolderHandler'
+import IGovHandler from '@/interfaces/classes/IGovHandler'
+import IProtoHandler from '@/interfaces/classes/IProtoHandler'
+import IRnsHandler from '@/interfaces/classes/IRnsHandler'
+import IStorageHandler from '@/interfaces/classes/IStorageHandler'
+import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 
 export {
   IFileDownloadHandler,
