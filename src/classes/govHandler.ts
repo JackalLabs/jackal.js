@@ -63,7 +63,7 @@ export default class GovHandler implements IGovHandler {
   async getAllValidatorDetails (status: string): Promise<IStakingValidator[]> {
     return (await this.pH.stakingQuery.queryValidators({ status })).validators as IStakingValidator[]
   }
-  async delegatedValidators (): Promise<IStakingValidator[]> {
+  async getDelegatedValidators (): Promise<IStakingValidator[]> {
     return (await this.pH.stakingQuery.queryDelegatorValidators({
       delegatorAddr: this.walletRef.getJackalAddress()
     })).validators as IStakingValidator[]

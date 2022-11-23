@@ -10,7 +10,7 @@ export default interface IGovHandler {
   getMyValidatorDetails (validatorAddress: string): Promise<IStakingValidator>
   getValidatorDetails (validatorAddress: string): Promise<IStakingValidator>
   getAllValidatorDetails (status: string): Promise<IStakingValidator[]>
-  delegatedValidators (): Promise<IStakingValidator[]>
+  getDelegatedValidators (): Promise<IStakingValidator[]>
   claimDelegatorRewards (validatorAddresses: string[]): Promise<void>
   delegateTokens (validatorAddress: string, amount: number): Promise<void>
 
