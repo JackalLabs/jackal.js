@@ -1,9 +1,10 @@
-import { IRnsHandler, IWalletHandler } from '@/interfaces/classes'
+import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
 import { INames } from '@/interfaces'
+import { EncodeObject } from '@cosmjs/proto-signing'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
-  private readonly pH: any
+  private readonly pH: IProtoHandler
 
   private constructor (wallet: IWalletHandler) {
     this.walletRef = wallet
@@ -14,6 +15,9 @@ export default class RnsHandler implements IRnsHandler {
     return new RnsHandler(wallet)
   }
 
+  makeFreeRns (): EncodeObject {
+     return this.pH.rnsTx.msgInit({ creator: this.walletRef.getJackalAddress() })
+  }
   async findExistingNames (): Promise<INames[]> {
     return (await this.pH.rnsQuery.queryListOwnedNames({ address: this.walletRef.getJackalAddress() })).names
   }
