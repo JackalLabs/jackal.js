@@ -15,7 +15,7 @@ export default class RnsHandler implements IRnsHandler {
     return new RnsHandler(wallet)
   }
 
-  makeFreeRns (): EncodeObject {
+  makeFreeRnsMsg (): EncodeObject {
      return this.pH.rnsTx.msgInit({ creator: this.walletRef.getJackalAddress() })
   }
   async findExistingNames (): Promise<INames[]> {
