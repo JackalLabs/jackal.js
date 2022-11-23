@@ -1,4 +1,4 @@
-import { IProtoHandler } from '../interfaces/classes'
+import { IProtoHandler } from '@/interfaces/classes'
 
 import ProtoBuilder, { IAllQuery, IAllTx, TMasterBroadcaster } from 'jackal.js-protos'
 import { OfflineSigner } from '@cosmjs/proto-signing'

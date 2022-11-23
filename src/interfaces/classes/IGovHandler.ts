@@ -1,5 +1,5 @@
 import { IDelegationRewards, IStakingValidator } from '@/interfaces/'
-import ICoin from '../ICoin'
+import ICoin from '@/interfaces/ICoin'
 
 export default interface IGovHandler {
 

@@ -1,6 +1,6 @@
 import IMiner from '@/interfaces/IMiner'
-import IFileDownloadHandler from './IFileDownloadHandler'
-import IFolderHandler from './IFolderHandler'
+import IFileDownloadHandler from '@/interfaces/classes/IFileDownloadHandler'
+import IFolderHandler from '@/interfaces/classes/IFolderHandler'
 import IFileMeta from '@/interfaces/IFileMeta'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IDeleteItem from '@/interfaces/IDeleteItem'
