@@ -1,4 +1,4 @@
-import { IStorageHandler, IWalletHandler } from '@/interfaces/classes'
+import { IProtoHandler, IStorageHandler, IWalletHandler } from '@/interfaces/classes'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { finalizeGas } from '@/utils/gas'
@@ -6,7 +6,7 @@ import { IPayBlock, IPayData, IStorageClientUsage } from '@/interfaces'
 
 export default class StorageHandler implements IStorageHandler {
   private readonly walletRef: IWalletHandler
-  private readonly pH: any
+  private readonly pH: IProtoHandler
 
   private constructor (wallet: IWalletHandler) {
     this.walletRef = wallet
@@ -29,15 +29,14 @@ export default class StorageHandler implements IStorageHandler {
     })
     return await this.pH.broadcaster([msg], { fee: finalizeGas([msg]), memo: '' })
   }
+
   async getClientUsage (address: string): Promise<IStorageClientUsage> {
     const result = await this.pH.storageQuery.queryClientUsage({ address })
     return (result) ? result.clientUsage as IStorageClientUsage : { address: '', usage: '' }
   }
-  async getClientFreeSpace (address: string) {
+  async getClientFreeSpace (address: string): Promise<string> {
     const result = await this.pH.storageQuery.queryGetClientFreeSpace({ address })
-    return (result) ? result.clientUsage as IStorageClientUsage : { bytesfree: '' }
-
-
+    return (result) ? result.bytesfree as string : ''
   }
   async getGetPayData (address: string): Promise<IPayData> {
     const result = await this.pH.storageQuery.queryGetPayData({ address })
@@ -48,4 +47,3 @@ export default class StorageHandler implements IStorageHandler {
     return (result) ? result.payBlocks as IPayBlock : { blockid: '', blocknum: '', blocktype: '', bytes: '' }
   }
 }
-
