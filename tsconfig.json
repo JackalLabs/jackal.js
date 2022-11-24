@@ -17,7 +17,7 @@
     "stripInternal": true,
     "skipLibCheck": true,
     "paths": {
-      "./*": [
+      "@/*": [
         "src/*"
       ]
     }
@@ -27,6 +27,6 @@
     "src/**/*.tsx"
   ],
   "exclude": [
-    "node_modules/*"
+    "node_modules"
   ]
 }

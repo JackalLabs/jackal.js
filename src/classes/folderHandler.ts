@@ -1,6 +1,6 @@
-import { IChildDirInfo, IFileConfigRelevant, IFileMeta, IFolderFileFrame } from '../interfaces'
-import { IFolderHandler } from '../interfaces/classes'
-import { stripper } from '../utils/misc'
+import { IChildDirInfo, IFileConfigRelevant, IFileMeta, IFolderFileFrame } from '@/interfaces'
+import { IFolderHandler } from '@/interfaces/classes'
+import { stripper } from '@/utils/misc'
 import {
   aesCrypt,
   assembleEncryptedFile,
@@ -9,8 +9,8 @@ import {
   exportJackalKey,
   genIv,
   genKey
-} from '../utils/crypt'
-import { hexFullPath, merkleMeBro } from '../utils/hash'
+} from '@/utils/crypt'
+import { hexFullPath, merkleMeBro } from '@/utils/hash'
 
 export default class FolderHandler implements IFolderHandler {
 

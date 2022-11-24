@@ -1,5 +1,5 @@
-import IEditorsViewers from './IEditorsViewers'
-import IFiletreeParsedContents from './IFiletreeParsedContents'
+import IEditorsViewers from '@/interfaces/IEditorsViewers'
+import IFiletreeParsedContents from '@/interfaces/IFiletreeParsedContents'
 
 export default interface IFileConfigFull {
   address: string; // merkle path of entire file

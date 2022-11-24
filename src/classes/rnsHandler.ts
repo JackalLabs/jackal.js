@@ -1,36 +1,42 @@
-import { rnsTxClient, rnsQueryApi, rnsQueryClient } from 'jackal.js-protos'
-import { IRnsHandler, IWalletHandler } from '../interfaces/classes'
-import { RnsNames } from 'jackal.js-protos/dist/protos/jackal-dao/canine/jackaldao.canine.rns/module/rest'
+import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
+import { INames } from '@/interfaces'
+import { EncodeObject } from '@cosmjs/proto-signing'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
-  readonly txAddr26657: string
-  readonly queryAddr1317: string
-  private readonly rnsTxClient: any
-  private rnsQueryClient: rnsQueryApi<any>
+  private readonly pH: IProtoHandler
 
-  private constructor (wallet: IWalletHandler, txAddr: string, queryAddr: string, txClient: any, queryClient: rnsQueryApi<any>) {
+  private constructor (wallet: IWalletHandler) {
     this.walletRef = wallet
-    this.txAddr26657 = txAddr
-    this.queryAddr1317 = queryAddr
-    this.rnsTxClient = txClient
-    this.rnsQueryClient = queryClient
+    this.pH = wallet.getProtoHandler()
   }
 
   static async trackRns (wallet: IWalletHandler): Promise<IRnsHandler> {
-    const txAddr = wallet.txAddr26657
-    const queryAddr = wallet.queryAddr1317
-    const txClient = await rnsTxClient(wallet.getSigner(), { addr: txAddr })
-    const queryClient = await rnsQueryClient({ addr: queryAddr })
-    return new RnsHandler(wallet, txAddr, queryAddr, txClient, queryClient)
+    return new RnsHandler(wallet)
   }
 
-  async findExistingNames (): Promise<RnsNames[]> {
-    return (await this.rnsQueryClient.queryListOwnedNames(this.walletRef.getJackalAddress())).data.names || []
+  makeFreeRnsMsg (): EncodeObject {
+     return this.pH.rnsTx.msgInit({ creator: this.walletRef.getJackalAddress() })
+  }
+  makeBuyMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgBuy({ creator: this.walletRef.getJackalAddress(), name: rns })
+  }
+  makeDelistMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgDelist({ creator: this.walletRef.getJackalAddress(), name: rns })
+  }
+  makeListMsg (rns: string, price: string): EncodeObject {
+    return this.pH.rnsTx.msgList({ creator: this.walletRef.getJackalAddress(), name: rns, price })
+  }
+  makeTransferMsg (rns: string, receiver: string): EncodeObject {
+    return this.pH.rnsTx.msgTransfer({ creator: this.walletRef.getJackalAddress(), name: rns, receiver })
+  }
+
+  async findExistingNames (): Promise<INames[]> {
+    return (await this.pH.rnsQuery.queryListOwnedNames({ address: this.walletRef.getJackalAddress() })).names
   }
   async findMatchingAddress (rns: string): Promise<string> {
-    const trueRns = (rns.endsWith('.jkl')) ? rns : `${rns}.jkl`
-    return (await this.rnsQueryClient.queryNames(trueRns)).data.names?.value || ''
+    const trueRns = (rns.endsWith('.jkl')) ? rns.replace(/.jkl$/, '') : rns
+    return (await this.pH.rnsQuery.queryNames({ index: trueRns })).names?.value || ''
   }
 }
 

@@ -1,4 +1,4 @@
-import IFileDetails from './IFileDetails'
+import IFileDetails from '@/interfaces/IFileDetails'
 
 export default interface IFileBuffer {
   content: ArrayBuffer,

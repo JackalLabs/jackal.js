@@ -1,10 +1,7 @@
-import { IFileConfigRelevant } from '../interfaces'
-import { IFileDownloadHandler } from '../interfaces/classes'
-import {
-  aesCrypt,
-  decryptPrep,
-} from '../utils/crypt'
-import { removePadding } from '../utils/misc'
+import { IFileConfigRelevant } from '@/interfaces'
+import { IFileDownloadHandler } from '@/interfaces/classes'
+import { aesCrypt, decryptPrep } from '@/utils/crypt'
+import { removePadding } from '@/utils/misc'
 
 export default class FileDownloadHandler implements IFileDownloadHandler {
   private readonly file: File
