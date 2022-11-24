@@ -76,11 +76,11 @@ export default class GovHandler implements IGovHandler {
         validatorAddress: address
       })
     })
-    console.dir(await this.pH.broadcaster(msgs, { fee: finalizeGas(msgs), memo: '' }))
+    console.dir(await this.pH.broadcaster(msgs))
   }
   async delegateTokens (validatorAddress: string, amount: number): Promise<void> {
     const { msgDelegate } = await this.pH.stakingTx
-    const msgs = msgDelegate({
+    const msg = msgDelegate({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorAddress,
         amount: {
@@ -88,6 +88,6 @@ export default class GovHandler implements IGovHandler {
           amount: amount.toString()
         }
       })
-    console.dir(await this.pH.broadcaster([msgs], { fee: finalizeGas([msgs]), memo: '' }))
+    console.dir(await this.pH.broadcaster([msg]))
   }
 }

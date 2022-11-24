@@ -1,7 +1,9 @@
 import { IProtoHandler } from '@/interfaces/classes'
 
 import ProtoBuilder, { IAllQuery, IAllTx, TMasterBroadcaster } from 'jackal.js-protos'
-import { OfflineSigner } from '@cosmjs/proto-signing'
+import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
+import { finalizeGas } from '@/utils/gas'
+import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default class ProtoHandler implements IProtoHandler {
   private readonly masterBroadcaster: TMasterBroadcaster
@@ -23,7 +25,10 @@ export default class ProtoHandler implements IProtoHandler {
   }
 
   /** General */
-  get broadcaster () {
+  broadcaster (msgs: EncodeObject[]): Promise<DeliverTxResponse> {
+    return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs) })
+  }
+  get rawBroadcaster () {
     return this.masterBroadcaster
   }
 

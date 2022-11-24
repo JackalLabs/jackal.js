@@ -52,7 +52,7 @@ export default class WalletHandler implements IWalletHandler {
       const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
-      return new WalletHandler(signer, keyPair, !!initComplete, acct, pH)
+      return new WalletHandler(signer, keyPair, initComplete, acct, pH)
     }
   }
   static async getAbitraryMerkle (path: string, item: string): Promise<string> {

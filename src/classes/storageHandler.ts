@@ -27,7 +27,7 @@ export default class StorageHandler implements IStorageHandler {
       bytes,
       paymentDenom: 'ujkl'
     })
-    return await this.pH.broadcaster([msg], { fee: finalizeGas([msg]), memo: '' })
+    return await this.pH.broadcaster([msg])
   }
 
   async getClientUsage (address: string): Promise<IStorageClientUsage> {

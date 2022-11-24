@@ -14,11 +14,14 @@ import {
   ITxStaking,
   TMasterBroadcaster
 } from 'jackal.js-protos'
+import { EncodeObject } from '@cosmjs/proto-signing'
+import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default interface IProtoHandler {
 
   /** General */
-  broadcaster: TMasterBroadcaster
+  broadcaster (msgs: EncodeObject[]): Promise<DeliverTxResponse>
+  rawBroadcaster: TMasterBroadcaster
 
   /** Custom */
   jklMintQuery: IQueryJklMint
