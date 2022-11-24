@@ -38,7 +38,7 @@ export default class StorageHandler implements IStorageHandler {
     const result = await this.pH.storageQuery.queryGetClientFreeSpace({ address })
     return (result) ? result.bytesfree as string : ''
   }
-  async getGetPayData (address: string): Promise<IPayData> {
+  async getPayData (address: string): Promise<IPayData> {
     const result = await this.pH.storageQuery.queryGetPayData({ address })
     return (result) ? result as IPayData : { blocksRemaining: 0, bytes: 0 }
   }
