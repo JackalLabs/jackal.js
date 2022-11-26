@@ -367,7 +367,7 @@ export default class FileIo implements IFileIo {
 }
  */
 async function doUpload (url: string, sender: string, file: File): Promise<IProviderModifiedResponse> {
-  const fileFormData = new NodeFormData()
+  const fileFormData = new FormData()
   fileFormData.set('file', file)
   fileFormData.set('sender', sender)
   return await fetch(url, { method: 'POST', body: fileFormData as FormData })
