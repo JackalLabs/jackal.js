@@ -1,5 +1,4 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { FormData as NodeFormData } from 'formdata-node'
 import { randomUUID } from 'make-random'
 import { IQueryStorage } from 'jackal.js-protos'
 
