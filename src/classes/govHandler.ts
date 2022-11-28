@@ -1,6 +1,6 @@
 import { IGovHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import { ICoin, IDelegationRewards, IDelegationSummary, IStakingValidator } from '@/interfaces'
-import { finalizeGas } from '@/utils/gas'
+import { TValidatorStatus } from '@/types/TValidatorStatus'
 
 export default class GovHandler implements IGovHandler {
   private readonly walletRef: IWalletHandler
@@ -60,7 +60,7 @@ export default class GovHandler implements IGovHandler {
       throw new Error('No Validator Details Found')
     }
   }
-  async getAllValidatorDetails (status: string): Promise<IStakingValidator[]> {
+  async getAllValidatorDetails (status: TValidatorStatus): Promise<IStakingValidator[]> {
     return (await this.pH.stakingQuery.queryValidators({ status })).validators as IStakingValidator[]
   }
   async getDelegatedValidators (): Promise<IStakingValidator[]> {
