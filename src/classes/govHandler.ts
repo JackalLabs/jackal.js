@@ -61,7 +61,7 @@ export default class GovHandler implements IGovHandler {
     }
   }
   async getAllValidatorDetails (status: TValidatorStatus): Promise<IStakingValidator[]> {
-    return (await this.pH.stakingQuery.queryValidators({ status })).validators as IStakingValidator[]
+    return (await this.pH.stakingQuery.queryValidators({ status: statusMap[status.toUpperCase()] })).validators as IStakingValidator[]
   }
   async getDelegatedValidators (): Promise<IStakingValidator[]> {
     return (await this.pH.stakingQuery.queryDelegatorValidators({
@@ -90,4 +90,11 @@ export default class GovHandler implements IGovHandler {
       })
     console.dir(await this.pH.broadcaster([msg]))
   }
+}
+
+const statusMap: { [key: string]: string } = {
+  'UNSPECIFIED': '0',
+  'UNBONDED': '1',
+  'UNBONDING': '2',
+  'BONDED': '3'
 }
