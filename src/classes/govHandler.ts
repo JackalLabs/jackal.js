@@ -93,6 +93,7 @@ export default class GovHandler implements IGovHandler {
 }
 
 const statusMap: { [key: string]: string } = {
+  'ALL': '0',
   'UNSPECIFIED': '0',
   'UNBONDED': '1',
   'UNBONDING': '2',

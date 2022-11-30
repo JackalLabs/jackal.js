@@ -4,7 +4,7 @@ export default interface IStakingValidator {
   operatorAddress: string;
   consensusPubkey: any;
   jailed: boolean;
-  status: any;
+  status: number;
   tokens: string;
   delegatorShares: string;
   description: IValidatorDescription;
