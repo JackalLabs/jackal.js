@@ -1,5 +1,5 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { randomUUID } from 'make-random'
+import { randomUUID, random } from 'make-random'
 import { IQueryStorage } from 'jackal.js-protos'
 
 import { finalizeGas } from '@/utils/gas'
@@ -33,17 +33,18 @@ export default class FileIo implements IFileIo {
   private availableProviders: IMiner[]
   private currentProvider: IMiner
 
-  private constructor (wallet: IWalletHandler, providers: IMiner[]) {
+  private constructor (wallet: IWalletHandler, providers: IMiner[], currentProvider: IMiner) {
     this.walletRef = wallet
     this.pH = wallet.getProtoHandler()
     this.availableProviders = providers
-    this.currentProvider = providers[Math.floor(Math.random() * providers.length)]
+    this.currentProvider = currentProvider
   }
 
   static async trackIo (wallet: IWalletHandler): Promise<FileIo> {
     const providers = await getProvider(wallet.getProtoHandler().storageQuery)
     console.dir(providers)
-    return new FileIo(wallet, providers)
+    const provider = providers[await random(providers.length)]
+    return new FileIo(wallet, providers, provider)
   }
 
   async shuffle (): Promise<void> {
@@ -53,7 +54,6 @@ export default class FileIo implements IFileIo {
   forceProvider (toSet: IMiner): void {
     this.currentProvider = toSet
   }
-  /** todo - Requires Filetree
    async uploadFolders (toUpload: IFolderHandler[], owner: string): Promise<void> {
     const { ip } = this.currentProvider
     const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/u`
@@ -90,7 +90,7 @@ export default class FileIo implements IFileIo {
     }
   }
   private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
-    const { msgPostFile } = await this.pH.filetreeTx
+    const { msgPostFile } = await this.pH.fileTreeTx
     const { msgSignContract } = await this.pH.storageTx
 
     const creator = this.walletRef.getJackalAddress()
@@ -160,19 +160,19 @@ export default class FileIo implements IFileIo {
     const readyToBroadcast = [...needingReset, ...ready.flat()]
     // const readyToBroadcast = [...ready.flat()]
     console.dir(readyToBroadcast)
-    checkResults(await this.pH.broadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' }))
+    checkResults(await this.pH.broadcaster(readyToBroadcast))
     // const lastStep = await this.pH.broadcaster(needingReset, { fee: finalizeGas(needingReset), memo: '' })
     // checkResults(lastStep)
     // const lastStep2 = await this.pH.broadcaster(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
     // checkResults(lastStep2)
   }
-  async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
+   async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
-    const { version, data } = await getFileChainData(hexAddress, hexedOwner, this.pH.filetreeQuery)
-    const storageQueryResults = await this.pH.storageQuery.queryFindFile(version)
+    const { version, data } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
+    const storageQueryResults = await this.pH.storageQuery.queryFindFile({ fid: version })
 
-    if (!storageQueryResults || !storageQueryResults.data.providerIps) throw new Error('No FID found!')
-    const providers = storageQueryResults.data.providerIps
+    if (!storageQueryResults || !storageQueryResults.providerIps) throw new Error('No FID found!')
+    const providers = storageQueryResults.providerIps
     console.dir(providers)
     const targetProvider = JSON.parse(providers)[0]
     if (targetProvider && targetProvider.length) {
@@ -181,15 +181,15 @@ export default class FileIo implements IFileIo {
         .then(resp => resp.arrayBuffer())
         .then(async (resp): Promise<IFileDownloadHandler | IFolderHandler> => {
           const config = {
-            editAccess: JSON.parse(data.editAccess as string), // json string array of edit access object (to be discussed
-            viewingAccess: JSON.parse(data.viewingAccess as string), // json string of viewing access object (to be discussed)
-            trackingNumber: data.trackingNumber as string // uuid
+            editAccess: JSON.parse(data.editAccess), // json string array of edit access object (to be discussed
+            viewingAccess: JSON.parse(data.viewingAccess), // json string of viewing access object (to be discussed)
+            trackingNumber: data.trackingNumber // uuid
           }
-          const requestor = await hashAndHex(`e${config.trackingNumber}${this.walletRef.getJackalAddress()}`)
+          const requester = await hashAndHex(`e${config.trackingNumber}${this.walletRef.getJackalAddress()}`)
           console.dir(config.trackingNumber)
-          console.log(requestor)
+          console.log(requester)
           console.dir(config.editAccess)
-          const { key, iv } = config.editAccess[requestor]
+          const { key, iv } = config.editAccess[requester]
           console.log('pre-crypt')
           console.dir(key)
           console.dir(iv)
@@ -208,7 +208,7 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
-  async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
+   async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
 
     const names = targets.map((target:IDeleteItem) => target.name)
     parent.removeChildDirs(names)
@@ -224,10 +224,11 @@ export default class FileIo implements IFileIo {
       // todo - logic here
     }
 
-    console.dir(await this.pH.broadcaster(msgs, { fee: finalizeGas(msgs), memo: '' }))
+    console.dir(await this.pH.broadcaster(msgs))
   }
+  /** TODO - Verify this is still valid */
   async generateInitialDirs (startingDirs?: string[]): Promise<void> {
-    const { msgMakeRoot, msgPostFile } = await this.pH.filetreeTx
+    const { msgMakeRoot, msgPostFile } = await this.pH.fileTreeTx
     const { msgSignContract } = await this.pH.storageTx
     const { ip } = this.currentProvider
     const url = `${ip.replace(/\/+$/, '')}/u`
@@ -237,7 +238,7 @@ export default class FileIo implements IFileIo {
     const pubKey = this.walletRef.getPubkey()
     const account = await hashAndHex(creator)
 
-    const initMsg = await WalletHandler.initAccount(this.walletRef, this.pH.filetreeTx)
+    const initMsg = await WalletHandler.initAccount(this.walletRef, this.pH.fileTreeTx)
 
     const rootTrackingNumber = await randomUUID()
     const rootPermissions: IEditorsViewers = {}
@@ -306,20 +307,20 @@ export default class FileIo implements IFileIo {
     }))
     console.dir(msgs.flat())
     const readyToBroadcast = [initMsg, msgRoot, ...msgs.flat()]
-    console.dir(await this.pH.broadcaster(readyToBroadcast, { fee: finalizeGas(readyToBroadcast), memo: '' }))
+    console.dir(await this.pH.broadcaster(readyToBroadcast))
   }
 
   private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
-    const { msgDeleteFile } = await this.pH.filetreeTx
+    const { msgDeleteFile } = await this.pH.fileTreeTx
     const { msgCancelContract } = await this.pH.storageTx
 
     const readyToDelete: EncodeObject[][] = await Promise.all(targets.map(async (target: IDeleteItem) => {
       const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
       const hexOwner = await hashAndHex(`o${hexPath}${await hashAndHex(creator)}`)
-      const { version } = await getFileChainData(hexPath, hexOwner, this.pH.filetreeQuery)
-      const possibleCids = await this.pH.storageQuery.queryFidCid(version)
-      const cidsToRemove = JSON.parse(possibleCids.data.fidCid?.cids || '[]')
-      const strays: IStray[] = (await this.pH.storageQuery.queryStraysAll()).data.strays || []
+      const { version } = await getFileChainData(hexPath, hexOwner, this.pH.fileTreeQuery)
+      const possibleCids = await this.pH.storageQuery.queryFidCid({ fid: version })
+      const cidsToRemove = JSON.parse(possibleCids.fidCid?.cids || '[]')
+      const strays: IStray[] = (await this.pH.storageQuery.queryStraysAll({})).strays || []
       const strayCids = strays.map((stray: IStray) => stray.cid)
       const finalCids = cidsToRemove.filter((cid: string) => !strayCids.includes(cid))
       const cancelContractsArr = await Promise.all(finalCids.map(async (cid: string) => {
@@ -334,14 +335,12 @@ export default class FileIo implements IFileIo {
     }))
     return readyToDelete.flat()
   }
-   */
 }
 
 /** Helpers */
-/** todo - Requires Filetree
  async function prepExistingUpload (data: TFileOrFFile, ownerAddr: string, walletRef: IWalletHandler): Promise<{ file: File, cfg: IFileConfigFull }> {
   const hexedOwner = await hashAndHex(`o${await data.getFullMerkle()}${await hashAndHex(ownerAddr)}`)
-  const fileChainResult = await getFileChainData(await data.getFullMerkle(), hexedOwner, walletRef.getProtoHandler().filetreeQuery)
+  const fileChainResult = await getFileChainData(await data.getFullMerkle(), hexedOwner, walletRef.getProtoHandler().fileTreeQuery)
   const typedData = fileChainResult.data as IFileConfigRaw
 
   const configData: IFileConfigFull = {
@@ -364,7 +363,6 @@ export default class FileIo implements IFileIo {
     file: await data.getForUpload(recoveredKey, recoveredIv)
   }
 }
- */
 async function doUpload (url: string, sender: string, file: File): Promise<IProviderModifiedResponse> {
   const fileFormData = new FormData()
   fileFormData.set('file', file)
@@ -380,16 +378,16 @@ async function getProvider (queryClient: IQueryStorage): Promise<IMiner[]> {
   const rawProviderReturn = await queryClient.queryProvidersAll({})
 
   if (!rawProviderReturn || !rawProviderReturn.providers) throw new Error('Unable to get Storage Provider list!')
-  const rawProviderList = rawProviderReturn.providers as IMiner[]
+  const rawProviderList = rawProviderReturn.providers as IMiner[] || []
   return rawProviderList.slice(0, 100)
 }
-async function getFileChainData (hexAddress: string, owner: string, ftQ: any) {
-  const filetreeQueryResults = await ftQ.queryFiles(hexAddress, owner)
-  console.dir(filetreeQueryResults)
+async function getFileChainData (hexAddress: string, owner: string, fTQ: any) {
+  const fileTreeQueryResults = await fTQ.queryFiles({ address: hexAddress, ownerAddress: owner })
+  console.dir(fileTreeQueryResults)
 
-  if (!filetreeQueryResults || !filetreeQueryResults.data.files) throw new Error('No address found!')
-  const fileData = filetreeQueryResults.data.files
-  const parsedContents: IFiletreeParsedContents = JSON.parse(fileData.contents as string)
+  if (!fileTreeQueryResults || !fileTreeQueryResults.files) throw new Error('No address found!')
+  const fileData = fileTreeQueryResults.files
+  const parsedContents: IFiletreeParsedContents = JSON.parse(fileData.contents)
   return {
     version: parsedContents.fids[parsedContents.fids.length - 1],
     data: fileData
