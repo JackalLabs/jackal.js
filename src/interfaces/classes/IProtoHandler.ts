@@ -16,6 +16,9 @@ import {
 } from 'jackal.js-protos'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { DeliverTxResponse } from '@cosmjs/stargate'
+// TODO - Update this later
+import IQueryFileTree from 'jackal.js-protos/dist/interfaces/classes/IQueryFileTree'
+import { ITxFileTree } from 'jackal.js-protos/dist/snackages/tx/custom/fileTree'
 
 export default interface IProtoHandler {
 
@@ -24,14 +27,15 @@ export default interface IProtoHandler {
   rawBroadcaster: TMasterBroadcaster
 
   /** Custom */
+  fileTreeQuery: IQueryFileTree
+  fileTreeTx: ITxFileTree
   jklMintQuery: IQueryJklMint
   rnsQuery: IQueryRns
   rnsTx: ITxRns
   storageQuery: IQueryStorage
   storageTx: ITxStorage
 
-  // filetreeQuery: any
-  // filetreeTx: any
+
 
   /** Static */
   bankQuery: IQueryBank

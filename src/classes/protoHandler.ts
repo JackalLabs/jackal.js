@@ -33,6 +33,12 @@ export default class ProtoHandler implements IProtoHandler {
   }
 
   /** Custom */
+  get fileTreeQuery () {
+    return this.allQueryClients.fileTree
+  }
+  get fileTreeTx () {
+    return this.allTxClients.fileTree
+  }
   get jklMintQuery () {
     return this.allQueryClients.jklMint
   }
@@ -49,12 +55,7 @@ export default class ProtoHandler implements IProtoHandler {
     return this.allTxClients.storage
   }
 
-  // get filetreeQuery () {
-  //   return this.allQueryClients.filetree
-  // }
-  // get filetreeTx () {
-  //   return this.allTxClients.filetree
-  // }
+
 
   /** Static */
   get bankQuery () {

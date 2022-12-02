@@ -39,4 +39,3 @@ export default class RnsHandler implements IRnsHandler {
     return (await this.pH.rnsQuery.queryNames({ index: trueRns })).names?.value || ''
   }
 }
-
