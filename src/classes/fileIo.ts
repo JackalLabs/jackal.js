@@ -1,5 +1,5 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { randomUUID, random } from 'make-random'
+// import { randomUUID, random } from 'make-random'
 import { IQueryStorage } from 'jackal.js-protos'
 
 import { finalizeGas } from '@/utils/gas'
@@ -49,7 +49,7 @@ export default class FileIo implements IFileIo {
 
   async shuffle (): Promise<void> {
     this.availableProviders = await getProvider(await this.pH.storageQuery)
-    this.currentProvider = this.availableProviders[Math.floor(Math.random() * this.availableProviders.length)]
+    this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
   }
   forceProvider (toSet: IMiner): void {
     this.currentProvider = toSet
@@ -132,7 +132,8 @@ export default class FileIo implements IFileIo {
           iv: this.walletRef.asymmetricEncrypt(iv, pubKey),
           key: this.walletRef.asymmetricEncrypt(key, pubKey)
         })
-        const workingUUID = await randomUUID()
+        // const workingUUID = await randomUUID()
+        const workingUUID = self.crypto.randomUUID()
         folderView[await hashAndHex(`v${workingUUID}${creator}`)] = JSON.parse(perms)
         folderEdit[await hashAndHex(`e${workingUUID}${creator}`)] = JSON.parse(perms)
         msgPostFileBundle.viewers = JSON.stringify(folderView)
@@ -240,7 +241,8 @@ export default class FileIo implements IFileIo {
 
     const initMsg = await WalletHandler.initAccount(this.walletRef, this.pH.fileTreeTx)
 
-    const rootTrackingNumber = await randomUUID()
+    // const rootTrackingNumber = await randomUUID()
+    const rootTrackingNumber = self.crypto.randomUUID()
     const rootPermissions: IEditorsViewers = {}
     rootPermissions[await hashAndHex(`e${rootTrackingNumber}${creator}`)] = {
       iv: this.walletRef.asymmetricEncrypt(genIv(), pubKey),
@@ -283,7 +285,8 @@ export default class FileIo implements IFileIo {
         iv: this.walletRef.asymmetricEncrypt(iv, pubKey),
         key: this.walletRef.asymmetricEncrypt(key, pubKey)
       })
-      const workingUUID = await randomUUID()
+      // const workingUUID = await randomUUID()
+      const workingUUID = self.crypto.randomUUID()
       folderView[await hashAndHex(`v${workingUUID}${creator}`)] = JSON.parse(perms)
       folderEdit[await hashAndHex(`e${workingUUID}${creator}`)] = JSON.parse(perms)
       const frame: IMsgFinalPostFileBundle = {
@@ -392,4 +395,7 @@ async function getFileChainData (hexAddress: string, owner: string, fTQ: any) {
     version: parsedContents.fids[parsedContents.fids.length - 1],
     data: fileData
   }
+}
+async function random (max: number) {
+   return Math.floor(Math.random() * max)
 }

@@ -1,4 +1,4 @@
-import { randomUUID } from 'make-random'
+// import { randomUUID } from 'make-random'
 
 import { IFileBuffer } from '@/interfaces'
 import { IFileUploadHandler } from '@/interfaces/classes'
@@ -37,7 +37,7 @@ export default class FileUploadHandler implements IFileUploadHandler {
   static async trackFile (file: File, parentPath: string): Promise<IFileUploadHandler> {
     const savedKey = await genKey()
     const savedIv = genIv()
-    const uuid = await randomUUID()
+    const uuid = self.crypto.randomUUID()
     return new FileUploadHandler(file, parentPath, uuid, savedKey, savedIv)
   }
 

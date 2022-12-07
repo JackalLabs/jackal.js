@@ -1,6 +1,6 @@
 {
   "name": "jackal.js",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Javascript library for interacting with the Jackal Chain",
   "keywords": [
     "jackal",
@@ -10,7 +10,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc && tscpaths -v -p tsconfig.json -s ./src -o ./dist",
-    "packit": "npm pack --pack-destination packs",
+    "packit": "npm run build && npm pack --pack-destination packs",
     "push": "npm run build && npm publish",
     "test": "echo \"Error: no tests included\" && exit 1"
   },
@@ -43,8 +43,7 @@
     "bip39": "^3.0.4",
     "bs58check": "^2.1.2",
     "eciesjs": "^0.3.15",
-    "jackal.js-protos": "^1.2.0",
-    "make-random": "^3.0.2",
+    "jackal.js-protos": "^1.2.1",
     "tiny-secp256k1": "^2.2.1"
   },
   "devDependencies": {
