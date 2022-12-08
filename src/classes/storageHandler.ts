@@ -30,10 +30,6 @@ export default class StorageHandler implements IStorageHandler {
     return await this.pH.broadcaster([msg])
   }
 
-  async getClientUsage (address: string): Promise<IStorageClientUsage> {
-    const result = await this.pH.storageQuery.queryClientUsage({ address })
-    return (result) ? result.clientUsage as IStorageClientUsage : { address: '', usage: '' }
-  }
   async getClientFreeSpace (address: string): Promise<string> {
     const result = await this.pH.storageQuery.queryGetClientFreeSpace({ address })
     return (result) ? result.bytesfree as string : ''
@@ -42,8 +38,8 @@ export default class StorageHandler implements IStorageHandler {
     const result = await this.pH.storageQuery.queryGetPayData({ address })
     return (result) ? result as IPayData : { blocksRemaining: 0, bytes: 0 }
   }
-  async getPayBlocks (blockid: string): Promise<IPayBlock> {
-    const result = await this.pH.storageQuery.queryPayBlocks({ blockid })
-    return (result) ? result.payBlocks as IPayBlock : { blockid: '', blocknum: '', blocktype: '', bytes: '' }
+  /** TODO - Complete placeholder */
+  async getStoragePaymentInfo (): Promise<true> {
+    return true
   }
 }
