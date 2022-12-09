@@ -8,7 +8,6 @@ import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
 import { checkResults } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
-import WalletHandler from '@/classes/walletHandler'
 import { IFileDownloadHandler, IFileIo, IFolderHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import {
   IDeleteItem,
@@ -228,7 +227,7 @@ export default class FileIo implements IFileIo {
     console.dir(await this.pH.broadcaster(msgs))
   }
   /** TODO - Verify this is still valid */
-  async generateInitialDirs (startingDirs?: string[]): Promise<void> {
+  async generateInitialDirs (initMsg: EncodeObject, startingDirs?: string[]): Promise<void> {
     const { msgMakeRoot, msgPostFile } = await this.pH.fileTreeTx
     const { msgSignContract } = await this.pH.storageTx
     const { ip } = this.currentProvider
@@ -239,9 +238,6 @@ export default class FileIo implements IFileIo {
     const pubKey = this.walletRef.getPubkey()
     const account = await hashAndHex(creator)
 
-    const initMsg = await WalletHandler.initAccount(this.walletRef, this.pH.fileTreeTx)
-
-    // const rootTrackingNumber = await randomUUID()
     const rootTrackingNumber = self.crypto.randomUUID()
     const rootPermissions: IEditorsViewers = {}
     rootPermissions[await hashAndHex(`e${rootTrackingNumber}${creator}`)] = {
@@ -260,8 +256,6 @@ export default class FileIo implements IFileIo {
       viewers: '',
       trackingNumber: rootTrackingNumber
     })
-
-    // console.dir(await this.pH.broadcaster([msgRoot], { fee: finalizeGas([]), memo: '' }))
 
     const folderHandlerList: TFileOrFFile[] = []
     for (let i = 0; i < toGenerate.length; i++) {

@@ -15,7 +15,7 @@ export default class RnsHandler implements IRnsHandler {
     return new RnsHandler(wallet)
   }
 
-  makeFreeRnsMsg (): EncodeObject {
+  createRnsInitMsg (): EncodeObject {
      return this.pH.rnsTx.msgInit({ creator: this.walletRef.getJackalAddress() })
   }
   makeBuyMsg (rns: string): EncodeObject {

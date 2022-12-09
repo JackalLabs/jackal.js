@@ -1,4 +1,4 @@
 export default interface IPayData {
-  blocksRemaining: number,
+  timeRemaining: number,
   bytes: number
 }

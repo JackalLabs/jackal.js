@@ -17,14 +17,16 @@ const defaultChains = [jackalMainnetChainId, 'osmo-1', 'cosmoshub-4']
 export default class WalletHandler implements IWalletHandler {
   private readonly signer: OfflineSigner
   private readonly keyPair: PrivateKey
-  private initComplete: boolean
+  rnsInitComplete: boolean
+  fileTreeInitComplete: boolean
   private readonly jackalAccount: AccountData
   private readonly pH: IProtoHandler
 
-  private constructor (signer: OfflineSigner, keyPair: PrivateKey, initComplete: boolean, acct: AccountData, pH: IProtoHandler) {
+  private constructor (signer: OfflineSigner, keyPair: PrivateKey, rnsInitComplete: boolean, fileTreeInitComplete: boolean, acct: AccountData, pH: IProtoHandler) {
     this.signer = signer
     this.keyPair = keyPair
-    this.initComplete = initComplete
+    this.rnsInitComplete = rnsInitComplete
+    this.fileTreeInitComplete = fileTreeInitComplete
     this.jackalAccount = acct
     this.pH = pH
   }
@@ -46,13 +48,14 @@ export default class WalletHandler implements IWalletHandler {
 
       const pH = await ProtoHandler.trackProto(signer, tAddr, qAddr)
 
-      const initComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).init
+      const rnsInitComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).init
+      const fileTreeInitComplete = (await pH.fileTreeQuery.queryPubkey({ address: acct.address })).pubkey
 
       const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
       const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
-      return new WalletHandler(signer, keyPair, initComplete, acct, pH)
+      return new WalletHandler(signer, keyPair, rnsInitComplete, !!fileTreeInitComplete, acct, pH)
     }
   }
   static async getAbitraryMerkle (path: string, item: string): Promise<string> {
@@ -65,9 +68,6 @@ export default class WalletHandler implements IWalletHandler {
       pubkey: wallet.getPubkey()
     })
     return initCall
-  }
-  checkIfInit (): boolean {
-    return this.initComplete
   }
 
   getProtoHandler (): IProtoHandler {

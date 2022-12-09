@@ -3,7 +3,9 @@ import { ICoin } from '@/interfaces'
 import { IProtoHandler } from '@/interfaces/classes'
 
 export default interface IWalletHandler {
-  checkIfInit (): boolean
+
+  rnsInitComplete: boolean
+  fileTreeInitComplete: boolean
 
   getProtoHandler (): IProtoHandler
   getAccounts (): Promise<readonly AccountData[]>

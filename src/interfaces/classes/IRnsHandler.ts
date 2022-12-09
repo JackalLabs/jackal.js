@@ -1,7 +1,7 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 
 export default interface IRnsHandler {
-  makeFreeRnsMsg (): EncodeObject
+  createRnsInitMsg (): EncodeObject
   makeBuyMsg (rns: string): EncodeObject
   makeDelistMsg (rns: string): EncodeObject
   makeListMsg (rns: string, price: string): EncodeObject

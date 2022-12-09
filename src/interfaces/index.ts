@@ -19,7 +19,6 @@ import IMiner from '@/interfaces/IMiner'
 import IMsgFinalPostFileBundle from '@/interfaces/IMsgFinalPostFileBundle'
 import IMsgPartialPostFileBundle from '@/interfaces/IMsgPartialPostFileBundle'
 import INames from '@/interfaces/INames'
-import IPayBlock from '@/interfaces/IPayBlock'
 import IPayData from '@/interfaces/IPayData'
 import IProtoReqs from '@/interfaces/IProtoReqs'
 import IProviderModifiedResponse from '@/interfaces/IProviderModifiedResponse'
@@ -27,7 +26,7 @@ import IProviderResponse from '@/interfaces/IProviderResponse'
 import IQueueItemPostUpload from '@/interfaces/IQueueItemPostUpload'
 import IStakingValidator from '@/interfaces/IStakingValidator'
 import IStorageClientFree from '@/interfaces/IStorageClientFree'
-import IStorageClientUsage from '@/interfaces/IStorageClientUsage'
+import IStoragePaymentInfo from '@/interfaces/IStoragePaymentInfo'
 import IStray from '@/interfaces/IStray'
 import IWalletConfig from '@/interfaces/IWalletConfig'
 
@@ -53,7 +52,6 @@ export {
   IMsgFinalPostFileBundle,
   IMsgPartialPostFileBundle,
   INames,
-  IPayBlock,
   IPayData,
   IProtoReqs,
   IProviderModifiedResponse,
@@ -61,7 +59,7 @@ export {
   IQueueItemPostUpload,
   IStakingValidator,
   IStorageClientFree,
-  IStorageClientUsage,
+  IStoragePaymentInfo,
   IStray,
   IWalletConfig
 }
