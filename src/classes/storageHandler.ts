@@ -26,7 +26,7 @@ export default class StorageHandler implements IStorageHandler {
     })
     return await this.pH.broadcaster([msg])
   }
-  createStorageInitMsg (): EncodeObject {
+  makeStorageInitMsg (): EncodeObject {
     return this.pH.fileTreeTx.msgPostkey({
       creator: this.walletRef.getJackalAddress(),
       key: this.walletRef.getPubkey()
