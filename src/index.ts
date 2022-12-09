@@ -10,21 +10,24 @@ import StorageHandler from '@/classes/storageHandler'
 import WalletHandler from '@/classes/walletHandler'
 
 /** Class Interfaces */
-import IFileDownloadHandler from '@/interfaces/classes/IFileDownloadHandler'
-import IFileUploadHandler from '@/interfaces/classes/IFileUploadHandler'
-import IFileIo from '@/interfaces/classes/IFileIo'
-import IFolderHandler from '@/interfaces/classes/IFolderHandler'
-import IGovHandler from '@/interfaces/classes/IGovHandler'
-import IStorageHandler from '@/interfaces/classes/IStorageHandler'
-import IOracleHandler from '@/interfaces/classes/IOracleHandler'
-import IRnsHandler from '@/interfaces/classes/IRnsHandler'
-import IWalletHandler from '@/interfaces/classes/IWalletHandler'
+import {
+  IFileDownloadHandler,
+  IFileUploadHandler,
+  IFileIo,
+  IFolderHandler,
+  IGovHandler,
+  IStorageHandler,
+  IOracleHandler,
+  IRnsHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 
 /** Misc Interfaces */
 import {
   IFileMeta,
   IPayData,
   IStakingValidator,
+  IStoragePaymentInfo,
   IWalletConfig
 } from '@/interfaces'
 
@@ -58,6 +61,7 @@ export {
   IFileMeta,
   IPayData,
   IStakingValidator,
+  IStoragePaymentInfo,
   IWalletConfig,
   // Types
   TFileOrFFile,
