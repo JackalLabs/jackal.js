@@ -17,8 +17,8 @@ const defaultChains = [jackalMainnetChainId, 'osmo-1', 'cosmoshub-4']
 export default class WalletHandler implements IWalletHandler {
   private readonly signer: OfflineSigner
   private readonly keyPair: PrivateKey
-  rnsInitComplete: boolean
-  fileTreeInitComplete: boolean
+  private rnsInitComplete: boolean
+  private fileTreeInitComplete: boolean
   private readonly jackalAccount: AccountData
   private readonly pH: IProtoHandler
 
@@ -70,6 +70,18 @@ export default class WalletHandler implements IWalletHandler {
     return initCall
   }
 
+  getRnsInitStatus (): boolean {
+    return this.rnsInitComplete
+  }
+  setRnsInitStatus (status: boolean): void {
+    this.rnsInitComplete = status
+  }
+  getStorageInitStatus (): boolean {
+    return this.rnsInitComplete
+  }
+  setStorageInitStatus (status: boolean): void {
+    this.fileTreeInitComplete = status
+  }
   getProtoHandler (): IProtoHandler {
     return this.pH
   }

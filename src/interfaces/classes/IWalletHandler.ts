@@ -4,9 +4,11 @@ import { IProtoHandler } from '@/interfaces/classes'
 
 export default interface IWalletHandler {
 
-  rnsInitComplete: boolean
-  fileTreeInitComplete: boolean
 
+  getRnsInitStatus (): boolean
+  setRnsInitStatus (status: boolean): void
+  getStorageInitStatus (): boolean
+  setStorageInitStatus (status: boolean): void
   getProtoHandler (): IProtoHandler
   getAccounts (): Promise<readonly AccountData[]>
   getSigner (): OfflineSigner
