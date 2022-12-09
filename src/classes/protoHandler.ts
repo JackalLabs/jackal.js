@@ -42,6 +42,12 @@ export default class ProtoHandler implements IProtoHandler {
   get jklMintQuery () {
     return this.allQueryClients.jklMint
   }
+  get oracleQuery () {
+    return this.allQueryClients.oracle
+  }
+  get oracleTx () {
+    return this.allTxClients.oracle
+  }
   get rnsQuery () {
     return this.allQueryClients.rns
   }

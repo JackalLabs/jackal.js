@@ -4,6 +4,7 @@ import FileUploadHandler from '@/classes/fileUploadHandler'
 import FileIo from '@/classes/fileIo'
 import FolderHandler from '@/classes/folderHandler'
 import GovHandler from '@/classes/govHandler'
+import OracleHandler from '@/classes/OracleHandler'
 import RnsHandler from '@/classes/rnsHandler'
 import StorageHandler from '@/classes/storageHandler'
 import WalletHandler from '@/classes/walletHandler'
@@ -15,16 +16,15 @@ import IFileIo from '@/interfaces/classes/IFileIo'
 import IFolderHandler from '@/interfaces/classes/IFolderHandler'
 import IGovHandler from '@/interfaces/classes/IGovHandler'
 import IStorageHandler from '@/interfaces/classes/IStorageHandler'
+import IOracleHandler from '@/interfaces/classes/IOracleHandler'
 import IRnsHandler from '@/interfaces/classes/IRnsHandler'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 
 /** Misc Interfaces */
 import {
   IFileMeta,
-  IPayBlock,
   IPayData,
   IStakingValidator,
-  IStorageClientUsage,
   IWalletConfig
 } from '@/interfaces'
 
@@ -46,6 +46,8 @@ export {
   IFolderHandler,
   GovHandler,
   IGovHandler,
+  OracleHandler,
+  IOracleHandler,
   RnsHandler,
   IRnsHandler,
   StorageHandler,
@@ -54,10 +56,8 @@ export {
   IWalletHandler,
   // Misc Interfaces
   IFileMeta,
-  IPayBlock,
   IPayData,
   IStakingValidator,
-  IStorageClientUsage,
   IWalletConfig,
   // Types
   TFileOrFFile,

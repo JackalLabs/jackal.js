@@ -19,6 +19,7 @@ import IMiner from '@/interfaces/IMiner'
 import IMsgFinalPostFileBundle from '@/interfaces/IMsgFinalPostFileBundle'
 import IMsgPartialPostFileBundle from '@/interfaces/IMsgPartialPostFileBundle'
 import INames from '@/interfaces/INames'
+import IOracleFeed from '@/interfaces/IOracleFeed'
 import IPayData from '@/interfaces/IPayData'
 import IProtoReqs from '@/interfaces/IProtoReqs'
 import IProviderModifiedResponse from '@/interfaces/IProviderModifiedResponse'
@@ -52,6 +53,7 @@ export {
   IMsgFinalPostFileBundle,
   IMsgPartialPostFileBundle,
   INames,
+  IOracleFeed,
   IPayData,
   IProtoReqs,
   IProviderModifiedResponse,
