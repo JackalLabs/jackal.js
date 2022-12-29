@@ -104,9 +104,9 @@ export default class FileIo implements IFileIo {
         hashParent: await item.handler.getMerklePath(),
         hashChild: await hashAndHex(item.handler.getWhoAmI()),
         contents: JSON.stringify({ fids: fid }),
-        viewers: '',
-        editors: '',
-        trackingNumber: ''
+        viewers: 'na',
+        editors: 'na',
+        trackingNumber: 'na'
       }
       if (item.data) {
         msgPostFileBundle.viewers = JSON.stringify(item.data.viewingAccess)
@@ -142,10 +142,10 @@ export default class FileIo implements IFileIo {
       console.log(Object.keys(msgPostFileBundle))
       const finalBundle: IMsgFinalPostFileBundle = {
         ...msgPostFileBundle,
-        viewersToNotify: '',
-        editorsToNotify: '',
-        notiForViewers: '',
-        notiForEditors: ''
+        viewersToNotify: 'na',
+        editorsToNotify: 'na',
+        notiForViewers: 'na',
+        notiForEditors: 'na'
       }
       console.log(Object.keys(finalBundle))
 
@@ -253,7 +253,7 @@ export default class FileIo implements IFileIo {
       rootHashPath: await merkleMeBro('s'),
       contents: JSON.stringify({ fids: [] }),
       editors: rootPerms,
-      viewers: '',
+      viewers: 'na',
       trackingNumber: rootTrackingNumber
     })
 
@@ -292,10 +292,10 @@ export default class FileIo implements IFileIo {
         viewers: JSON.stringify(folderView),
         editors: JSON.stringify(folderEdit),
         trackingNumber: workingUUID,
-        viewersToNotify: '',
-        editorsToNotify: '',
-        notiForViewers: '',
-        notiForEditors: ''
+        viewersToNotify: 'na',
+        editorsToNotify: 'na',
+        notiForViewers: 'na',
+        notiForEditors: 'na'
       }
 
       const msgPost: EncodeObject = await msgPostFile(frame)
