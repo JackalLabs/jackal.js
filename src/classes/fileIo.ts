@@ -69,17 +69,29 @@ export default class FileIo implements IFileIo {
     ])
   }
   async verifyFoldersExist (toCheck: string[]): Promise<number> {
-    const toCreate = await Promise.all(
-      toCheck.filter(async (folderName) => {
-        const hexAddress = await merkleMeBro(`s/${folderName}`)
-        console.log(`verify : ${hexAddress}`)
-        const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
-        const { version } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
+    const toCreate = []
+
+    for (let i = 0; i < toCheck.length; i++) {
+      const folderName = toCheck[i]
+      const hexAddress = await merkleMeBro(`s/${folderName}`)
+      console.log(`verify : ${hexAddress}`)
+      const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
+      const { version } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
+      if (version) {
+        console.warn(`${folderName} exists`)
+        console.dir(version)
+      } else {
         console.warn(`${folderName} does not exist`)
-        return !version
-    }))
-    await this.generateInitialDirs(null, toCreate)
-    console.log(`Created ${toCreate.length} folders`)
+        console.dir(version)
+        toCreate.push(folderName)
+      }
+    }
+
+    console.dir(toCreate)
+    if (toCreate.length) {
+      await this.generateInitialDirs(null, toCreate)
+      console.log(`Created ${toCreate.length} folders`)
+    }
     return toCreate.length
   }
   async uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: { [name: string]: IFileMeta }): Promise<void> {
