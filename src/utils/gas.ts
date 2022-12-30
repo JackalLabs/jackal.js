@@ -41,6 +41,7 @@ const hashMap: IGasHashMap = {
   '/canine_chain.storage.MsgCancelContract': 142,
   '/canine_chain.storage.MsgBuyStorage': 142,
   '/canine_chain.storage.MsgClaimStray': 142,
+  '/canine_chain.storage.MsgUpgradeStorage': 142,
   /** Bank */
   '/cosmos.bank.v1beta1.MsgMultiSend': 142,
   '/cosmos.bank.v1beta1.MsgSend': 142,

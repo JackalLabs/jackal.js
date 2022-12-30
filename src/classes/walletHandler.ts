@@ -49,13 +49,17 @@ export default class WalletHandler implements IWalletHandler {
       const pH = await ProtoHandler.trackProto(signer, tAddr, qAddr)
 
       const rnsInitComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).init
-      const fileTreeInitComplete = (await pH.fileTreeQuery.queryPubkey({ address: acct.address })).pubkey
-
+      const { pubkey, success} = (await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
+      console.log('wallet boot')
+      console.dir(await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
+      console.dir((success && !!pubkey?.key))
       const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
       const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
       const keyPair = PrivateKey.fromHex(secretAsHex)
+      console.dir(secret)
+      console.dir(keyPair)
 
-      return new WalletHandler(signer, keyPair, rnsInitComplete, !!fileTreeInitComplete, acct, pH)
+      return new WalletHandler(signer, keyPair, rnsInitComplete, (success && !!pubkey?.key), acct, pH)
     }
   }
   static async getAbitraryMerkle (path: string, item: string): Promise<string> {
@@ -77,7 +81,7 @@ export default class WalletHandler implements IWalletHandler {
     this.rnsInitComplete = status
   }
   getStorageInitStatus (): boolean {
-    return this.rnsInitComplete
+    return this.fileTreeInitComplete
   }
   setStorageInitStatus (status: boolean): void {
     this.fileTreeInitComplete = status

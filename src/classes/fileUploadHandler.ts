@@ -1,6 +1,6 @@
 // import { randomUUID } from 'make-random'
 
-import { IFileBuffer } from '@/interfaces'
+import { IAesBundle, IFileBuffer } from '@/interfaces'
 import { IFileUploadHandler } from '@/interfaces/classes'
 import {
   exportJackalKey,
@@ -60,15 +60,15 @@ export default class FileUploadHandler implements IFileUploadHandler {
   getWhereAmI (): string {
     return this.parentPath
   }
-  getForUpload (key?: CryptoKey, iv?: Uint8Array): Promise<File> {
-    this.key = key || this.key
-    this.iv = iv || this.iv
+  getForUpload (aes?: IAesBundle): Promise<File> {
+    this.key = aes?.key || this.key
+    this.iv = aes?.iv || this.iv
     return convertToEncryptedFile(this.file, this.key, this.iv)
   }
-  async getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}> {
+  async getEnc (): Promise<IAesBundle> {
     return {
       iv: this.iv,
-      key: await exportJackalKey(this.key)
+      key: this.key
     }
   }
   async getFullMerkle (): Promise<string> {

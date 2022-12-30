@@ -1,3 +1,4 @@
+import IAesBundle from '@/interfaces/IAesBundle'
 import IChildDirInfo from '@/interfaces/IChildDirInfo'
 import ICoin from '@/interfaces/ICoin'
 import IDelegationRewards from '@/interfaces/IDelegationRewards'
@@ -32,6 +33,7 @@ import IStray from '@/interfaces/IStray'
 import IWalletConfig from '@/interfaces/IWalletConfig'
 
 export {
+  IAesBundle,
   IChildDirInfo,
   ICoin,
   IDelegationRewards,
