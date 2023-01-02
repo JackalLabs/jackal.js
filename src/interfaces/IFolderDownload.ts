@@ -1,4 +1,4 @@
-import IFileConfigRelevant from './IFileConfigRelevant'
+import IFileConfigRelevant from '@/interfaces/IFileConfigRelevant'
 
 export default interface IFolderDownload {
   data: ArrayBuffer,

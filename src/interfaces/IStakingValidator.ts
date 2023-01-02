@@ -1,22 +1,22 @@
-import IValidatorDescription from './IValidatorDescription'
+import IValidatorDescription from '@/interfaces/IValidatorDescription'
 
 export default interface IStakingValidator {
-  operator_address: string;
-  consensus_pubkey: any;
+  operatorAddress: string;
+  consensusPubkey: any;
   jailed: boolean;
-  status: any;
+  status: number;
   tokens: string;
-  delegator_shares: string;
+  delegatorShares: string;
   description: IValidatorDescription;
-  unbonding_height: string;
-  unbonding_time: string;
+  unbondingHeight: number;
+  unbondingTime: Date;
   commission: {
-    commission_rates: {
+    commissionRates: {
       rate: string;
-      max_rate: string;
-      max_change_rate: string;
+      maxRate: string;
+      maxChangeRate: string;
     };
-    update_time: string;
+    updateTime: Date;
   };
-  min_self_delegation: string;
+  minSelfDelegation: string;
 }

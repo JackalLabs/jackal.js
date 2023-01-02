@@ -1,6 +1,6 @@
-import { keyAlgo } from './globals'
-import { hashAndHex } from './hash'
-import { addPadding } from './misc'
+import { keyAlgo } from '@/utils/globals'
+import { hashAndHex } from '@/utils/hash'
+import { addPadding } from '@/utils/misc'
 
 export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))

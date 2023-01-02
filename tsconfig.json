@@ -1,5 +1,6 @@
 {
-  "extends": "@tsconfig/node16",
+//  break compile process
+//  "extends": "@tsconfig/node16",
   "compilerOptions": {
     "lib": [
       "dom"
@@ -17,16 +18,19 @@
     "stripInternal": true,
     "skipLibCheck": true,
     "paths": {
-      "./*": [
+      "@/*": [
         "src/*"
       ]
-    }
+    },
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.ts"
   ],
   "exclude": [
-    "node_modules/*"
+    "node_modules"
   ]
 }

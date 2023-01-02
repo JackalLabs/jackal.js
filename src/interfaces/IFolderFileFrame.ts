@@ -1,4 +1,4 @@
-import IFileMeta from './IFileMeta'
+import IFileMeta from '@/interfaces/IFileMeta'
 
 export default interface IFolderFileFrame {
   whoAmI: string,

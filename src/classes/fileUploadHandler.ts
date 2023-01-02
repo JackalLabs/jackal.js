@@ -1,7 +1,7 @@
-import { randomUUID } from 'make-random'
+// import { randomUUID } from 'make-random'
 
-import { IFileBuffer } from '../interfaces'
-import { IFileUploadHandler } from '../interfaces/classes'
+import { IAesBundle, IFileBuffer } from '@/interfaces'
+import { IFileUploadHandler } from '@/interfaces/classes'
 import {
   exportJackalKey,
   genIv,
@@ -9,10 +9,10 @@ import {
   aesCrypt,
   encryptPrep,
   assembleEncryptedFile
-} from '../utils/crypt'
-import { hexFullPath, merkleMeBro } from '../utils/hash'
-import { IFileMeta } from '../interfaces'
-import { addPadding } from '../utils/misc'
+} from '@/utils/crypt'
+import { hexFullPath, merkleMeBro } from '@/utils/hash'
+import { IFileMeta } from '@/interfaces'
+import { addPadding } from '@/utils/misc'
 
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File
@@ -37,7 +37,7 @@ export default class FileUploadHandler implements IFileUploadHandler {
   static async trackFile (file: File, parentPath: string): Promise<IFileUploadHandler> {
     const savedKey = await genKey()
     const savedIv = genIv()
-    const uuid = await randomUUID()
+    const uuid = self.crypto.randomUUID()
     return new FileUploadHandler(file, parentPath, uuid, savedKey, savedIv)
   }
 
@@ -60,15 +60,15 @@ export default class FileUploadHandler implements IFileUploadHandler {
   getWhereAmI (): string {
     return this.parentPath
   }
-  getForUpload (key?: CryptoKey, iv?: Uint8Array): Promise<File> {
-    this.key = key || this.key
-    this.iv = iv || this.iv
+  getForUpload (aes?: IAesBundle): Promise<File> {
+    this.key = aes?.key || this.key
+    this.iv = aes?.iv || this.iv
     return convertToEncryptedFile(this.file, this.key, this.iv)
   }
-  async getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}> {
+  async getEnc (): Promise<IAesBundle> {
     return {
       iv: this.iv,
-      key: await exportJackalKey(this.key)
+      key: this.key
     }
   }
   async getFullMerkle (): Promise<string> {

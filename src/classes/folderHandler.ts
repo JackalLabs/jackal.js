@@ -1,16 +1,15 @@
-import { IChildDirInfo, IFileConfigRelevant, IFileMeta, IFolderFileFrame } from '../interfaces'
-import { IFolderHandler } from '../interfaces/classes'
-import { stripper } from '../utils/misc'
+import { IAesBundle, IChildDirInfo, IFileConfigRelevant, IFileMeta, IFolderFileFrame } from '@/interfaces'
+import { IFolderHandler } from '@/interfaces/classes'
+import { stripper } from '@/utils/misc'
 import {
   aesCrypt,
   assembleEncryptedFile,
   decryptPrep,
   encryptPrep,
-  exportJackalKey,
   genIv,
   genKey
-} from '../utils/crypt'
-import { hexFullPath, merkleMeBro } from '../utils/hash'
+} from '@/utils/crypt'
+import { hexFullPath, merkleMeBro } from '@/utils/hash'
 
 export default class FolderHandler implements IFolderHandler {
 
@@ -137,10 +136,11 @@ export default class FolderHandler implements IFolderHandler {
     console.dir(encChunks)
     return await assembleEncryptedFile(encChunks, this.folderDetails.whoAmI)
   }
-  async getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}> {
+  async getEnc (): Promise<IAesBundle> {
     return {
       iv: this.iv,
-      key: await exportJackalKey(this.key)
+      // key: await exportJackalKey(this.key)
+      key: this.key
     }
   }
   getMerklePath () {

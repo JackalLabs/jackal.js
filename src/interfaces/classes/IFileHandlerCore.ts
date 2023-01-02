@@ -1,3 +1,5 @@
+import { IAesBundle } from '@/interfaces'
+
 export default interface IFileHandlerCore {
   isFolder: boolean
 
@@ -7,8 +9,8 @@ export default interface IFileHandlerCore {
   getUUID (): string
   getWhoAmI (): string
   getWhereAmI (): string
-  getForUpload (key?: CryptoKey, iv?: Uint8Array): Promise<File>
-  getEnc (): Promise<{iv: Uint8Array, key: Uint8Array}>
+  getForUpload (aes?: IAesBundle): Promise<File>
+  getEnc (): Promise<IAesBundle>
   getMerklePath (): Promise<string>
 
 }
