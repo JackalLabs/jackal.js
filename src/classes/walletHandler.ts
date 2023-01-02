@@ -48,8 +48,8 @@ export default class WalletHandler implements IWalletHandler {
 
       const pH = await ProtoHandler.trackProto(signer, tAddr, qAddr)
 
-      const rnsInitComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).init
-      const { pubkey, success} = (await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
+      const rnsInitComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).value.init
+      const { value: { pubkey }, success} = (await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
       console.log('wallet boot')
       console.dir(await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
       console.dir((success && !!pubkey?.key))
@@ -103,12 +103,12 @@ export default class WalletHandler implements IWalletHandler {
   }
   async getAllBalances (): Promise<ICoin[]> {
     const res = await this.pH.bankQuery.queryAllBalances({ address: this.jackalAccount.address })
-    return res.balances as ICoin[]
+    return res.value.balances as ICoin[]
   }
   async getJackalBalance (): Promise<ICoin> {
     const res = await this.pH.bankQuery.queryBalance({ address: this.jackalAccount.address, denom: 'ujkl' })
     console.dir(res)
-    return res.balance as ICoin
+    return res.value.balance as ICoin
   }
   getPubkey (): string {
     return this.keyPair.publicKey.toHex()

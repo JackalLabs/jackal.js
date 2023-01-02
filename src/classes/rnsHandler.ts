@@ -32,10 +32,10 @@ export default class RnsHandler implements IRnsHandler {
   }
 
   async findExistingNames (): Promise<INames[]> {
-    return (await this.pH.rnsQuery.queryListOwnedNames({ address: this.walletRef.getJackalAddress() })).names
+    return (await this.pH.rnsQuery.queryListOwnedNames({ address: this.walletRef.getJackalAddress() })).value.names
   }
   async findMatchingAddress (rns: string): Promise<string> {
     const trueRns = (rns.endsWith('.jkl')) ? rns.replace(/.jkl$/, '') : rns
-    return (await this.pH.rnsQuery.queryNames({ index: trueRns })).names?.value || ''
+    return (await this.pH.rnsQuery.queryNames({ index: trueRns })).value.names?.value || ''
   }
 }

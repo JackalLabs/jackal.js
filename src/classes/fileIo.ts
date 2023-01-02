@@ -100,6 +100,9 @@ export default class FileIo implements IFileIo {
     } else {
       const { ip } = this.currentProvider
       const url = `${ip.endsWith('/') ? ip.slice(0, -1) : ip}/upload`
+      console.log('toUpload')
+      console.dir(toUpload)
+
       const ids: IQueueItemPostUpload[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
         const itemName = item.getWhoAmI()
         const jackalAddr = this.walletRef.getJackalAddress()
@@ -109,6 +112,7 @@ export default class FileIo implements IFileIo {
 
         item.setIds(await doUpload(url, jackalAddr, file))
         console.log(itemName)
+        console.log(file.name)
         console.dir(item.getIds())
         return { handler: item, data: cfg }
       }))
@@ -202,8 +206,8 @@ export default class FileIo implements IFileIo {
 
     const storageQueryResults = await this.pH.storageQuery.queryFindFile({ fid: version })
 
-    if (!storageQueryResults || !storageQueryResults.providerIps) throw new Error('No FID found!')
-    const providers = storageQueryResults.providerIps
+    if (!storageQueryResults || !storageQueryResults.value.providerIps) throw new Error('No FID found!')
+    const providers = storageQueryResults.value.providerIps
     console.dir(providers)
     const targetProvider = JSON.parse(providers)[0]
     if (targetProvider && targetProvider.length) {
@@ -372,8 +376,8 @@ export default class FileIo implements IFileIo {
       const hexOwner = await hashAndHex(`o${hexPath}${await hashAndHex(creator)}`)
       const { version } = await getFileChainData(hexPath, hexOwner, this.pH.fileTreeQuery)
       const possibleCids = await this.pH.storageQuery.queryFidCid({ fid: version })
-      const cidsToRemove = JSON.parse(possibleCids.fidCid?.cids || '[]')
-      const strays: IStray[] = (await this.pH.storageQuery.queryStraysAll({})).strays || []
+      const cidsToRemove = JSON.parse(possibleCids.value.fidCid?.cids || '[]')
+      const strays: IStray[] = (await this.pH.storageQuery.queryStraysAll({})).value.strays || []
       const strayCids = strays.map((stray: IStray) => stray.cid)
       const finalCids = cidsToRemove.filter((cid: string) => !strayCids.includes(cid))
       const cancelContractsArr = await Promise.all(finalCids.map(async (cid: string) => {
@@ -433,8 +437,8 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
 async function getProvider (queryClient: IQueryStorage): Promise<IMiner[]> {
   const rawProviderReturn = await queryClient.queryProvidersAll({})
 
-  if (!rawProviderReturn || !rawProviderReturn.providers) throw new Error('Unable to get Storage Provider list!')
-  const rawProviderList = rawProviderReturn.providers as IMiner[] || []
+  if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
+  const rawProviderList = rawProviderReturn.value.providers as IMiner[] || []
   return rawProviderList.slice(0, 100)
 }
 async function getFileChainData (hexAddress: string, owner: string, fTQ: any) {

@@ -34,13 +34,13 @@ export default class StorageHandler implements IStorageHandler {
   }
 
   async getClientFreeSpace (address: string): Promise<number> {
-    return (await this.pH.storageQuery.queryGetClientFreeSpace({ address })).bytesfree
+    return (await this.pH.storageQuery.queryGetClientFreeSpace({ address })).value.bytesfree
   }
   async getPayData (address: string): Promise<IPayData> {
-    return await this.pH.storageQuery.queryGetPayData({ address })
+    return (await this.pH.storageQuery.queryGetPayData({ address })).value
   }
   async getStoragePaymentInfo (address: string): Promise<IStoragePaymentInfo> {
-    const result = (await this.pH.storageQuery.queryStoragePaymentInfo({ address })).storagePaymentInfo
+    const result = (await this.pH.storageQuery.queryStoragePaymentInfo({ address })).value.storagePaymentInfo
     return (result) ? result : { spaceAvailable: 0, spaceUsed: 0, address: '' }
   }
 }
