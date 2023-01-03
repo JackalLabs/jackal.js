@@ -48,7 +48,7 @@ export default class FileIo implements IFileIo {
   }
 
   async shuffle (): Promise<void> {
-    this.availableProviders = await getProvider(await this.pH.storageQuery)
+    this.availableProviders = await getProvider(this.pH.storageQuery)
     this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
   }
   forceProvider (toSet: IMiner): void {
@@ -442,12 +442,12 @@ async function getProvider (queryClient: IQueryStorage): Promise<IMiner[]> {
   return rawProviderList.slice(0, 100)
 }
 async function getFileChainData (hexAddress: string, owner: string, fTQ: any) {
-  const fileTreeQueryResults = await fTQ.queryFiles({ address: hexAddress, ownerAddress: owner })
-  console.dir(fileTreeQueryResults)
+  const { value } = await fTQ.queryFiles({ address: hexAddress, ownerAddress: owner })
+  console.dir(value)
 
-  if (!fileTreeQueryResults || !fileTreeQueryResults.files) throw new Error('No address found!')
-  const fileData = fileTreeQueryResults.files
-  if (!fileTreeQueryResults.success) {
+  if (!value || !value.files) throw new Error('No address found!')
+  const fileData = value.files
+  if (!value.success) {
     fileData.contents = '{ "fids": [] }'
   }
   const parsedContents: IFiletreeParsedContents = JSON.parse(fileData.contents)
