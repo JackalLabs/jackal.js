@@ -336,6 +336,7 @@ export default class FileIo implements IFileIo {
         hashParent: await item.getMerklePath(),
         hashChild: await hashAndHex(item.getWhoAmI()),
         contents: JSON.stringify({ fids: fid }),
+        // contents: 'This is a test',
         viewers: JSON.stringify(folderView),
         editors: JSON.stringify(folderEdit),
         trackingNumber: workingUUID
@@ -442,12 +443,12 @@ async function getProvider (queryClient: IQueryStorage): Promise<IMiner[]> {
   return rawProviderList.slice(0, 100)
 }
 async function getFileChainData (hexAddress: string, owner: string, fTQ: any) {
-  const { value } = await fTQ.queryFiles({ address: hexAddress, ownerAddress: owner })
-  console.dir(value)
+  const fileResp = await fTQ.queryFiles({ address: hexAddress, ownerAddress: owner })
+  console.dir(fileResp.value)
 
-  if (!value || !value.files) throw new Error('No address found!')
-  const fileData = value.files
-  if (!value.success) {
+  if (!fileResp.value || !fileResp.value.files) throw new Error('No address found!')
+  const fileData = fileResp.value.files
+  if (!fileResp.success) {
     fileData.contents = '{ "fids": [] }'
   }
   const parsedContents: IFiletreeParsedContents = JSON.parse(fileData.contents)
