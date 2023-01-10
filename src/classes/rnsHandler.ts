@@ -1,6 +1,7 @@
 import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
 import { INames } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
+import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
@@ -17,6 +18,14 @@ export default class RnsHandler implements IRnsHandler {
 
   makeRnsInitMsg (): EncodeObject {
      return this.pH.rnsTx.msgInit({ creator: this.walletRef.getJackalAddress() })
+  }
+  makeNewRegistrationMsg (registrationValues: IRnsRegistrationItem): EncodeObject {
+    return this.pH.rnsTx.msgRegister({
+      creator: this.walletRef.getJackalAddress(),
+      name: registrationValues.nameToRegister,
+      years: (Number(registrationValues.yearsToRegister) || 1).toString(),
+      data: registrationValues.data
+    })
   }
   makeBuyMsg (rns: string): EncodeObject {
     return this.pH.rnsTx.msgBuy({ creator: this.walletRef.getJackalAddress(), name: rns })
