@@ -26,6 +26,7 @@ import IProtoReqs from '@/interfaces/IProtoReqs'
 import IProviderModifiedResponse from '@/interfaces/IProviderModifiedResponse'
 import IProviderResponse from '@/interfaces/IProviderResponse'
 import IQueueItemPostUpload from '@/interfaces/IQueueItemPostUpload'
+import IRnsBidItem from './IRnsBidItem'
 import IRnsForSaleItem from '@/interfaces/IRnsForSaleItem'
 import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
 import IStakingValidator from '@/interfaces/IStakingValidator'
@@ -63,6 +64,7 @@ export {
   IProviderModifiedResponse,
   IProviderResponse,
   IQueueItemPostUpload,
+  IRnsBidItem,
   IRnsForSaleItem,
   IRnsRegistrationItem,
   IStakingValidator,
