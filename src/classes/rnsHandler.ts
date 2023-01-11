@@ -1,5 +1,5 @@
 import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
-import { INames } from '@/interfaces'
+import { INames, IRnsForSaleItem } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
 
@@ -40,6 +40,12 @@ export default class RnsHandler implements IRnsHandler {
     return this.pH.rnsTx.msgTransfer({ creator: this.walletRef.getJackalAddress(), name: rns, receiver })
   }
 
+  async findSingleForSaleName (rnsName: string): Promise<IRnsForSaleItem> {
+    return (await this.pH.rnsQuery.queryForsale({ name: rnsName })).value.forsale as IRnsForSaleItem
+  }
+  async findAllForSaleNames (): Promise<IRnsForSaleItem[]> {
+    return (await this.pH.rnsQuery.queryForsaleAll({})).value.forsale
+  }
   async findExistingNames (): Promise<INames[]> {
     return (await this.pH.rnsQuery.queryListOwnedNames({ address: this.walletRef.getJackalAddress() })).value.names
   }

@@ -1,5 +1,6 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
+import { INames, IRnsForSaleItem } from '@/interfaces'
 
 export default interface IRnsHandler {
   makeRnsInitMsg (): EncodeObject
@@ -9,6 +10,8 @@ export default interface IRnsHandler {
   makeListMsg (rns: string, price: string): EncodeObject
   makeTransferMsg (rns: string, receiver: string): EncodeObject
 
-  findExistingNames (): Promise<any[]>
+  findSingleForSaleName (rnsName: string): Promise<IRnsForSaleItem>
+  findAllForSaleNames (): Promise<IRnsForSaleItem[]>
+  findExistingNames (): Promise<INames[]>
   findMatchingAddress (rns: string): Promise<string>
 }

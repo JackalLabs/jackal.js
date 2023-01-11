@@ -26,6 +26,8 @@ import IProtoReqs from '@/interfaces/IProtoReqs'
 import IProviderModifiedResponse from '@/interfaces/IProviderModifiedResponse'
 import IProviderResponse from '@/interfaces/IProviderResponse'
 import IQueueItemPostUpload from '@/interfaces/IQueueItemPostUpload'
+import IRnsForSaleItem from '@/interfaces/IRnsForSaleItem'
+import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
 import IStakingValidator from '@/interfaces/IStakingValidator'
 import IStorageClientFree from '@/interfaces/IStorageClientFree'
 import IStoragePaymentInfo from '@/interfaces/IStoragePaymentInfo'
@@ -61,6 +63,8 @@ export {
   IProviderModifiedResponse,
   IProviderResponse,
   IQueueItemPostUpload,
+  IRnsForSaleItem,
+  IRnsRegistrationItem,
   IStakingValidator,
   IStorageClientFree,
   IStoragePaymentInfo,
