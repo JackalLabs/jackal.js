@@ -2,6 +2,7 @@ import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes
 import { INames, IRnsBidItem, IRnsForSaleItem } from '@/interfaces'
 
 import { EncodeObject } from '@cosmjs/proto-signing'
+import IRnsRecordItem from '@/interfaces/IRnsRecordItem'
 import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
 
 export default class RnsHandler implements IRnsHandler {
@@ -17,8 +18,63 @@ export default class RnsHandler implements IRnsHandler {
     return new RnsHandler(wallet)
   }
 
+  makeAcceptBidMsg (rns: string, from: string): EncodeObject {
+    return this.pH.rnsTx.msgAcceptBid({ 
+      creator: this.walletRef.getJackalAddress(),
+      name: rns,
+      from
+    })
+  }
+  makeAddRecordMsg (recordValues: IRnsRecordItem): EncodeObject {
+    return this.pH.rnsTx.msgAddRecord({
+      creator: this.walletRef.getJackalAddress(),
+      name: recordValues.name,
+      value: recordValues.value,
+      data: recordValues.data,
+      record: recordValues.record
+    });
+  }
+  makeBidMsg (rns: string, bid: string): EncodeObject {
+    return this.pH.rnsTx.msgBid({ 
+      creator: this.walletRef.getJackalAddress(),
+      name: rns,
+      bid
+    })
+  }
+  makeBuyMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgBuy({ 
+      creator: this.walletRef.getJackalAddress(),
+      name: rns 
+    })
+  }
+  makeCancelBidMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgCancelBid({ 
+      creator: this.walletRef.getJackalAddress(),
+      name: rns
+    })
+  }
+  makeDelistMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgDelist({ 
+      creator: this.walletRef.getJackalAddress(),
+      name: rns })
+  }
+  makeDelRecordMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgDelRecord({ 
+      creator: this.walletRef.getJackalAddress(),
+      name: rns
+    })
+  }
   makeRnsInitMsg (): EncodeObject {
-     return this.pH.rnsTx.msgInit({ creator: this.walletRef.getJackalAddress() })
+    return this.pH.rnsTx.msgInit({ 
+      creator: this.walletRef.getJackalAddress()
+    })
+  }
+  makeListMsg (rns: string, price: string): EncodeObject {
+    return this.pH.rnsTx.msgList({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns,
+      price
+    })
   }
   makeNewRegistrationMsg (registrationValues: IRnsRegistrationItem): EncodeObject {
     return this.pH.rnsTx.msgRegister({
@@ -28,17 +84,12 @@ export default class RnsHandler implements IRnsHandler {
       data: registrationValues.data
     })
   }
-  makeBuyMsg (rns: string): EncodeObject {
-    return this.pH.rnsTx.msgBuy({ creator: this.walletRef.getJackalAddress(), name: rns })
-  }
-  makeDelistMsg (rns: string): EncodeObject {
-    return this.pH.rnsTx.msgDelist({ creator: this.walletRef.getJackalAddress(), name: rns })
-  }
-  makeListMsg (rns: string, price: string): EncodeObject {
-    return this.pH.rnsTx.msgList({ creator: this.walletRef.getJackalAddress(), name: rns, price })
-  }
   makeTransferMsg (rns: string, receiver: string): EncodeObject {
-    return this.pH.rnsTx.msgTransfer({ creator: this.walletRef.getJackalAddress(), name: rns, receiver })
+    return this.pH.rnsTx.msgTransfer({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns,
+      receiver
+    })
   }
 
   async findSingleBid (index: string): Promise<IRnsBidItem> {
