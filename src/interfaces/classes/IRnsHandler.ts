@@ -1,7 +1,5 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import IRnsRecordItem from '../IRnsRecordItem'
-import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
-import { INames, IRnsBidItem, IRnsForSaleItem } from '@/interfaces'
+import { INames, IRnsBidItem, IRnsForSaleItem, IRnsRecordItem, IRnsRegistrationItem } from '@/interfaces'
 
 export default interface IRnsHandler {
   makeAcceptBidMsg (rns: string, from: string): EncodeObject
