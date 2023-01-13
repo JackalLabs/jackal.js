@@ -1,7 +1,6 @@
-import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
-import { INames } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
+import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
+import { INames, IRnsBidItem, IRnsForSaleItem, IRnsRecordItem, IRnsRegistrationItem } from '@/interfaces'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
@@ -16,8 +15,63 @@ export default class RnsHandler implements IRnsHandler {
     return new RnsHandler(wallet)
   }
 
+  makeAcceptBidMsg (rns: string, from: string): EncodeObject {
+    return this.pH.rnsTx.msgAcceptBid({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns,
+      from
+    })
+  }
+  makeAddRecordMsg (recordValues: IRnsRecordItem): EncodeObject {
+    return this.pH.rnsTx.msgAddRecord({
+      creator: this.walletRef.getJackalAddress(),
+      name: recordValues.name,
+      value: recordValues.value,
+      data: recordValues.data,
+      record: recordValues.record
+    });
+  }
+  makeBidMsg (rns: string, bid: string): EncodeObject {
+    return this.pH.rnsTx.msgBid({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns,
+      bid
+    })
+  }
+  makeBuyMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgBuy({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns
+    })
+  }
+  makeCancelBidMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgCancelBid({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns
+    })
+  }
+  makeDelistMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgDelist({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns })
+  }
+  makeDelRecordMsg (rns: string): EncodeObject {
+    return this.pH.rnsTx.msgDelRecord({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns
+    })
+  }
   makeRnsInitMsg (): EncodeObject {
-     return this.pH.rnsTx.msgInit({ creator: this.walletRef.getJackalAddress() })
+    return this.pH.rnsTx.msgInit({
+      creator: this.walletRef.getJackalAddress()
+    })
+  }
+  makeListMsg (rns: string, price: string): EncodeObject {
+    return this.pH.rnsTx.msgList({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns,
+      price
+    })
   }
   makeNewRegistrationMsg (registrationValues: IRnsRegistrationItem): EncodeObject {
     return this.pH.rnsTx.msgRegister({
@@ -27,19 +81,26 @@ export default class RnsHandler implements IRnsHandler {
       data: registrationValues.data
     })
   }
-  makeBuyMsg (rns: string): EncodeObject {
-    return this.pH.rnsTx.msgBuy({ creator: this.walletRef.getJackalAddress(), name: rns })
-  }
-  makeDelistMsg (rns: string): EncodeObject {
-    return this.pH.rnsTx.msgDelist({ creator: this.walletRef.getJackalAddress(), name: rns })
-  }
-  makeListMsg (rns: string, price: string): EncodeObject {
-    return this.pH.rnsTx.msgList({ creator: this.walletRef.getJackalAddress(), name: rns, price })
-  }
   makeTransferMsg (rns: string, receiver: string): EncodeObject {
-    return this.pH.rnsTx.msgTransfer({ creator: this.walletRef.getJackalAddress(), name: rns, receiver })
+    return this.pH.rnsTx.msgTransfer({
+      creator: this.walletRef.getJackalAddress(),
+      name: rns,
+      receiver
+    })
   }
 
+  async findSingleBid (index: string): Promise<IRnsBidItem> {
+    return (await this.pH.rnsQuery.queryBids({ index: index })).value.bids as IRnsBidItem
+  }
+  async findAllBids (): Promise<IRnsBidItem[]> {
+    return (await this.pH.rnsQuery.queryBidsAll({})).value.bids
+  }
+  async findSingleForSaleName (rnsName: string): Promise<IRnsForSaleItem> {
+    return (await this.pH.rnsQuery.queryForsale({ name: rnsName })).value.forsale as IRnsForSaleItem
+  }
+  async findAllForSaleNames (): Promise<IRnsForSaleItem[]> {
+    return (await this.pH.rnsQuery.queryForsaleAll({})).value.forsale
+  }
   async findExistingNames (): Promise<INames[]> {
     return (await this.pH.rnsQuery.queryListOwnedNames({ address: this.walletRef.getJackalAddress() })).value.names
   }

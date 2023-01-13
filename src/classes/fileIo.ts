@@ -192,8 +192,10 @@ export default class FileIo implements IFileIo {
     ready.unshift(ready.pop() as EncodeObject[])
     const readyToBroadcast = [...needingReset, ...ready.flat()]
     // const readyToBroadcast = [...ready.flat()]
-    console.dir(readyToBroadcast)
-    checkResults(await this.pH.broadcaster(readyToBroadcast))
+    // await this.pH.debugBroadcaster(readyToBroadcast, true)
+    await this.pH.debugBroadcaster(readyToBroadcast)
+    // console.dir(readyToBroadcast)
+    // checkResults(await this.pH.broadcaster(readyToBroadcast))
     // const lastStep = await this.pH.broadcaster(needingReset, { fee: finalizeGas(needingReset), memo: '' })
     // checkResults(lastStep)
     // const lastStep2 = await this.pH.broadcaster(ready.flat(), { fee: finalizeGas(ready.flat()), memo: '' })
@@ -348,22 +350,26 @@ export default class FileIo implements IFileIo {
       return [ msgPost, msgSign ]
     }))
     console.dir(msgs.flat())
+    console.dir(initMsg)
     const readyToBroadcast: EncodeObject[] = []
     if (initMsg) {
-      console.dir('initMsg')
-      console.dir(await this.pH.broadcaster([initMsg]))
+      readyToBroadcast.push(initMsg)
+      // console.dir('initMsg')
+      // console.dir(await this.pH.broadcaster([initMsg]))
       // readyToBroadcast.push(initMsg, msgRoot)
     }
-    console.dir('msgRoot')
-    console.dir(await this.pH.broadcaster([msgRoot]))
-    console.dir('msgPost')
-    console.dir(await this.pH.broadcaster([msgs[0][0]]))
-    console.dir('msgSign')
-    console.dir(await this.pH.broadcaster([msgs[0][1]]))
+    // console.dir('msgRoot')
+    // console.dir(await this.pH.broadcaster([msgRoot]))
+    // console.dir('msgPost')
+    // console.dir(await this.pH.broadcaster([msgs[0][0]]))
+    // console.dir('msgSign')
+    // console.dir(await this.pH.broadcaster([msgs[0][1]]))
     readyToBroadcast.push(
-
+      msgRoot,
       ...msgs.flat()
     )
+    // await this.pH.debugBroadcaster(readyToBroadcast, true)
+    await this.pH.debugBroadcaster(readyToBroadcast)
     // const readyToBroadcast = [initMsg, msgRoot, ...msgs.flat()]
     // console.dir(await this.pH.broadcaster(readyToBroadcast))
   }
@@ -371,25 +377,21 @@ export default class FileIo implements IFileIo {
   private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
     const { msgDeleteFile } = await this.pH.fileTreeTx
     const { msgCancelContract } = await this.pH.storageTx
-
     const readyToDelete: EncodeObject[][] = await Promise.all(targets.map(async (target: IDeleteItem) => {
       const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
       const hexOwner = await hashAndHex(`o${hexPath}${await hashAndHex(creator)}`)
       const { version } = await getFileChainData(hexPath, hexOwner, this.pH.fileTreeQuery)
-      const possibleCids = await this.pH.storageQuery.queryFidCid({ fid: version })
-      const cidsToRemove = JSON.parse(possibleCids.value.fidCid?.cids || '[]')
-      const strays: IStray[] = (await this.pH.storageQuery.queryStraysAll({})).value.strays || []
-      const strayCids = strays.map((stray: IStray) => stray.cid)
-      const finalCids = cidsToRemove.filter((cid: string) => !strayCids.includes(cid))
-      const cancelContractsArr = await Promise.all(finalCids.map(async (cid: string) => {
-        return msgCancelContract({ creator, cid })
+      const linkedCids  = JSON.parse((await this.pH.storageQuery.queryFidCid({ fid: version })).value.fidCid?.cids || '[]')
+      const toRemove: string[] = await Promise.all(linkedCids.filter(async (cid: string) => {
+        return await matchOwnerToCid(this.pH, cid, creator)
       }))
+      const cancelContractsMsgs: EncodeObject[] = toRemove.map((cid: string) => msgCancelContract({ creator, cid }))
       const msgDelFile = await msgDeleteFile({
         creator,
         hashPath: hexPath,
         account: await hashAndHex(creator),
       })
-      return [...cancelContractsArr, msgDelFile]
+      return [...cancelContractsMsgs, msgDelFile]
     }))
     return readyToDelete.flat()
   }
@@ -456,6 +458,15 @@ async function getFileChainData (hexAddress: string, owner: string, fTQ: any) {
     version: parsedContents.fids[parsedContents.fids.length - 1],
     data: fileData
   }
+}
+async function matchOwnerToCid (pH: IProtoHandler, cid: string, owner: string): Promise<boolean> {
+   if ((await pH.storageQuery.queryContracts({ cid })).value.contracts?.signee == owner) {
+     return true
+   } else if ((await pH.storageQuery.queryStrays({ cid })).value.strays?.signee == owner) {
+     return true
+   } else {
+     return false
+   }
 }
 async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
   const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
