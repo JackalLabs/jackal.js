@@ -29,7 +29,7 @@ export default class RnsHandler implements IRnsHandler {
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       value: recordValues.value,
-      data: recordValues.data || '{}',
+      data: sanitizeRnsData(recordValues.data, 'makeAddRecordMsg'),
       record: recordValues.record
     });
   }
@@ -87,7 +87,7 @@ export default class RnsHandler implements IRnsHandler {
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       years: (Number(registrationValues.yearsToRegister) || 1).toString(),
-      data: registrationValues.data || '{}'
+      data: sanitizeRnsData(registrationValues.data, 'makeNewRegistrationMsg')
     })
   }
   makeTransferMsg (rns: string, receiver: string): EncodeObject {
@@ -103,7 +103,7 @@ export default class RnsHandler implements IRnsHandler {
     return this.pH.rnsTx.msgUpdate({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
-      data: (data.length > 1) ? data : '{}'
+      data: sanitizeRnsData(data, 'makeUpdateMsg')
     })
   }
 
@@ -134,4 +134,14 @@ export default class RnsHandler implements IRnsHandler {
 function sanitizeRns (rns: string): string {
   const allowedExtensions = /\.(jkl|ibc)$/
   return (rns.match(allowedExtensions)) ? rns : `${rns}.jkl`
+}
+function sanitizeRnsData (data: string, caller: string) {
+  try {
+    return (typeof data === 'string') ? JSON.stringify(JSON.parse(data)) : JSON.stringify(data)
+  }
+  catch (err) {
+    console.error(`sanitizeRnsData() failed for ${caller}`)
+    console.error(err)
+    return '{}'
+  }
 }
