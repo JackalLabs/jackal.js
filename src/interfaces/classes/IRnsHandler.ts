@@ -13,6 +13,7 @@ export default interface IRnsHandler {
   makeListMsg (rns: string, price: string): EncodeObject
   makeNewRegistrationMsg (registrationValues: IRnsRegistrationItem): EncodeObject
   makeTransferMsg (rns: string, receiver: string): EncodeObject
+  makeUpdateMsg (rns: string, data: string): EncodeObject
 
   findSingleBid (index: string): Promise<IRnsBidItem>
   findAllBids (): Promise<IRnsBidItem[]>

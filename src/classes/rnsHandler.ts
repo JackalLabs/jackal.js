@@ -16,49 +16,56 @@ export default class RnsHandler implements IRnsHandler {
   }
 
   makeAcceptBidMsg (rns: string, from: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgAcceptBid({
       creator: this.walletRef.getJackalAddress(),
-      name: rns,
+      name: trueRns,
       from
     })
   }
   makeAddRecordMsg (recordValues: IRnsRecordItem): EncodeObject {
+    const trueRns = sanitizeRns(recordValues.name)
     return this.pH.rnsTx.msgAddRecord({
       creator: this.walletRef.getJackalAddress(),
-      name: recordValues.name,
+      name: trueRns,
       value: recordValues.value,
-      data: recordValues.data,
+      data: sanitizeRnsData(recordValues.data, 'makeAddRecordMsg'),
       record: recordValues.record
     });
   }
   makeBidMsg (rns: string, bid: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgBid({
       creator: this.walletRef.getJackalAddress(),
-      name: rns,
+      name: trueRns,
       bid
     })
   }
   makeBuyMsg (rns: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgBuy({
       creator: this.walletRef.getJackalAddress(),
-      name: rns
+      name: trueRns
     })
   }
   makeCancelBidMsg (rns: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgCancelBid({
       creator: this.walletRef.getJackalAddress(),
-      name: rns
+      name: trueRns
     })
   }
   makeDelistMsg (rns: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgDelist({
       creator: this.walletRef.getJackalAddress(),
-      name: rns })
+      name: trueRns })
   }
   makeDelRecordMsg (rns: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgDelRecord({
       creator: this.walletRef.getJackalAddress(),
-      name: rns
+      name: trueRns
     })
   }
   makeRnsInitMsg (): EncodeObject {
@@ -67,36 +74,50 @@ export default class RnsHandler implements IRnsHandler {
     })
   }
   makeListMsg (rns: string, price: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgList({
       creator: this.walletRef.getJackalAddress(),
-      name: rns,
+      name: trueRns,
       price
     })
   }
   makeNewRegistrationMsg (registrationValues: IRnsRegistrationItem): EncodeObject {
+    const trueRns = sanitizeRns(registrationValues.nameToRegister)
     return this.pH.rnsTx.msgRegister({
       creator: this.walletRef.getJackalAddress(),
-      name: registrationValues.nameToRegister,
+      name: trueRns,
       years: (Number(registrationValues.yearsToRegister) || 1).toString(),
-      data: registrationValues.data
+      data: sanitizeRnsData(registrationValues.data, 'makeNewRegistrationMsg')
     })
   }
   makeTransferMsg (rns: string, receiver: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgTransfer({
       creator: this.walletRef.getJackalAddress(),
-      name: rns,
+      name: trueRns,
       receiver
     })
   }
+  makeUpdateMsg (rns: string, data: string): EncodeObject {
+    const trueRns = sanitizeRns(rns)
+    return this.pH.rnsTx.msgUpdate({
+      creator: this.walletRef.getJackalAddress(),
+      name: trueRns,
+      data: sanitizeRnsData(data, 'makeUpdateMsg')
+    })
+  }
+
 
   async findSingleBid (index: string): Promise<IRnsBidItem> {
-    return (await this.pH.rnsQuery.queryBids({ index: index })).value.bids as IRnsBidItem
+    const trueIndex = sanitizeRns(index)
+    return (await this.pH.rnsQuery.queryBids({ index: trueIndex })).value.bids as IRnsBidItem
   }
   async findAllBids (): Promise<IRnsBidItem[]> {
     return (await this.pH.rnsQuery.queryBidsAll({})).value.bids
   }
-  async findSingleForSaleName (rnsName: string): Promise<IRnsForSaleItem> {
-    return (await this.pH.rnsQuery.queryForsale({ name: rnsName })).value.forsale as IRnsForSaleItem
+  async findSingleForSaleName (rns: string): Promise<IRnsForSaleItem> {
+    const trueRns = sanitizeRns(rns)
+    return (await this.pH.rnsQuery.queryForsale({ name: trueRns })).value.forsale as IRnsForSaleItem
   }
   async findAllForSaleNames (): Promise<IRnsForSaleItem[]> {
     return (await this.pH.rnsQuery.queryForsaleAll({})).value.forsale
@@ -105,7 +126,22 @@ export default class RnsHandler implements IRnsHandler {
     return (await this.pH.rnsQuery.queryListOwnedNames({ address: this.walletRef.getJackalAddress() })).value.names
   }
   async findMatchingAddress (rns: string): Promise<string> {
-    const trueRns = (rns.endsWith('.jkl')) ? rns.replace(/.jkl$/, '') : rns
+    const trueRns = sanitizeRns(rns)
     return (await this.pH.rnsQuery.queryNames({ index: trueRns })).value.names?.value || ''
+  }
+}
+
+function sanitizeRns (rns: string): string {
+  const allowedExtensions = /\.(jkl|ibc)$/
+  return (rns.match(allowedExtensions)) ? rns : `${rns}.jkl`
+}
+function sanitizeRnsData (data: string, caller: string) {
+  try {
+    return (typeof data === 'string') ? JSON.stringify(JSON.parse(data)) : JSON.stringify(data)
+  }
+  catch (err) {
+    console.error(`sanitizeRnsData() failed for ${caller}`)
+    console.error(err)
+    return '{}'
   }
 }
