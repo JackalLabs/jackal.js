@@ -1,6 +1,5 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import IGasHashMap from '@/interfaces/IGasHashMap'
-import IGasRate from '@/interfaces/IGasRate'
+import { IGasHashMap, IGasRate } from '@/interfaces'
 
 const hashMap: IGasHashMap = {
   /** Filetree */
@@ -30,6 +29,7 @@ const hashMap: IGasHashMap = {
   '/canine_chain.rns.MsgList': 142,
   '/canine_chain.rns.MsgRegister': 142,
   '/canine_chain.rns.MsgTransfer': 142,
+  '/canine_chain.rns.MsgUpdate': 142,
   /** Storage */
   '/canine_chain.storage.MsgPostContract': 142,
   '/canine_chain.storage.MsgPostproof': 142,
