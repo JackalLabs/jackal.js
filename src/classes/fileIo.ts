@@ -2,10 +2,8 @@ import { EncodeObject } from '@cosmjs/proto-signing'
 // import { randomUUID, random } from 'make-random'
 import { IQueryFileTree, IQueryStorage, ITxFileTree } from 'jackal.js-protos'
 
-import { finalizeGas } from '@/utils/gas'
 import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
-import { checkResults } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
 import { IFileDownloadHandler, IFileIo, IFolderHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
@@ -18,12 +16,10 @@ import {
   IFileMeta,
   IFiletreeParsedContents,
   IMiner,
-  IMsgFinalPostFileBundle,
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
-  IQueueItemPostUpload,
-  IStray
+  IQueueItemPostUpload
 } from '@/interfaces'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 
