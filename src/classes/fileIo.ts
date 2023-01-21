@@ -15,6 +15,7 @@ import {
   IFileConfigRaw,
   IFileMeta,
   IFiletreeParsedContents,
+  IFolderAdd,
   IMiner,
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
@@ -50,17 +51,18 @@ export default class FileIo implements IFileIo {
   forceProvider (toSet: IMiner): void {
     this.currentProvider = toSet
   }
-   async uploadFolders (toUpload: IFolderHandler[], owner: string): Promise<void> {
+  async uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void> {
+    const { newDir, parentDir } = toUpload
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const jackalAddr = this.walletRef.getJackalAddress()
 
-    toUpload[0].setIds(await doUpload(url, jackalAddr, await toUpload[0].getForUpload()))
-    const { cfg, file } = await prepExistingUpload(toUpload[1], owner, this.walletRef)
-    toUpload[1].setIds(await doUpload(url, jackalAddr, file))
+    newDir.setIds(await doUpload(url, jackalAddr, await newDir.getForUpload()))
+    const { cfg, file } = await prepExistingUpload(parentDir, owner, this.walletRef)
+    parentDir.setIds(await doUpload(url, jackalAddr, file))
 
     await this.afterUpload([
-      { handler: toUpload[0], data: null },
-      { handler: toUpload[1], data: cfg }
+      { handler: newDir, data: null },
+      { handler: parentDir, data: cfg }
     ])
   }
   async verifyFoldersExist (toCheck: string[]): Promise<number> {
@@ -108,9 +110,11 @@ export default class FileIo implements IFileIo {
     }
   }
   private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
-    const { msgPostFile } = await this.pH.fileTreeTx
-    const { msgSignContract } = await this.pH.storageTx
-
+    const readyToBroadcast = await this.rawAfterUpload(ids)
+    // await this.pH.debugBroadcaster(readyToBroadcast, true)
+    await this.pH.debugBroadcaster(readyToBroadcast)
+  }
+  private async rawAfterUpload (ids: IQueueItemPostUpload[]): Promise<EncodeObject[]> {
     const creator = this.walletRef.getJackalAddress()
 
     const needingReset: EncodeObject[] = []
@@ -154,14 +158,13 @@ export default class FileIo implements IFileIo {
       }
 
       const msgPost: EncodeObject = await buildPostFile(msgPostFileBundle, this.pH.fileTreeTx)
-      const msgSign: EncodeObject = await msgSignContract({ creator, cid })
+      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid })
       return [msgPost, msgSign]
     }))
 
     ready.unshift(ready.pop() as EncodeObject[])
-    const readyToBroadcast = [...needingReset, ...ready.flat()]
-    // await this.pH.debugBroadcaster(readyToBroadcast, true)
-    await this.pH.debugBroadcaster(readyToBroadcast)
+    return [...needingReset, ...ready.flat()]
+
   }
   async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
@@ -197,24 +200,26 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
-   async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
+async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
+  const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
+  const names = targets.map((target:IDeleteItem) => target.name)
 
-    const names = targets.map((target:IDeleteItem) => target.name)
-    parent.removeChildDirs(names)
-    parent.removeChildFiles(names)
-    targets.push({
-      location: parent.getWhereAmI(),
-      name: parent.getWhoAmI()
-    })
+  parent.removeChildDirs(names)
+  parent.removeChildFiles(names)
+  targets.push({
+    location: parent.getWhereAmI(),
+    name: parent.getWhoAmI()
+  })
+  const msgs = await this.makeDelete(this.walletRef.getJackalAddress(), targets)
 
-    const msgs = await this.makeDelete(this.walletRef.getJackalAddress(), targets)
+  const { cfg, file } = await prepExistingUpload(parent, parent.getWhoOwnsMe(), this.walletRef)
+  parent.setIds(await doUpload(url, parent.getWhoOwnsMe(), file))
+  const uploadMsg = await this.rawAfterUpload([{ handler: parent, data: cfg }])
+  msgs.push(...uploadMsg)
 
-    if (parent) {
-      // todo - logic here
-    }
-
-    console.dir(await this.pH.broadcaster(msgs))
-  }
+  // await this.pH.debugBroadcaster(msgs, true)
+  await this.pH.debugBroadcaster(msgs)
+}
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const toGenerate = startingDirs || ['Config', 'Home', 'WWW']
@@ -326,9 +331,6 @@ export default class FileIo implements IFileIo {
   const editorKeys = configData.editAccess[
     await hashAndHex(`e${configData.trackingNumber}${walletRef.getJackalAddress()}`)
     ]
-  // const parsedKeys = JSON.parse(editorKeys)
-  // const recoveredKey = await importJackalKey(new Uint8Array(walletRef.asymmetricDecrypt(parsedKeys.key)))
-  // const recoveredIv = new Uint8Array(walletRef.asymmetricDecrypt(parsedKeys.iv))
 
   return {
     cfg: configData,

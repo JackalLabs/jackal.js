@@ -5,12 +5,13 @@ import IFileMeta from '@/interfaces/IFileMeta'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IDeleteItem from '@/interfaces/IDeleteItem'
 import { EncodeObject } from '@cosmjs/proto-signing'
+import { IFolderAdd } from '@/interfaces'
 
 export default interface IFileIo {
   shuffle (): Promise<void>
   forceProvider (toSet: IMiner): void
 
-  uploadFolders (toUpload: IFolderHandler[], owner: string): Promise<void>
+  uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void>
   verifyFoldersExist (toCheck: string[]): Promise<number>
   uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: { [name: string]: IFileMeta }): Promise<void>
   downloadFile (fileAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler>
