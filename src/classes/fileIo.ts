@@ -200,26 +200,22 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
-async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
-  const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
-  const names = targets.map((target:IDeleteItem) => target.name)
+  async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
+    const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
+    const names = targets.map((target:IDeleteItem) => target.name)
 
-  parent.removeChildDirs(names)
-  parent.removeChildFiles(names)
-  targets.push({
-    location: parent.getWhereAmI(),
-    name: parent.getWhoAmI()
-  })
-  const msgs = await this.makeDelete(this.walletRef.getJackalAddress(), targets)
+    parent.removeChildDirs(names)
+    parent.removeChildFiles(names)
+    const msgs = await this.makeDelete(this.walletRef.getJackalAddress(), targets)
 
-  const { cfg, file } = await prepExistingUpload(parent, parent.getWhoOwnsMe(), this.walletRef)
-  parent.setIds(await doUpload(url, parent.getWhoOwnsMe(), file))
-  const uploadMsg = await this.rawAfterUpload([{ handler: parent, data: cfg }])
-  msgs.push(...uploadMsg)
+    const { cfg, file } = await prepExistingUpload(parent, parent.getWhoOwnsMe(), this.walletRef)
+    parent.setIds(await doUpload(url, parent.getWhoOwnsMe(), file))
+    const uploadMsg = await this.rawAfterUpload([{ handler: parent, data: cfg }])
+    msgs.push(...uploadMsg)
 
-  // await this.pH.debugBroadcaster(msgs, true)
-  await this.pH.debugBroadcaster(msgs)
-}
+    // await this.pH.debugBroadcaster(msgs, true)
+    await this.pH.debugBroadcaster(msgs)
+  }
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const toGenerate = startingDirs || ['Config', 'Home', 'WWW']
@@ -291,8 +287,6 @@ async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<vo
   }
 
   private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
-    const { msgDeleteFile } = await this.pH.fileTreeTx
-    const { msgCancelContract } = await this.pH.storageTx
     const readyToDelete: EncodeObject[][] = await Promise.all(targets.map(async (target: IDeleteItem) => {
       const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
       const hexOwner = await hashAndHex(`o${hexPath}${await hashAndHex(creator)}`)
@@ -301,8 +295,8 @@ async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<vo
       const toRemove: string[] = await Promise.all(linkedCids.filter(async (cid: string) => {
         return await matchOwnerToCid(this.pH, cid, creator)
       }))
-      const cancelContractsMsgs: EncodeObject[] = toRemove.map((cid: string) => msgCancelContract({ creator, cid }))
-      const msgDelFile = await msgDeleteFile({
+      const cancelContractsMsgs: EncodeObject[] = toRemove.map((cid: string) => this.pH.storageTx.msgCancelContract({ creator, cid }))
+      const msgDelFile = this.pH.fileTreeTx.msgDeleteFile({
         creator,
         hashPath: hexPath,
         account: await hashAndHex(creator),
