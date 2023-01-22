@@ -3,7 +3,7 @@ import { IPayData, IStoragePaymentInfo } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 
 export default interface IStorageHandler {
-  buyStorage (forAddress: string, duration: string, bytes: string): Promise<DeliverTxResponse>
+  buyStorage (forAddress: string, duration: string, bytes: string): Promise<void>
   makeStorageInitMsg (): EncodeObject
   getClientFreeSpace (address: string): Promise<number>
   getPayData (address: string): Promise<IPayData>

@@ -12,6 +12,7 @@ import IFileConfigRelevant from '@/interfaces/IFileConfigRelevant'
 import IFileDetails from '@/interfaces/IFileDetails'
 import IFileMeta from '@/interfaces/IFileMeta'
 import IFiletreeParsedContents from '@/interfaces/IFiletreeParsedContents'
+import IFolderAdd from '@/interfaces/IFolderAdd'
 import IFolderDownload from '@/interfaces/IFolderDownload'
 import IFolderFileFrame from '@/interfaces/IFolderFileFrame'
 import IGasHashMap from '@/interfaces/IGasHashMap'
@@ -51,6 +52,7 @@ export {
   IFileDetails,
   IFileMeta,
   IFiletreeParsedContents,
+  IFolderAdd,
   IFolderDownload,
   IFolderFileFrame,
   IGasHashMap,

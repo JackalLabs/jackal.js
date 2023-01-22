@@ -50,14 +50,9 @@ export default class WalletHandler implements IWalletHandler {
 
       const rnsInitComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).value.init
       const { value: { pubkey }, success} = (await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
-      console.log('wallet boot')
-      console.dir(await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
-      console.dir((success && !!pubkey?.key))
       const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
       const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
       const keyPair = PrivateKey.fromHex(secretAsHex)
-      console.dir(secret)
-      console.dir(keyPair)
 
       return new WalletHandler(signer, keyPair, rnsInitComplete, (success && !!pubkey?.key), acct, pH)
     }
@@ -107,7 +102,6 @@ export default class WalletHandler implements IWalletHandler {
   }
   async getJackalBalance (): Promise<ICoin> {
     const res = await this.pH.bankQuery.queryBalance({ address: this.jackalAccount.address, denom: 'ujkl' })
-    console.dir(res)
     return res.value.balance as ICoin
   }
   getPubkey (): string {

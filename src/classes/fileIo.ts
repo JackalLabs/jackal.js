@@ -15,6 +15,7 @@ import {
   IFileConfigRaw,
   IFileMeta,
   IFiletreeParsedContents,
+  IFolderAdd,
   IMiner,
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
@@ -38,7 +39,6 @@ export default class FileIo implements IFileIo {
 
   static async trackIo (wallet: IWalletHandler): Promise<FileIo> {
     const providers = await getProvider(wallet.getProtoHandler().storageQuery)
-    console.dir(providers)
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
@@ -50,17 +50,18 @@ export default class FileIo implements IFileIo {
   forceProvider (toSet: IMiner): void {
     this.currentProvider = toSet
   }
-   async uploadFolders (toUpload: IFolderHandler[], owner: string): Promise<void> {
+  async uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void> {
+    const { newDir, parentDir } = toUpload
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const jackalAddr = this.walletRef.getJackalAddress()
 
-    toUpload[0].setIds(await doUpload(url, jackalAddr, await toUpload[0].getForUpload()))
-    const { cfg, file } = await prepExistingUpload(toUpload[1], owner, this.walletRef)
-    toUpload[1].setIds(await doUpload(url, jackalAddr, file))
+    newDir.setIds(await doUpload(url, jackalAddr, await newDir.getForUpload()))
+    const { cfg, file } = await prepExistingUpload(parentDir, owner, this.walletRef)
+    parentDir.setIds(await doUpload(url, jackalAddr, file))
 
     await this.afterUpload([
-      { handler: toUpload[0], data: null },
-      { handler: toUpload[1], data: cfg }
+      { handler: newDir, data: null },
+      { handler: parentDir, data: cfg }
     ])
   }
   async verifyFoldersExist (toCheck: string[]): Promise<number> {
@@ -69,11 +70,10 @@ export default class FileIo implements IFileIo {
     for (let i = 0; i < toCheck.length; i++) {
       const folderName = toCheck[i]
       const hexAddress = await merkleMeBro(`s/${folderName}`)
-      console.log(`verify : ${hexAddress}`)
       const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
       const { version } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
       if (version) {
-        console.warn(`${folderName} exists`)
+        console.info(`${folderName} exists`)
       } else {
         console.warn(`${folderName} does not exist`)
         toCreate.push(folderName)
@@ -91,9 +91,6 @@ export default class FileIo implements IFileIo {
       throw new Error('Empty File array submitted for upload')
     } else {
       const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
-      console.log('toUpload')
-      console.dir(toUpload)
-
       const ids: IQueueItemPostUpload[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
         const itemName = item.getWhoAmI()
         const jackalAddr = this.walletRef.getJackalAddress()
@@ -108,9 +105,11 @@ export default class FileIo implements IFileIo {
     }
   }
   private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
-    const { msgPostFile } = await this.pH.fileTreeTx
-    const { msgSignContract } = await this.pH.storageTx
-
+    const readyToBroadcast = await this.rawAfterUpload(ids)
+    // await this.pH.debugBroadcaster(readyToBroadcast, true)
+    await this.pH.debugBroadcaster(readyToBroadcast)
+  }
+  private async rawAfterUpload (ids: IQueueItemPostUpload[]): Promise<EncodeObject[]> {
     const creator = this.walletRef.getJackalAddress()
 
     const needingReset: EncodeObject[] = []
@@ -154,14 +153,13 @@ export default class FileIo implements IFileIo {
       }
 
       const msgPost: EncodeObject = await buildPostFile(msgPostFileBundle, this.pH.fileTreeTx)
-      const msgSign: EncodeObject = await msgSignContract({ creator, cid })
+      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid })
       return [msgPost, msgSign]
     }))
 
     ready.unshift(ready.pop() as EncodeObject[])
-    const readyToBroadcast = [...needingReset, ...ready.flat()]
-    // await this.pH.debugBroadcaster(readyToBroadcast, true)
-    await this.pH.debugBroadcaster(readyToBroadcast)
+    return [...needingReset, ...ready.flat()]
+
   }
   async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
@@ -172,8 +170,6 @@ export default class FileIo implements IFileIo {
 
     if (!storageQueryResults || !storageQueryResults.value.providerIps) throw new Error('No Matching CIDs found!')
     const providers = storageQueryResults.value.providerIps
-    console.log('File providers :')
-    console.dir(providers)
     const targetProvider = JSON.parse(providers)[0]
     if (targetProvider && targetProvider.length) {
       const url = `${targetProvider.replace(/\/+$/, '')}/download/${version}`
@@ -197,23 +193,21 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
-   async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
-
+  async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
+    const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const names = targets.map((target:IDeleteItem) => target.name)
+
     parent.removeChildDirs(names)
     parent.removeChildFiles(names)
-    targets.push({
-      location: parent.getWhereAmI(),
-      name: parent.getWhoAmI()
-    })
-
     const msgs = await this.makeDelete(this.walletRef.getJackalAddress(), targets)
 
-    if (parent) {
-      // todo - logic here
-    }
+    const { cfg, file } = await prepExistingUpload(parent, parent.getWhoOwnsMe(), this.walletRef)
+    parent.setIds(await doUpload(url, parent.getWhoOwnsMe(), file))
+    const uploadMsg = await this.rawAfterUpload([{ handler: parent, data: cfg }])
+    msgs.push(...uploadMsg)
 
-    console.dir(await this.pH.broadcaster(msgs))
+    // await this.pH.debugBroadcaster(msgs, true)
+    await this.pH.debugBroadcaster(msgs)
   }
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
@@ -286,8 +280,6 @@ export default class FileIo implements IFileIo {
   }
 
   private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
-    const { msgDeleteFile } = await this.pH.fileTreeTx
-    const { msgCancelContract } = await this.pH.storageTx
     const readyToDelete: EncodeObject[][] = await Promise.all(targets.map(async (target: IDeleteItem) => {
       const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
       const hexOwner = await hashAndHex(`o${hexPath}${await hashAndHex(creator)}`)
@@ -296,8 +288,8 @@ export default class FileIo implements IFileIo {
       const toRemove: string[] = await Promise.all(linkedCids.filter(async (cid: string) => {
         return await matchOwnerToCid(this.pH, cid, creator)
       }))
-      const cancelContractsMsgs: EncodeObject[] = toRemove.map((cid: string) => msgCancelContract({ creator, cid }))
-      const msgDelFile = await msgDeleteFile({
+      const cancelContractsMsgs: EncodeObject[] = toRemove.map((cid: string) => this.pH.storageTx.msgCancelContract({ creator, cid }))
+      const msgDelFile = this.pH.fileTreeTx.msgDeleteFile({
         creator,
         hashPath: hexPath,
         account: await hashAndHex(creator),
@@ -326,9 +318,6 @@ export default class FileIo implements IFileIo {
   const editorKeys = configData.editAccess[
     await hashAndHex(`e${configData.trackingNumber}${walletRef.getJackalAddress()}`)
     ]
-  // const parsedKeys = JSON.parse(editorKeys)
-  // const recoveredKey = await importJackalKey(new Uint8Array(walletRef.asymmetricDecrypt(parsedKeys.key)))
-  // const recoveredIv = new Uint8Array(walletRef.asymmetricDecrypt(parsedKeys.iv))
 
   return {
     cfg: configData,
@@ -342,23 +331,20 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
   return await fetch(url, { method: 'POST', body: fileFormData as FormData })
     .then((resp): Promise<IProviderResponse> => resp.json())
     .then((resp) => {
-      console.log('Upload Resp')
-      console.dir(resp)
       return { fid: [resp.fid], cid: resp.cid }
     })
 }
 
-async function getProvider (queryClient: IQueryStorage): Promise<IMiner[]> {
+async function getProvider (queryClient: IQueryStorage, max?: number): Promise<IMiner[]> {
   const rawProviderReturn = await queryClient.queryProvidersAll({})
-
   if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
-  const rawProviderList = rawProviderReturn.value.providers as IMiner[] || []
-  return rawProviderList.slice(0, 100)
+  const rawProviderList = rawProviderReturn.value.providers as IMiner[]
+  console.info('Providers')
+  console.dir(rawProviderList)
+  return rawProviderList.slice(0, Number(max) || 100)
 }
 async function getFileChainData (hexAddress: string, owner: string, fileTreeQuery: IQueryFileTree) {
   const fileResp = await fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: owner })
-  console.dir(fileResp.value)
-
   if (!fileResp.value || !fileResp.value.files) throw new Error('No address found!')
   const fileData = fileResp.value.files
   if (!fileResp.success) {
