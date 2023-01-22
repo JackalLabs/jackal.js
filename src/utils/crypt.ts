@@ -23,22 +23,16 @@ export async function aesCrypt (data: ArrayBuffer, key: CryptoKey, iv: Uint8Arra
   if (data.byteLength < 1) {
     return new ArrayBuffer(0)
   } else if (mode?.toLowerCase() === 'encrypt') {
-    console.log('encrypt')
-    console.dir(data.byteLength)
     return await crypto.subtle.encrypt(algo, key, data)
       .then(res => {
-        console.dir(res.byteLength)
         return res
       })
       .catch(err => {
         throw new Error(err)
       })
   } else {
-    console.log('decrypt')
-    console.dir(data.byteLength)
     return await crypto.subtle.decrypt(algo, key, data)
       .then(res => {
-        console.dir(res.byteLength)
         return res
       })
       .catch(err => {
@@ -48,7 +42,6 @@ export async function aesCrypt (data: ArrayBuffer, key: CryptoKey, iv: Uint8Arra
 }
 export function encryptPrep (source: ArrayBuffer): ArrayBuffer[] {
   const paddedSource = addPadding(source)
-  console.log(paddedSource)
   const chunkSize = 33554432 /** in bytes */
   const len = paddedSource.byteLength
   const count = Math.ceil(len / chunkSize)
@@ -62,30 +55,19 @@ export function encryptPrep (source: ArrayBuffer): ArrayBuffer[] {
       const endIndex = (i + 1) * chunkSize
       ret.push(paddedSource.slice(startIndex, endIndex))
     }
-    console.log('enc parts')
-    console.dir(ret)
     return ret
   }
 }
 export function decryptPrep (source: ArrayBuffer): ArrayBuffer[] {
-  console.log(`dl ab`)
-  console.dir(source)
   const parts: ArrayBuffer[] = []
   for (let i = 0; i + 1 < source.byteLength;) {
-    console.log(`i : ${i}`)
     const offset = i + 8
-    console.log(`offset : ${offset}`)
-    console.log(`raw segSize : ${(new TextDecoder()).decode(source.slice(i, offset))}`)
     const segSize = Number((new TextDecoder()).decode(source.slice(i, offset)))
-    console.log(`segSize : ${segSize}`)
     const last = offset + segSize
-    console.log(`last : ${last}`)
     const segment = source.slice(offset, last)
     parts.push(segment)
     i = last
   }
-  console.log('parts')
-  console.dir(parts)
   return parts
 }
 
@@ -97,10 +79,7 @@ export async function assembleEncryptedFile (parts: ArrayBuffer[], name: string)
       parts[i]
     )
   }
-  console.log('staged')
-  console.dir(staged)
   const finalName = `${await hashAndHex(name + Date.now().toString())}.jkl`
   const tstFile =  new File(staged, finalName, { type: 'text/plain' })
-  console.dir(tstFile)
   return tstFile
 }

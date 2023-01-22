@@ -16,8 +16,6 @@ export function stripper (value: string): string {
 }
 export function addPadding (original: ArrayBuffer): ArrayBuffer {
   let padSize = 16 - (original.byteLength % 16)
-  console.log('padSize')
-  console.log(padSize)
   if (padSize === 0) {
     padSize = 16
   } else {
@@ -30,8 +28,6 @@ export function addPadding (original: ArrayBuffer): ArrayBuffer {
 export function removePadding (chunk: ArrayBuffer): ArrayBuffer {
   const workingChunk = new Uint8Array(chunk)
   const padCount = workingChunk[workingChunk.byteLength - 1]
-  console.log('padCount')
-  console.log(padCount)
   return workingChunk.slice(0, workingChunk.byteLength - padCount).buffer
 }
 export function checkResults (response: any) {

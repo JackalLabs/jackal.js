@@ -77,7 +77,8 @@ export default class GovHandler implements IGovHandler {
         validatorAddress: address
       })
     })
-    console.dir(await this.pH.broadcaster(msgs))
+    // await this.pH.debugBroadcaster(msgs, true)
+    await this.pH.debugBroadcaster(msgs)
   }
   async delegateTokens (validatorAddress: string, amount: number): Promise<void> {
     const { msgDelegate } = await this.pH.stakingTx
@@ -89,7 +90,8 @@ export default class GovHandler implements IGovHandler {
           amount: amount.toString()
         }
       })
-    console.dir(await this.pH.broadcaster([msg]))
+    // await this.pH.debugBroadcaster([msg], true)
+    await this.pH.debugBroadcaster([msg])
   }
 }
 

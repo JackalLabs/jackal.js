@@ -42,7 +42,6 @@ export default class FolderHandler implements IFolderHandler {
         .map((chunk: ArrayBuffer) => aesCrypt(chunk, key, iv, 'decrypt')
     ))
     const result = (new TextDecoder()).decode(await (new Blob([...decChunks])).arrayBuffer())
-    console.log(`result : ${result}`)
     const folderDetails = JSON.parse(result.slice(0, result.lastIndexOf('}') + 1))
     return new FolderHandler(folderDetails, config, key, iv)
   }
@@ -90,7 +89,6 @@ export default class FolderHandler implements IFolderHandler {
       return acc
     }, {})
     this.folderDetails.fileChildren = {...this.folderDetails.fileChildren, ...midStep}
-    console.dir(this.folderDetails)
   }
   removeChildDirs (toRemove: string[]) {
     this.folderDetails.dirChildren = this.folderDetails.dirChildren.filter((saved: string) => !toRemove.includes(saved))
@@ -128,12 +126,10 @@ export default class FolderHandler implements IFolderHandler {
   }
   async getForUpload (): Promise<File> {
     const str = JSON.stringify(this.folderDetails)
-    console.log(str)
     const chunks = encryptPrep((new TextEncoder()).encode(str))
     const encChunks: ArrayBuffer[] = await Promise.all(
       chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, this.key, this.iv, 'encrypt'))
     )
-    console.dir(encChunks)
     return await assembleEncryptedFile(encChunks, this.folderDetails.whoAmI)
   }
   async getEnc (): Promise<IAesBundle> {

@@ -90,8 +90,6 @@ async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Ui
   const chunks = encryptPrep(read.content)
   chunks.unshift(addPadding((new TextEncoder()).encode(JSON.stringify(read.details)).buffer))
   const encChunks: ArrayBuffer[] = await Promise.all(chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, key, iv, 'encrypt')))
-  console.log('file')
-  console.dir(encChunks)
   return await assembleEncryptedFile(encChunks, read.details.name)
 }
 async function readFile (workingFile: File): Promise<IFileBuffer> {

@@ -39,7 +39,6 @@ export default class FileIo implements IFileIo {
 
   static async trackIo (wallet: IWalletHandler): Promise<FileIo> {
     const providers = await getProvider(wallet.getProtoHandler().storageQuery)
-    console.dir(providers)
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
@@ -71,11 +70,10 @@ export default class FileIo implements IFileIo {
     for (let i = 0; i < toCheck.length; i++) {
       const folderName = toCheck[i]
       const hexAddress = await merkleMeBro(`s/${folderName}`)
-      console.log(`verify : ${hexAddress}`)
       const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
       const { version } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
       if (version) {
-        console.warn(`${folderName} exists`)
+        console.info(`${folderName} exists`)
       } else {
         console.warn(`${folderName} does not exist`)
         toCreate.push(folderName)
@@ -93,9 +91,6 @@ export default class FileIo implements IFileIo {
       throw new Error('Empty File array submitted for upload')
     } else {
       const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
-      console.log('toUpload')
-      console.dir(toUpload)
-
       const ids: IQueueItemPostUpload[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
         const itemName = item.getWhoAmI()
         const jackalAddr = this.walletRef.getJackalAddress()
@@ -175,8 +170,6 @@ export default class FileIo implements IFileIo {
 
     if (!storageQueryResults || !storageQueryResults.value.providerIps) throw new Error('No Matching CIDs found!')
     const providers = storageQueryResults.value.providerIps
-    console.log('File providers :')
-    console.dir(providers)
     const targetProvider = JSON.parse(providers)[0]
     if (targetProvider && targetProvider.length) {
       const url = `${targetProvider.replace(/\/+$/, '')}/download/${version}`
@@ -338,23 +331,20 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
   return await fetch(url, { method: 'POST', body: fileFormData as FormData })
     .then((resp): Promise<IProviderResponse> => resp.json())
     .then((resp) => {
-      console.log('Upload Resp')
-      console.dir(resp)
       return { fid: [resp.fid], cid: resp.cid }
     })
 }
 
-async function getProvider (queryClient: IQueryStorage): Promise<IMiner[]> {
+async function getProvider (queryClient: IQueryStorage, max?: number): Promise<IMiner[]> {
   const rawProviderReturn = await queryClient.queryProvidersAll({})
-
   if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
-  const rawProviderList = rawProviderReturn.value.providers as IMiner[] || []
-  return rawProviderList.slice(0, 100)
+  const rawProviderList = rawProviderReturn.value.providers as IMiner[]
+  console.info('Providers')
+  console.dir(rawProviderList)
+  return rawProviderList.slice(0, Number(max) || 100)
 }
 async function getFileChainData (hexAddress: string, owner: string, fileTreeQuery: IQueryFileTree) {
   const fileResp = await fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: owner })
-  console.dir(fileResp.value)
-
   if (!fileResp.value || !fileResp.value.files) throw new Error('No address found!')
   const fileData = fileResp.value.files
   if (!fileResp.success) {
