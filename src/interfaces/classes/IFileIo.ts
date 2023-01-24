@@ -9,6 +9,7 @@ import { IFolderAdd } from '@/interfaces'
 
 export default interface IFileIo {
   shuffle (): Promise<void>
+  refresh (): Promise<void>
   forceProvider (toSet: IMiner): void
 
   uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void>

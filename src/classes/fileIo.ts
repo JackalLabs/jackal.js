@@ -38,13 +38,16 @@ export default class FileIo implements IFileIo {
   }
 
   static async trackIo (wallet: IWalletHandler): Promise<FileIo> {
-    const providers = await getProvider(wallet.getProtoHandler().storageQuery)
+    const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery))
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
 
   async shuffle (): Promise<void> {
-    this.availableProviders = await getProvider(this.pH.storageQuery)
+    this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
+  }
+  async refresh (): Promise<void> {
+    this.availableProviders = await verifyProviders(await getProviders(this.pH.storageQuery))
     this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
   }
   forceProvider (toSet: IMiner): void {
@@ -335,13 +338,41 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
     })
 }
 
-async function getProvider (queryClient: IQueryStorage, max?: number): Promise<IMiner[]> {
+async function getProviders (queryClient: IQueryStorage, max?: number): Promise<IMiner[]> {
   const rawProviderReturn = await queryClient.queryProvidersAll({})
   if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
   const rawProviderList = rawProviderReturn.value.providers as IMiner[]
-  console.info('Providers')
+  console.info('Raw Providers')
   console.dir(rawProviderList)
-  return rawProviderList.slice(0, Number(max) || 100)
+  const filteredProviders = rawProviderList.filter((provider) => {
+    return !provider.ip.match(/(localhost|example|sample|placeholder|127\.\d{1,3}\.\d{1,3}\.\d{1,3})/)
+  })
+  return filteredProviders.slice(0, Number(max) || 100)
+}
+async function verifyProviders (providers: IMiner[]): Promise<IMiner[]> {
+  const staged: boolean[] = await Promise.all(
+    providers.map(async (provider) => {
+      const result: boolean = await fetch(
+        `${provider.ip.replace(/\/+$/, '')}/version`,
+        {
+          // signal: AbortSignal.timeout(5000)
+          signal: AbortSignal.timeout(1500)
+        })
+        .then((res): boolean => {
+          return res.ok
+        })
+        .catch(err => {
+          console.warn('verifyProviders Error')
+          console.error(err)
+          return false
+        })
+      console.warn(`${provider.ip} : ${result}`)
+      return result
+  }))
+  const verified = providers.filter((provider, index) => staged[index])
+  console.info('Verified Providers')
+  console.dir(verified)
+  return verified
 }
 async function getFileChainData (hexAddress: string, owner: string, fileTreeQuery: IQueryFileTree) {
   const fileResp = await fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: owner })

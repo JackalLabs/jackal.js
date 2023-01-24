@@ -37,12 +37,7 @@ export default class GovHandler implements IGovHandler {
       return acc
     }, 0)
   }
-  async getMyValidators (): Promise<IStakingValidator[]> {
-    return (await this.pH.stakingQuery.queryDelegatorValidators({
-      delegatorAddr: this.walletRef.getJackalAddress()
-    })).value.validators as IStakingValidator[]
-  }
-  async getMyValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
+  async getDelegatorValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
     const result = (await this.pH.stakingQuery.queryDelegatorValidator({
       delegatorAddr: this.walletRef.getJackalAddress(),
       validatorAddr: validatorAddress
@@ -53,8 +48,15 @@ export default class GovHandler implements IGovHandler {
       throw new Error('No Validator Details Found')
     }
   }
+  async getAllDelegatorValidatorDetails (): Promise<IStakingValidator[]> {
+    return (await this.pH.stakingQuery.queryDelegatorValidators({
+      delegatorAddr: this.walletRef.getJackalAddress()
+    })).value.validators as IStakingValidator[]
+  }
   async getValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
-    const result = (await this.pH.stakingQuery.queryValidator({ validatorAddr: validatorAddress })).value.validator
+    const result = (await this.pH.stakingQuery.queryValidator({
+      validatorAddr: validatorAddress
+    })).value.validator
     if (result) {
       return result as IStakingValidator
     } else {
@@ -62,11 +64,8 @@ export default class GovHandler implements IGovHandler {
     }
   }
   async getAllValidatorDetails (status: TValidatorStatus): Promise<IStakingValidator[]> {
-    return (await this.pH.stakingQuery.queryValidators({ status: statusMap[status.toUpperCase()] })).value.validators as IStakingValidator[]
-  }
-  async getDelegatedValidators (): Promise<IStakingValidator[]> {
-    return (await this.pH.stakingQuery.queryDelegatorValidators({
-      delegatorAddr: this.walletRef.getJackalAddress()
+    return (await this.pH.stakingQuery.queryValidators({
+      status: statusMap[status.toUpperCase()]
     })).value.validators as IStakingValidator[]
   }
   async claimDelegatorRewards (validatorAddresses: string[]): Promise<void> {
