@@ -6,8 +6,8 @@ export default interface IGovHandler {
   getTotalRewards (): Promise<IDelegationRewards>
   getRewards (validatorAddress: string): Promise<ICoin[]>
   getTotalStaked (): Promise<number>
-  getMyValidatorDetails (validatorAddress: string): Promise<IStakingValidator>
-  getAllMyValidatorDetails (): Promise<IStakingValidator[]>
+  getDelegatorValidatorDetails (validatorAddress: string): Promise<IStakingValidator>
+  getAllDelegatorValidatorDetails (): Promise<IStakingValidator[]>
   getValidatorDetails (validatorAddress: string): Promise<IStakingValidator>
   getAllValidatorDetails (status: string): Promise<IStakingValidator[]>
   claimDelegatorRewards (validatorAddresses: string[]): Promise<void>

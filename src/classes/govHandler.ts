@@ -37,7 +37,7 @@ export default class GovHandler implements IGovHandler {
       return acc
     }, 0)
   }
-  async getMyValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
+  async getDelegatorValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
     const result = (await this.pH.stakingQuery.queryDelegatorValidator({
       delegatorAddr: this.walletRef.getJackalAddress(),
       validatorAddr: validatorAddress
@@ -48,7 +48,7 @@ export default class GovHandler implements IGovHandler {
       throw new Error('No Validator Details Found')
     }
   }
-  async getAllMyValidatorDetails (): Promise<IStakingValidator[]> {
+  async getAllDelegatorValidatorDetails (): Promise<IStakingValidator[]> {
     return (await this.pH.stakingQuery.queryDelegatorValidators({
       delegatorAddr: this.walletRef.getJackalAddress()
     })).value.validators as IStakingValidator[]
