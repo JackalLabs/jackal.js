@@ -37,3 +37,13 @@ export function checkResults (response: any) {
     alert('Ran out of gas. Please refresh page and try again with fewer items.')
   }
 }
+export function bruteForceString (value: string): null | undefined | string {
+  switch (value.toLowerCase()) {
+    case 'null':
+      return null
+    case 'undefined':
+      return undefined
+    default:
+      return value
+  }
+}
