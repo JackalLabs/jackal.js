@@ -4,6 +4,7 @@ import { IQueryFileTree, IQueryStorage, ITxFileTree } from 'jackal.js-protos'
 
 import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
+import { bruteForceString } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
 import { IFileDownloadHandler, IFileIo, IFolderHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
@@ -75,16 +76,22 @@ export default class FileIo implements IFileIo {
       const hexAddress = await merkleMeBro(`s/${folderName}`)
       const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
       const { version } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
-      if (version) {
-        console.info(`${folderName} exists`)
+      if (bruteForceString(version)) {
+        const storageQueryResults = await this.pH.storageQuery.queryFindFile({ fid: version })
+        if (!storageQueryResults || !bruteForceString(storageQueryResults.value.providerIps)) {
+          console.warn(`${folderName} does not exist`)
+          toCreate.push(folderName)
+        } else {
+          console.info(`${folderName} exists`)
+        }
       } else {
         console.warn(`${folderName} does not exist`)
         toCreate.push(folderName)
       }
     }
 
-    console.dir(toCreate)
     if (toCreate.length) {
+      console.dir(toCreate)
       await this.generateInitialDirs(null, toCreate)
     }
     return toCreate.length
@@ -170,10 +177,8 @@ export default class FileIo implements IFileIo {
     if (!version) throw new Error('No Existing File')
 
     const storageQueryResults = await this.pH.storageQuery.queryFindFile({ fid: version })
-
-    if (!storageQueryResults || !storageQueryResults.value.providerIps) throw new Error('No Matching CIDs found!')
-    const providers = storageQueryResults.value.providerIps
-    const targetProvider = JSON.parse(providers)[0]
+    if (!storageQueryResults || !bruteForceString(storageQueryResults.value.providerIps)) throw new Error('No Matching CIDs found!')
+    const targetProvider = JSON.parse(storageQueryResults.value.providerIps)[0]
     if (targetProvider && targetProvider.length) {
       const url = `${targetProvider.replace(/\/+$/, '')}/download/${version}`
       return await fetch(url)
@@ -362,11 +367,11 @@ async function verifyProviders (providers: IMiner[]): Promise<IMiner[]> {
           return res.ok
         })
         .catch(err => {
-          console.warn('verifyProviders Error')
-          console.error(err)
+          // console.warn('verifyProviders Error')
+          // console.error(err)
           return false
         })
-      console.warn(`${provider.ip} : ${result}`)
+      // console.warn(`${provider.ip} : ${result}`)
       return result
   }))
   const verified = providers.filter((provider, index) => staged[index])
