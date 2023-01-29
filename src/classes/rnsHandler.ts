@@ -2,9 +2,12 @@ import { EncodeObject } from '@cosmjs/proto-signing'
 import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
 import {
   IRnsBidHashMap,
-  IRnsBidItem, IRnsForSaleHashMap,
+  IRnsBidItem,
+  IRnsExpandedForSaleHashMap,
+  IRnsForSaleHashMap,
   IRnsForSaleItem,
-  IRnsOwnedHashMap, IRnsOwnedItem,
+  IRnsOwnedHashMap,
+  IRnsOwnedItem,
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
@@ -122,7 +125,7 @@ export default class RnsHandler implements IRnsHandler {
     const rawBids = await this.pH.rnsQuery.queryBidsAll({})
 
     return rawBids.value.bids.reduce((acc: IRnsBidHashMap, curr: IRnsBidItem) => {
-      if (!acc[curr.name].length) {
+      if (!acc[curr.name]?.length) {
         acc[curr.name] = [curr]
       } else {
         acc[curr.name].push(curr)
@@ -142,15 +145,28 @@ export default class RnsHandler implements IRnsHandler {
       return acc
     }, {})
   }
+  async findExpandedForSaleNames (): Promise<IRnsExpandedForSaleHashMap> {
+    const rawForSale = await this.pH.rnsQuery.queryForsaleAll({})
+    const rawOwned = await this.findExistingNames()
+    return rawForSale.value.forsale.reduce((acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
+
+      acc[curr.name] = {
+        ...curr,
+        mine: !!rawOwned[curr.name]
+      }
+      return acc
+    }, {})
+  }
   async findExistingNames (): Promise<IRnsOwnedHashMap> {
     const rawOwned = await this.pH.rnsQuery.queryListOwnedNames({
       address: this.walletRef.getJackalAddress()
     })
 
     return rawOwned.value.names.reduce((acc: IRnsOwnedHashMap, curr: IRnsOwnedItem) => {
-      acc[curr.name] = curr
       if (curr.locked) {
         acc.free = curr
+      } else {
+        acc[curr.name] = curr
       }
       return acc
     }, {})

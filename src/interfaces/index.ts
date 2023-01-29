@@ -28,6 +28,8 @@ import IProviderResponse from '@/interfaces/IProviderResponse'
 import IQueueItemPostUpload from '@/interfaces/IQueueItemPostUpload'
 import IRnsBidHashMap from '@/interfaces/rns/IRnsBidHashMap'
 import IRnsBidItem from '@/interfaces/rns/IRnsBidItem'
+import IRnsExpandedForSaleHashMap from '@/interfaces/rns/IRnsExpandedForSaleHashMap'
+import IRnsExpandedForSaleItem from '@/interfaces/rns/IRnsExpandedForSaleItem'
 import IRnsForSaleHashMap from '@/interfaces/rns/IRnsForSaleHashMap'
 import IRnsForSaleItem from '@/interfaces/rns/IRnsForSaleItem'
 import IRnsOwnedHashMap from '@/interfaces/rns/IRnsOwnedHashMap'
@@ -71,6 +73,8 @@ export {
   IQueueItemPostUpload,
   IRnsBidHashMap,
   IRnsBidItem,
+  IRnsExpandedForSaleHashMap,
+  IRnsExpandedForSaleItem,
   IRnsForSaleHashMap,
   IRnsForSaleItem,
   IRnsOwnedHashMap,
