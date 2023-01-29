@@ -43,6 +43,13 @@ export default class FileIo implements IFileIo {
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
+  static async checkProviders (wallet: IWalletHandler): Promise<{ raw: IMiner[], filtered: IMiner[] }> {
+    const raw = await fetchProviders(wallet.getProtoHandler().storageQuery)
+    return {
+      filtered: await filterProviders(raw),
+      raw
+    }
+  }
 
   async shuffle (): Promise<void> {
     this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
@@ -344,11 +351,17 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
 }
 
 async function getProviders (queryClient: IQueryStorage, max?: number): Promise<IMiner[]> {
-  const rawProviderReturn = await queryClient.queryProvidersAll({})
-  if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
-  const rawProviderList = rawProviderReturn.value.providers as IMiner[]
+  const rawProviderList = await fetchProviders(queryClient)
   console.info('Raw Providers')
   console.dir(rawProviderList)
+  return filterProviders(rawProviderList, max)
+}
+async function fetchProviders (queryClient: IQueryStorage): Promise<IMiner[]> {
+  const rawProviderReturn = await queryClient.queryProvidersAll({})
+  if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
+  return rawProviderReturn.value.providers as IMiner[]
+}
+async function filterProviders (rawProviderList: IMiner[], max?: number) {
   const disallowList = [
     /example/,
     /sample/,
@@ -367,8 +380,9 @@ async function getProviders (queryClient: IQueryStorage, max?: number): Promise<
   })
   return filteredProviders.slice(0, Number(max) || 100)
 }
-async function verifyProviders (providers: IMiner[]): Promise<IMiner[]> {
-  const staged: boolean[] = await Promise.all(
+async function verifyProviders (providers: IMiner[], versionFilter?: string): Promise<IMiner[]> {
+  if (versionFilter) console.log(`Checking for provider version : ${versionFilter}`)
+   const staged: boolean[] = await Promise.all(
     providers.map(async (provider) => {
       const result: boolean = await fetch(
         `${provider.ip.replace(/\/+$/, '')}/version`,
@@ -376,8 +390,8 @@ async function verifyProviders (providers: IMiner[]): Promise<IMiner[]> {
           // signal: AbortSignal.timeout(5000)
           signal: AbortSignal.timeout(1500)
         })
-        .then((res): boolean => {
-          return res.ok
+        .then(async (res): Promise<boolean> => {
+          return res.ok && (versionFilter) ? (await res.json()).version === versionFilter : true
         })
         .catch(err => {
           // console.warn('verifyProviders Error')
