@@ -1,9 +1,9 @@
-export default interface INames {
+export default interface IRnsOwnedItem {
   name: string;
   expires: number;
   value: string;
   data: string;
-  subdomains: INames[];
+  subdomains: IRnsOwnedItem[];
   tld: string;
   locked: number;
 }

@@ -20,15 +20,18 @@ import IGasRate from '@/interfaces/IGasRate'
 import IMiner from '@/interfaces/IMiner'
 import IMsgFinalPostFileBundle from '@/interfaces/IMsgFinalPostFileBundle'
 import IMsgPartialPostFileBundle from '@/interfaces/IMsgPartialPostFileBundle'
-import INames from '@/interfaces/INames'
 import IOracleFeed from '@/interfaces/IOracleFeed'
 import IPayData from '@/interfaces/IPayData'
 import IProtoReqs from '@/interfaces/IProtoReqs'
 import IProviderModifiedResponse from '@/interfaces/IProviderModifiedResponse'
 import IProviderResponse from '@/interfaces/IProviderResponse'
 import IQueueItemPostUpload from '@/interfaces/IQueueItemPostUpload'
+import IRnsBidHashMap from '@/interfaces/IRnsBidHashMap'
 import IRnsBidItem from '@/interfaces/IRnsBidItem'
+import IRnsForSaleHashMap from '@/interfaces/IRnsForSaleHashMap'
 import IRnsForSaleItem from '@/interfaces/IRnsForSaleItem'
+import IRnsOwnedHashMap from '@/interfaces/IRnsOwnedHashMap'
+import IRnsOwnedItem from '@/interfaces/IRnsOwnedItem'
 import IRnsRecordItem from '@/interfaces/IRnsRecordItem'
 import IRnsRegistrationItem from '@/interfaces/IRnsRegistrationItem'
 import IStakingValidator from '@/interfaces/IStakingValidator'
@@ -60,15 +63,18 @@ export {
   IMiner,
   IMsgFinalPostFileBundle,
   IMsgPartialPostFileBundle,
-  INames,
   IOracleFeed,
   IPayData,
   IProtoReqs,
   IProviderModifiedResponse,
   IProviderResponse,
   IQueueItemPostUpload,
+  IRnsBidHashMap,
   IRnsBidItem,
+  IRnsForSaleHashMap,
   IRnsForSaleItem,
+  IRnsOwnedHashMap,
+  IRnsOwnedItem,
   IRnsRecordItem,
   IRnsRegistrationItem,
   IStakingValidator,

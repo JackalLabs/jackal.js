@@ -24,6 +24,7 @@ import {
   IQueueItemPostUpload
 } from '@/interfaces'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
+import IProviderChecks from '@/interfaces/IProviderChecks'
 
 export default class FileIo implements IFileIo {
   private readonly walletRef: IWalletHandler
@@ -38,10 +39,19 @@ export default class FileIo implements IFileIo {
     this.currentProvider = currentProvider
   }
 
-  static async trackIo (wallet: IWalletHandler): Promise<FileIo> {
-    const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery))
+  static async trackIo (wallet: IWalletHandler, versionFilter?: string): Promise<FileIo> {
+    const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery), versionFilter)
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
+  }
+  static async checkProviders (wallet: IWalletHandler, versionFilter?: string): Promise<IProviderChecks> {
+    const raw = await fetchProviders(wallet.getProtoHandler().storageQuery)
+    const filtered = await filterProviders(raw)
+    return {
+      filtered,
+      raw,
+      verified: (versionFilter) ? await verifyProviders(filtered, versionFilter) : filtered
+    }
   }
 
   async shuffle (): Promise<void> {
@@ -344,18 +354,38 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
 }
 
 async function getProviders (queryClient: IQueryStorage, max?: number): Promise<IMiner[]> {
-  const rawProviderReturn = await queryClient.queryProvidersAll({})
-  if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
-  const rawProviderList = rawProviderReturn.value.providers as IMiner[]
+  const rawProviderList = await fetchProviders(queryClient)
   console.info('Raw Providers')
   console.dir(rawProviderList)
+  return filterProviders(rawProviderList, max)
+}
+async function fetchProviders (queryClient: IQueryStorage): Promise<IMiner[]> {
+  const rawProviderReturn = await queryClient.queryProvidersAll({})
+  if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
+  return rawProviderReturn.value.providers as IMiner[]
+}
+async function filterProviders (rawProviderList: IMiner[], max?: number) {
+  const disallowList = [
+    /example/,
+    /sample/,
+    /0\.0\.0\.0/,
+    /127\.\d{1,3}\.\d{1,3}\.\d{1,3}/,
+    /192\.168\.\d{1,3}\.\d{1,3}/,
+    /placeholder/
+  ]
   const filteredProviders = rawProviderList.filter((provider) => {
-    return !provider.ip.match(/(localhost|example|sample|placeholder|127\.\d{1,3}\.\d{1,3}\.\d{1,3})/)
+    const one = provider.ip.toLowerCase()
+    if (one.match('localhost')) {
+      return true
+    } else {
+      return one.startsWith('https') && !disallowList.some(rx => rx.test(one))
+    }
   })
   return filteredProviders.slice(0, Number(max) || 100)
 }
-async function verifyProviders (providers: IMiner[]): Promise<IMiner[]> {
-  const staged: boolean[] = await Promise.all(
+async function verifyProviders (providers: IMiner[], versionFilter?: string): Promise<IMiner[]> {
+  if (versionFilter) console.log(`Checking for provider version : ${versionFilter}`)
+   const staged: boolean[] = await Promise.all(
     providers.map(async (provider) => {
       const result: boolean = await fetch(
         `${provider.ip.replace(/\/+$/, '')}/version`,
@@ -363,8 +393,8 @@ async function verifyProviders (providers: IMiner[]): Promise<IMiner[]> {
           // signal: AbortSignal.timeout(5000)
           signal: AbortSignal.timeout(1500)
         })
-        .then((res): boolean => {
-          return res.ok
+        .then(async (res): Promise<boolean> => {
+          return res.ok && (versionFilter) ? (await res.json()).version === versionFilter : true
         })
         .catch(err => {
           // console.warn('verifyProviders Error')
