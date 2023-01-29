@@ -24,6 +24,7 @@ import {
   IQueueItemPostUpload
 } from '@/interfaces'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
+import IProviderChecks from '@/interfaces/IProviderChecks'
 
 export default class FileIo implements IFileIo {
   private readonly walletRef: IWalletHandler
@@ -38,16 +39,18 @@ export default class FileIo implements IFileIo {
     this.currentProvider = currentProvider
   }
 
-  static async trackIo (wallet: IWalletHandler): Promise<FileIo> {
-    const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery))
+  static async trackIo (wallet: IWalletHandler, versionFilter?: string): Promise<FileIo> {
+    const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery), versionFilter)
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
-  static async checkProviders (wallet: IWalletHandler): Promise<{ raw: IMiner[], filtered: IMiner[] }> {
+  static async checkProviders (wallet: IWalletHandler, versionFilter?: string): Promise<IProviderChecks> {
     const raw = await fetchProviders(wallet.getProtoHandler().storageQuery)
+    const filtered = await filterProviders(raw)
     return {
-      filtered: await filterProviders(raw),
-      raw
+      filtered,
+      raw,
+      verified: (versionFilter) ? await verifyProviders(filtered, versionFilter) : filtered
     }
   }
 
