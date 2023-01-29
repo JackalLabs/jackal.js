@@ -349,15 +349,20 @@ async function getProviders (queryClient: IQueryStorage, max?: number): Promise<
   const rawProviderList = rawProviderReturn.value.providers as IMiner[]
   console.info('Raw Providers')
   console.dir(rawProviderList)
+  const disallowList = [
+    /example/,
+    /sample/,
+    /0\.0\.0\.0/,
+    /127\.\d{1,3}\.\d{1,3}\.\d{1,3}/,
+    /192\.168\.\d{1,3}\.\d{1,3}/,
+    /placeholder/
+  ]
   const filteredProviders = rawProviderList.filter((provider) => {
     const one = provider.ip.toLowerCase()
     if (one.match('localhost')) {
       return true
     } else {
-      return one.startsWith('https')
-        && !one.match(
-          /(example|sample|placeholder|0\.0\.0\.0|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})/
-        )
+      return one.startsWith('https') && !disallowList.some(rx => rx.test(one))
     }
   })
   return filteredProviders.slice(0, Number(max) || 100)
