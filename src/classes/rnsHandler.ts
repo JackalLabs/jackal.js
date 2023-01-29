@@ -1,6 +1,13 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
-import { INames, IRnsBidItem, IRnsForSaleItem, IRnsRecordItem, IRnsRegistrationItem } from '@/interfaces'
+import {
+  IRnsBidHashMap,
+  IRnsBidItem, IRnsForSaleHashMap,
+  IRnsForSaleItem,
+  IRnsOwnedHashMap, IRnsOwnedItem,
+  IRnsRecordItem,
+  IRnsRegistrationItem
+} from '@/interfaces'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
@@ -107,23 +114,46 @@ export default class RnsHandler implements IRnsHandler {
     })
   }
 
-
   async findSingleBid (index: string): Promise<IRnsBidItem> {
     const trueIndex = sanitizeRns(index)
     return (await this.pH.rnsQuery.queryBids({ index: trueIndex })).value.bids as IRnsBidItem
   }
-  async findAllBids (): Promise<IRnsBidItem[]> {
-    return (await this.pH.rnsQuery.queryBidsAll({})).value.bids
+  async findAllBids (): Promise<IRnsBidHashMap> {
+    const rawBids = await this.pH.rnsQuery.queryBidsAll({})
+
+    return rawBids.value.bids.reduce((acc: IRnsBidHashMap, curr: IRnsBidItem) => {
+      if (!acc[curr.name].length) {
+        acc[curr.name] = [curr]
+      } else {
+        acc[curr.name].push(curr)
+      }
+      return acc
+    }, {})
   }
   async findSingleForSaleName (rns: string): Promise<IRnsForSaleItem> {
     const trueRns = sanitizeRns(rns)
     return (await this.pH.rnsQuery.queryForsale({ name: trueRns })).value.forsale as IRnsForSaleItem
   }
-  async findAllForSaleNames (): Promise<IRnsForSaleItem[]> {
-    return (await this.pH.rnsQuery.queryForsaleAll({})).value.forsale
+  async findAllForSaleNames (): Promise<IRnsForSaleHashMap> {
+    const rawForSale = await this.pH.rnsQuery.queryForsaleAll({})
+
+    return rawForSale.value.forsale.reduce((acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
+      acc[curr.name] = curr
+      return acc
+    }, {})
   }
-  async findExistingNames (): Promise<INames[]> {
-    return (await this.pH.rnsQuery.queryListOwnedNames({ address: this.walletRef.getJackalAddress() })).value.names
+  async findExistingNames (): Promise<IRnsOwnedHashMap> {
+    const rawOwned = await this.pH.rnsQuery.queryListOwnedNames({
+      address: this.walletRef.getJackalAddress()
+    })
+
+    return rawOwned.value.names.reduce((acc: IRnsOwnedHashMap, curr: IRnsOwnedItem) => {
+      acc[curr.name] = curr
+      if (curr.locked) {
+        acc.free = curr
+      }
+      return acc
+    }, {})
   }
   async findMatchingAddress (rns: string): Promise<string> {
     const trueRns = sanitizeRns(rns)
