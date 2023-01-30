@@ -7,16 +7,22 @@ import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
 import { bruteForceString } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
-import { IFileDownloadHandler, IFileIo, IFolderHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
+import {
+  IFileDownloadHandler,
+  IFileIo,
+  IFolderHandler,
+  IProtoHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import {
   IAesBundle,
   IDeleteItem,
   IEditorsViewers,
   IFileConfigFull,
   IFileConfigRaw,
-  IFileMeta,
   IFiletreeParsedContents,
   IFolderAdd,
+  IFolderChildFiles,
   IMiner,
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
@@ -67,6 +73,11 @@ export default class FileIo implements IFileIo {
     this.currentProvider = toSet
   }
   async uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void> {
+    const readyToBroadcast = await this.rawUploadFolders(toUpload, owner)
+    // await this.pH.debugBroadcaster(readyToBroadcast, true)
+    await this.pH.debugBroadcaster(readyToBroadcast)
+  }
+  async rawUploadFolders (toUpload: IFolderAdd, owner: string): Promise<EncodeObject[]> {
     const { newDir, parentDir } = toUpload
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const jackalAddr = this.walletRef.getJackalAddress()
@@ -75,7 +86,7 @@ export default class FileIo implements IFileIo {
     const { cfg, file } = await prepExistingUpload(parentDir, owner, this.walletRef)
     parentDir.setIds(await doUpload(url, jackalAddr, file))
 
-    await this.afterUpload([
+    return await this.rawAfterUpload([
       { handler: newDir, data: null },
       { handler: parentDir, data: cfg }
     ])
@@ -103,7 +114,23 @@ export default class FileIo implements IFileIo {
     }
     return toCreate.length
   }
-  async uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: { [name: string]: IFileMeta }): Promise<void> {
+  async uploadFiles (
+    toUpload: TFileOrFFile[],
+    owner: string,
+    existingChildren: IFolderChildFiles
+  ): Promise<void> {
+    const readyToBroadcast = await this.rawUploadFiles(toUpload, owner, existingChildren)
+      .catch(err => {
+        throw new Error(err)
+      })
+    // await this.pH.debugBroadcaster(readyToBroadcast, true)
+    await this.pH.debugBroadcaster(readyToBroadcast)
+  }
+  async rawUploadFiles (
+    toUpload: TFileOrFFile[],
+    owner: string,
+    existingChildren: IFolderChildFiles
+  ): Promise<EncodeObject[]> {
     if (!toUpload.length) {
       throw new Error('Empty File array submitted for upload')
     } else {
@@ -118,7 +145,7 @@ export default class FileIo implements IFileIo {
         item.setIds(await doUpload(url, jackalAddr, file))
         return { handler: item, data: cfg }
       }))
-      await this.afterUpload(ids)
+      return await this.rawAfterUpload(ids)
     }
   }
   private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
@@ -212,6 +239,11 @@ export default class FileIo implements IFileIo {
     }
   }
   async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
+    const readyToBroadcast = await this.rawDeleteTargets(targets, parent)
+    // await this.pH.debugBroadcaster(readyToBroadcast, true)
+    await this.pH.debugBroadcaster(readyToBroadcast)
+  }
+  async rawDeleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<EncodeObject[]> {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const names = targets.map((target:IDeleteItem) => target.name)
 
@@ -224,8 +256,7 @@ export default class FileIo implements IFileIo {
     const uploadMsg = await this.rawAfterUpload([{ handler: parent, data: cfg }])
     msgs.push(...uploadMsg)
 
-    // await this.pH.debugBroadcaster(msgs, true)
-    await this.pH.debugBroadcaster(msgs)
+    return msgs
   }
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`

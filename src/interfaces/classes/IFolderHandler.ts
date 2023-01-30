@@ -1,7 +1,5 @@
-import IFolderFileFrame from '@/interfaces/IFolderFileFrame'
-import IFileMeta from '@/interfaces/file/IFileMeta'
 import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
-import IChildDirInfo from '@/interfaces/IChildDirInfo'
+import { IChildDirInfo, IFileMeta, IFolderChildFiles, IFolderFileFrame } from '@/interfaces'
 
 export default interface IFolderHandler extends IFileHandlerCore {
 
@@ -9,7 +7,7 @@ export default interface IFolderHandler extends IFileHandlerCore {
   getMerklePath (): Promise<string>
   getFolderDetails (): IFolderFileFrame
   getChildDirs (): string[]
-  getChildFiles (): { [name: string]: IFileMeta }
+  getChildFiles (): IFolderChildFiles
   addChildDirs (dirs: string[]): void
 
   makeChildDirInfo (childName: string): IChildDirInfo
