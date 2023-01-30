@@ -1,5 +1,5 @@
 import IFolderFileFrame from '@/interfaces/IFolderFileFrame'
-import IFileMeta from '@/interfaces/IFileMeta'
+import IFileMeta from '@/interfaces/file/IFileMeta'
 import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
 import IChildDirInfo from '@/interfaces/IChildDirInfo'
 

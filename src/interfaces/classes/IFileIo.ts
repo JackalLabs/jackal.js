@@ -1,7 +1,7 @@
 import IMiner from '@/interfaces/IMiner'
 import IFileDownloadHandler from '@/interfaces/classes/IFileDownloadHandler'
 import IFolderHandler from '@/interfaces/classes/IFolderHandler'
-import IFileMeta from '@/interfaces/IFileMeta'
+import IFileMeta from '@/interfaces/file/IFileMeta'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IDeleteItem from '@/interfaces/IDeleteItem'
 import { EncodeObject } from '@cosmjs/proto-signing'

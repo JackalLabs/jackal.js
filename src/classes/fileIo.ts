@@ -25,6 +25,8 @@ import {
 } from '@/interfaces'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IProviderChecks from '@/interfaces/IProviderChecks'
+import { QueryFindFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/storage/query'
+import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
 
 export default class FileIo implements IFileIo {
   private readonly walletRef: IWalletHandler
@@ -86,14 +88,9 @@ export default class FileIo implements IFileIo {
       const hexAddress = await merkleMeBro(`s/${folderName}`)
       const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
       const { version } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
-      if (bruteForceString(version)) {
-        const storageQueryResults = await this.pH.storageQuery.queryFindFile({ fid: version })
-        if (!storageQueryResults || !bruteForceString(storageQueryResults.value.providerIps)) {
-          console.warn(`${folderName} does not exist`)
-          toCreate.push(folderName)
-        } else {
-          console.info(`${folderName} exists`)
-        }
+      const fileProviders = verifyFileProviderIps(await this.pH.storageQuery.queryFindFile({ fid: version }))
+      if (fileProviders && fileProviders.length) {
+        console.info(`${folderName} exists`)
       } else {
         console.warn(`${folderName} does not exist`)
         toCreate.push(folderName)
@@ -185,28 +182,31 @@ export default class FileIo implements IFileIo {
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
     const { version, data } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
     if (!version) throw new Error('No Existing File')
-
-    const storageQueryResults = await this.pH.storageQuery.queryFindFile({ fid: version })
-    if (!storageQueryResults || !bruteForceString(storageQueryResults.value.providerIps)) throw new Error('No Matching CIDs found!')
-    const targetProvider = JSON.parse(storageQueryResults.value.providerIps)[0]
-    if (targetProvider && targetProvider.length) {
-      const url = `${targetProvider.replace(/\/+$/, '')}/download/${version}`
-      return await fetch(url)
-        .then(resp => resp.arrayBuffer())
-        .then(async (resp): Promise<IFileDownloadHandler | IFolderHandler> => {
-          const config = {
-            editAccess: JSON.parse(data.editAccess),
-            viewingAccess: JSON.parse(data.viewingAccess),
-            trackingNumber: data.trackingNumber
-          }
-          const requester = await hashAndHex(`e${config.trackingNumber}${this.walletRef.getJackalAddress()}`)
+    const fileProviders = verifyFileProviderIps(await this.pH.storageQuery.queryFindFile({ fid: version }))
+    if (fileProviders && fileProviders.length) {
+      const config = {
+        editAccess: JSON.parse(data.editAccess),
+        viewingAccess: JSON.parse(data.viewingAccess),
+        trackingNumber: data.trackingNumber
+      }
+      const requester = await hashAndHex(`e${config.trackingNumber}${this.walletRef.getJackalAddress()}`)
+      for (let i = 0; i < fileProviders.length; i++) {
+        const url = `${fileProviders[i].replace(/\/+$/, '')}/download/${version}`
+        try {
+          const rawFile = await fetch(url)
+            .then(resp => resp.arrayBuffer())
           const { key, iv } = await stringToAes(this.walletRef, config.editAccess[requester])
           if (isFolder) {
-            return await FolderHandler.trackFolder(resp, config, key, iv)
+            return await FolderHandler.trackFolder(rawFile, config, key, iv)
           } else {
-            return await FileDownloadHandler.trackFile(resp, config, key, iv)
+            return await FileDownloadHandler.trackFile(rawFile, config, key, iv)
           }
-        })
+        } catch (err) {
+          console.warn(`File fetch() failed. Attempt #${i + 1}. ${2 - i} attempts remaining`)
+          console.warn(`Bad file provider url: ${url}`)
+        }
+      }
+      throw new Error('All file fetch() attempts failed!')
     } else {
       throw new Error('No available providers!')
     }
@@ -408,6 +408,28 @@ async function verifyProviders (providers: IMiner[], versionFilter?: string): Pr
   console.info('Verified Providers')
   console.dir(verified)
   return verified
+}
+function verifyFileProviderIps (resp: SuccessIncluded<QueryFindFileResponse>): string[] | false {
+  if (!resp) {
+    console.error('Invalid resp passed to verifyFileProviderIps()')
+    return false
+  }
+  if (!resp.value?.providerIps) {
+    console.error('Incomplete resp passed to verifyFileProviderIps()')
+    return false
+  }
+  const brutedString = bruteForceString(resp.value.providerIps)
+  if (!brutedString) {
+    console.error('bruteForceString() returned False in verifyFileProviderIps()')
+    return false
+  }
+  try {
+    return JSON.parse(resp.value.providerIps)
+  } catch (err) {
+    console.error('JSON.parse() failed in verifyFileProviderIps()')
+    console.error(err)
+    return false
+  }
 }
 async function getFileChainData (hexAddress: string, owner: string, fileTreeQuery: IQueryFileTree) {
   const fileResp = await fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: owner })
