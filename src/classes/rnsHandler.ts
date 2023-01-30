@@ -152,7 +152,7 @@ export default class RnsHandler implements IRnsHandler {
 
       acc[curr.name] = {
         ...curr,
-        mine: !!rawOwned[curr.name]
+        mine: !!rawOwned[reverseSanitizeRns(curr.name)]
       }
       return acc
     }, {})
@@ -180,6 +180,10 @@ export default class RnsHandler implements IRnsHandler {
 function sanitizeRns (rns: string): string {
   const allowedExtensions = /\.(jkl|ibc)$/
   return (rns.match(allowedExtensions)) ? rns : `${rns}.jkl`
+}
+function reverseSanitizeRns (rns: string): string {
+  const strippedExtensions = /\.(jkl|ibc)$/
+  return rns.replace(strippedExtensions, '')
 }
 function sanitizeRnsData (data: string, caller: string) {
   try {
