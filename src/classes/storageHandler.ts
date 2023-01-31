@@ -1,6 +1,7 @@
 import { IProtoHandler, IStorageHandler, IWalletHandler } from '@/interfaces/classes'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IPayData, IStoragePaymentInfo } from '@/interfaces'
+import { numToWholeTB } from '@/utils/misc'
 
 export default class StorageHandler implements IStorageHandler {
   private readonly walletRef: IWalletHandler
@@ -15,12 +16,12 @@ export default class StorageHandler implements IStorageHandler {
     return new StorageHandler(wallet)
   }
 
-  async buyStorage (forAddress: string, duration: string, bytes: string): Promise<void> {
+  async buyStorage (forAddress: string, duration: string, space: number): Promise<void> {
     const msg: EncodeObject = this.pH.storageTx.msgBuyStorage({
       creator: this.walletRef.getJackalAddress(),
       forAddress,
       duration,
-      bytes,
+      bytes: numToWholeTB(space),
       paymentDenom: 'ujkl'
     })
     // await this.pH.debugBroadcaster([msg], true)
