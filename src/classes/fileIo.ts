@@ -259,6 +259,14 @@ export default class FileIo implements IFileIo {
     return msgs
   }
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
+    const readyToBroadcast = await this.rawGenerateInitialDirs(initMsg, startingDirs)
+    // await this.pH.debugBroadcaster(readyToBroadcast, true)
+    await this.pH.debugBroadcaster(readyToBroadcast)
+  }
+  async rawGenerateInitialDirs (
+    initMsg: EncodeObject | null,
+    startingDirs?: string[]
+  ): Promise<EncodeObject[]> {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const toGenerate = startingDirs || ['Config', 'Home', 'WWW']
 
@@ -324,8 +332,7 @@ export default class FileIo implements IFileIo {
       msgRoot,
       ...msgs.flat()
     )
-    // await this.pH.debugBroadcaster(readyToBroadcast, true)
-    await this.pH.debugBroadcaster(readyToBroadcast)
+    return readyToBroadcast
   }
 
   private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
