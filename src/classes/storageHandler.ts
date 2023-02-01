@@ -1,6 +1,8 @@
 import { IProtoHandler, IStorageHandler, IWalletHandler } from '@/interfaces/classes'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IPayData, IStoragePaymentInfo } from '@/interfaces'
+import { numToWholeTB } from '@/utils/misc'
+import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default class StorageHandler implements IStorageHandler {
   private readonly walletRef: IWalletHandler
@@ -15,16 +17,27 @@ export default class StorageHandler implements IStorageHandler {
     return new StorageHandler(wallet)
   }
 
-  async buyStorage (forAddress: string, duration: string, bytes: string): Promise<void> {
+  async buyStorage (forAddress: string, duration: number, space: number): Promise<DeliverTxResponse> {
     const msg: EncodeObject = this.pH.storageTx.msgBuyStorage({
       creator: this.walletRef.getJackalAddress(),
       forAddress,
-      duration,
-      bytes,
+      duration: `${(duration * 720) || 720}h`,
+      bytes: numToWholeTB(space),
       paymentDenom: 'ujkl'
     })
     // await this.pH.debugBroadcaster([msg], true)
-    await this.pH.debugBroadcaster([msg])
+    return await this.pH.debugBroadcaster([msg]) as DeliverTxResponse
+  }
+  async upgradeStorage (forAddress: string, duration: number, space: number): Promise<DeliverTxResponse> {
+    const msg: EncodeObject = this.pH.storageTx.msgUpgradeStorage({
+      creator: this.walletRef.getJackalAddress(),
+      forAddress,
+      duration: `${(duration * 720) || 720}h`,
+      bytes: numToWholeTB(space),
+      paymentDenom: 'ujkl'
+    })
+    // await this.pH.debugBroadcaster([msg], true)
+    return await this.pH.debugBroadcaster([msg]) as DeliverTxResponse
   }
   makeStorageInitMsg (): EncodeObject {
     return this.pH.fileTreeTx.msgPostkey({

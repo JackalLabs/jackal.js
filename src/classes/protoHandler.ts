@@ -28,14 +28,17 @@ export default class ProtoHandler implements IProtoHandler {
   broadcaster (msgs: EncodeObject[]): Promise<DeliverTxResponse> {
     return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo: '' })
   }
-  async debugBroadcaster (msgs: EncodeObject[], step?: boolean): Promise<void> {
+  async debugBroadcaster (msgs: EncodeObject[], step?: boolean): Promise<DeliverTxResponse | null> {
     if (step) {
       for (let i = 0; i < msgs.length; i++) {
         console.log(msgs[i].typeUrl)
         console.dir(await this.broadcaster([msgs[i]]))
       }
+      return null
     } else {
-      console.dir(await this.broadcaster(msgs))
+      const resp = await this.broadcaster(msgs)
+      console.dir(resp)
+      return resp
     }
   }
   get rawBroadcaster () {
