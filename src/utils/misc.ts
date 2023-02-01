@@ -43,6 +43,7 @@ export function numToWholeTB (base: number | string): string {
   final *= 1000 /** MB */
   final *= 1000 /** GB */
   final *= 1000 /** TB */
+  console.info(final)
   return final.toString()
 }
 export function bruteForceString (value: string): null | undefined | string {
