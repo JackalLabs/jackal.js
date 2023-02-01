@@ -17,4 +17,5 @@ export default interface IFileIo {
   deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void>
   rawDeleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<EncodeObject[]>
   generateInitialDirs (initMsg: EncodeObject, startingDirs?: string[]): Promise<void>
+  rawGenerateInitialDirs (initMsg: EncodeObject, startingDirs?: string[]): Promise<EncodeObject[]>
 }
