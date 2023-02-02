@@ -87,9 +87,13 @@ export default class FileUploadHandler implements IFileUploadHandler {
 /** Helpers */
 async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Uint8Array): Promise<File> {
   const read = await readFile(workingFile)
-  const chunks = encryptPrep(read.content)
-  chunks.unshift(addPadding((new TextEncoder()).encode(JSON.stringify(read.details)).buffer))
-  const encChunks: ArrayBuffer[] = await Promise.all(chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, key, iv, 'encrypt')))
+  const chunks: ArrayBuffer[] = []
+  await encryptPrep(read.content, chunks)
+  chunks.unshift(await addPadding((new TextEncoder()).encode(JSON.stringify(read.details)).buffer))
+  const encChunks: ArrayBuffer[] = []
+  for (let i = 0; i < chunks.length; i++) {
+    encChunks.push(await aesCrypt(chunks[i], key, iv, 'encrypt'))
+  }
   return await assembleEncryptedFile(encChunks, read.details.name)
 }
 async function readFile (workingFile: File): Promise<IFileBuffer> {

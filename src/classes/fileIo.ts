@@ -135,16 +135,17 @@ export default class FileIo implements IFileIo {
       throw new Error('Empty File array submitted for upload')
     } else {
       const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
-      const ids: IQueueItemPostUpload[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
-        const itemName = item.getWhoAmI()
+      const ids: IQueueItemPostUpload[] = []
+      for (let i = 0; i < toUpload.length; i++) {
+        const itemName = toUpload[i].getWhoAmI()
         const jackalAddr = this.walletRef.getJackalAddress()
-        const { cfg, file } = (!existingChildren[itemName] && !item.isFolder)
-          ? { cfg: null, file: await item.getForUpload()}
-          : await prepExistingUpload(item, owner, this.walletRef)
+        const { cfg, file } = (!existingChildren[itemName] && !toUpload[i].isFolder)
+          ? { cfg: null, file: await toUpload[i].getForUpload()}
+          : await prepExistingUpload(toUpload[i], owner, this.walletRef)
 
-        item.setIds(await doUpload(url, jackalAddr, file))
-        return { handler: item, data: cfg }
-      }))
+        toUpload[i].setIds(await doUpload(url, jackalAddr, file))
+        ids.push({ handler: toUpload[i], data: cfg })
+      }
       return await this.rawAfterUpload(ids)
     }
   }

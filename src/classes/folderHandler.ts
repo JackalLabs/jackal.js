@@ -126,10 +126,12 @@ export default class FolderHandler implements IFolderHandler {
   }
   async getForUpload (): Promise<File> {
     const str = JSON.stringify(this.folderDetails)
-    const chunks = encryptPrep((new TextEncoder()).encode(str))
-    const encChunks: ArrayBuffer[] = await Promise.all(
-      chunks.map((chunk: ArrayBuffer) => aesCrypt(chunk, this.key, this.iv, 'encrypt'))
-    )
+    const chunks: ArrayBuffer[] = []
+    await encryptPrep((new TextEncoder()).encode(str), chunks)
+    const encChunks: ArrayBuffer[] = []
+    for (let i = 0; i < chunks.length; i++) {
+      encChunks.push(await aesCrypt(chunks[i], this.key, this.iv, 'encrypt'))
+    }
     return await assembleEncryptedFile(encChunks, this.folderDetails.whoAmI)
   }
   async getEnc (): Promise<IAesBundle> {
