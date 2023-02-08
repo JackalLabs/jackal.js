@@ -111,7 +111,10 @@ async function readFile (workingFile: File): Promise<IFileBuffer> {
         content: (reader.result) ? reader.result as ArrayBuffer : new ArrayBuffer(0)
       })
     }
-    reader.onerror = reject
+    reader.onerror = (e) => {
+      console.warn(e)
+      reject()
+    }
     reader.readAsArrayBuffer(workingFile)
   })
 }

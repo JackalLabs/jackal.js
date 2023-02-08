@@ -28,9 +28,11 @@ export default class FileDownloadHandler implements IFileDownloadHandler {
 
 /** Helpers */
 async function convertToOriginalFile (file: ArrayBuffer, key: CryptoKey, iv: Uint8Array): Promise<File> {
-  const decChunks: ArrayBuffer[] = await Promise.all(decryptPrep(file).map(async (chunk) => {
-    return removePadding(await aesCrypt(chunk, key, iv, 'decrypt'))
-  }))
+  const chunks: ArrayBuffer[] = decryptPrep(file)
+  const decChunks: ArrayBuffer[] = []
+  for (let i = 0; i < chunks.length; i++) {
+    decChunks.push(removePadding(await aesCrypt(chunks[i], key, iv, 'decrypt')))
+  }
   const rawMeta = decChunks[0]
   const data = decChunks.slice(1)
   const meta = JSON.parse((new TextDecoder()).decode(rawMeta))

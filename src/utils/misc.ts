@@ -17,7 +17,7 @@ export function stripper (value: string): string {
 export async function addPadding (original: ArrayBuffer): Promise<ArrayBuffer> {
   let padSize = (16 - (original.byteLength % 16)) || 16
   const padArray = Array(padSize).fill(padSize)
-  return await (new Blob([original, ...padArray])).arrayBuffer()
+  return await (new Blob([original, new Uint8Array(padArray)])).arrayBuffer()
 }
 export function removePadding (chunk: ArrayBuffer): ArrayBuffer {
   const workingChunk = new Uint8Array(chunk)

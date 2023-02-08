@@ -77,6 +77,5 @@ export async function assembleEncryptedFile (parts: ArrayBuffer[], name: string)
     )
   }
   const finalName = `${await hashAndHex(name + Date.now().toString())}.jkl`
-  const tstFile =  new File(staged, finalName, { type: 'text/plain' })
-  return tstFile
+  return new File(staged, finalName, { type: 'text/plain' })
 }
