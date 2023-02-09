@@ -1,4 +1,5 @@
 /** Classes */
+import ABCIHandler from '@/classes/ABCIHandler'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FileUploadHandler from '@/classes/fileUploadHandler'
 import FileIo from '@/classes/fileIo'
@@ -11,6 +12,7 @@ import WalletHandler from '@/classes/walletHandler'
 
 /** Class Interfaces */
 import {
+  IABCIHandler,
   IFileDownloadHandler,
   IFileUploadHandler,
   IFileIo,
@@ -39,6 +41,8 @@ import { OfflineSigner } from '@cosmjs/proto-signing'
 
 /** Exports */
 export {
+  ABCIHandler,
+  IABCIHandler,
   FileDownloadHandler,
   IFileDownloadHandler,
   FileUploadHandler,
