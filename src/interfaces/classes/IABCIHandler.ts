@@ -1,33 +1,33 @@
-import { IProtoHandler } from '@/interfaces/classes'
 import {
-    IABCIInfo,
-    ICommit,
-    IEndBlock,
-    IEvent,
-    IInitChainRequest,
-    IInitChainResponse,
-    IPutSnapshotChunk,
-    IQueryRequest,
-    IQueryResponse,
-    ISetOption,
-    ISnapshot,
-    ITx
-} from '@/interfaces'
+    RequestInfo, ResponseInfo,
+    ResponseSetOption,
+    RequestInitChain, ResponseInitChain,
+    RequestQuery, ResponseQuery,
+    RequestBeginBlock, ResponseBeginBlock,
+    ResponseCheckTx,
+    ResponseDeliverTx,
+    ResponseEndBlock,
+    ResponseCommit,
+    ResponseListSnapshots,
+    RequestOfferSnapshot, ResponseOfferSnapshot,
+    ResponseApplySnapshotChunk
+} from 'jackal.js-protos'
+import { IProtoHandler } from '@/interfaces/classes'
 
 export default interface IABCIHandler {
     getEcho (message: string): Promise<string>
     // getFlush ()
-    getBlockInfo (version: string, blockVersion: number, p2pVersion: number): Promise<IABCIInfo>
-    setOptionByKeyValue (key: string, value: string): Promise<ISetOption>
-    initializeChain (object: IInitChainRequest): Promise<IInitChainResponse>
-    getQuery (object: IQueryRequest): Promise<IQueryResponse>
-    getBeginBlock (): Promise<IEvent[]>
-    getCheckTx (tx: Uint8Array, type: number): Promise<ITx>
-    getDeliverTx (tx: Uint8Array): Promise<ITx>
-    getEndBlock (height: number): Promise<IEndBlock>
-    getCommit (): Promise<ICommit>
-    getlistSnapshots (): Promise<ISnapshot[][]>
-    getOfferSnapshot (snapshot: ISnapshot, appHash: Uint8Array): Promise<number>
+    getBlockInfo (versions: RequestInfo): Promise<ResponseInfo>
+    setOptionByKeyValue (key: string, value: string): Promise<ResponseSetOption>
+    initializeChain (object: RequestInitChain): Promise<ResponseInitChain>
+    getQuery (object: RequestQuery): Promise<ResponseQuery>
+    getBeginBlock (object: RequestBeginBlock): Promise<ResponseBeginBlock>
+    getCheckTx (tx: Uint8Array, type: number): Promise<ResponseCheckTx>
+    getDeliverTx (tx: Uint8Array): Promise<ResponseDeliverTx>
+    getEndBlock (height: number): Promise<ResponseEndBlock>
+    getCommit (): Promise<ResponseCommit>
+    getlistSnapshots (): Promise<ResponseListSnapshots>
+    getOfferSnapshot (object: RequestOfferSnapshot): Promise<ResponseOfferSnapshot>
     getSnapshotChunk (height: number, format: number, chunk: number): Promise<Uint8Array>
-    putSnapshotChunk (index: number, chunk: Uint8Array, sender: string): Promise<IPutSnapshotChunk>
+    putSnapshotChunk (index: number, chunk: Uint8Array, sender: string): Promise<ResponseApplySnapshotChunk>
 }

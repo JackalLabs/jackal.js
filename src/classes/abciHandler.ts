@@ -1,18 +1,18 @@
 import { IProtoHandler, IABCIHandler } from '@/interfaces/classes';
 import {
-    IABCIInfo,
-    ICommit,
-    IEndBlock,
-    IEvent,
-    IInitChainRequest,
-    IInitChainResponse,
-    IPutSnapshotChunk,
-    IQueryRequest,
-    IQueryResponse,
-    ISetOption,
-    ISnapshot,
-    ITx
-} from '@/interfaces'
+    RequestInfo, ResponseInfo,
+    ResponseSetOption,
+    RequestInitChain, ResponseInitChain,
+    RequestQuery, ResponseQuery,
+    RequestBeginBlock, ResponseBeginBlock,
+    ResponseCheckTx,
+    ResponseDeliverTx,
+    ResponseEndBlock,
+    ResponseCommit,
+    ResponseListSnapshots,
+    RequestOfferSnapshot, ResponseOfferSnapshot,
+    ResponseApplySnapshotChunk
+} from 'jackal.js-protos'
 
 export default class ABCIHandler implements IABCIHandler {
     async getEcho (message: string): Promise<string> {
