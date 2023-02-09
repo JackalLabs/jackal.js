@@ -1,6 +1,6 @@
 import { keyAlgo } from '@/utils/globals'
 import { hashAndHex } from '@/utils/hash'
-import { addPadding } from '@/utils/misc'
+import { addPadding, removePadding } from '@/utils/misc'
 
 export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
@@ -15,67 +15,77 @@ export function genIv (): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(16))
 }
 
-export async function aesCrypt (data: ArrayBuffer, key: CryptoKey, iv: Uint8Array, mode: 'encrypt' | 'decrypt'): Promise<ArrayBuffer> {
+export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode: 'encrypt' | 'decrypt'): Promise<Blob> {
   const algo = {
     name: 'AES-GCM',
     iv
   }
-  if (data.byteLength < 1) {
-    return new ArrayBuffer(0)
+  const workingData = await data.arrayBuffer()
+  if (workingData.byteLength < 1) {
+    return new Blob([])
   } else if (mode?.toLowerCase() === 'encrypt') {
-    return await crypto.subtle.encrypt(algo, key, data)
+    return await crypto.subtle.encrypt(algo, key, workingData)
       .then(res => {
-        return res
+        return new Blob([res])
       })
       .catch(err => {
         throw new Error(err)
       })
   } else {
-    return await crypto.subtle.decrypt(algo, key, data)
+    return await crypto.subtle.decrypt(algo, key, workingData)
       .then(res => {
-        return res
+        return new Blob([res])
       })
       .catch(err => {
         throw new Error(err)
       })
   }
-}
-export async function encryptPrep (source: ArrayBuffer, ref: ArrayBuffer[]): Promise<void> {
-  const paddedSource = await addPadding(source)
-  const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
-  const len = paddedSource.byteLength
-  const count = Math.ceil(len / chunkSize)
-  if (count === 1) {
-    ref.push(paddedSource)
-  } else {
-    for (let i = 0; i < count; i++) {
-      const startIndex = i * chunkSize
-      const endIndex = (i + 1) * chunkSize
-      ref.push(paddedSource.slice(startIndex, endIndex))
-    }
-  }
-}
-export function decryptPrep (source: ArrayBuffer): ArrayBuffer[] {
-  const parts: ArrayBuffer[] = []
-  for (let i = 0; i + 1 < source.byteLength;) {
-    const offset = i + 8
-    const segSize = Number((new TextDecoder()).decode(source.slice(i, offset)))
-    const last = offset + segSize
-    const segment = source.slice(offset, last)
-    parts.push(segment)
-    i = last
-  }
-  return parts
 }
 
-export async function assembleEncryptedFile (parts: ArrayBuffer[], name: string): Promise<File> {
-  const staged: ArrayBuffer[] = []
-  for (let i = 0; i < parts.length; i++) {
-    staged.push(
-      (new TextEncoder()).encode(parts[i].byteLength.toString().padStart(8, '0')).buffer,
-      parts[i]
+export async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Uint8Array): Promise<File> {
+  const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
+  const details = {
+      name: workingFile.name,
+      lastModified: workingFile.lastModified,
+      type: workingFile.type,
+      size: workingFile.size,
+    }
+  const detailsBlob = new Blob([JSON.stringify(details)])
+  const encryptedArray: Blob[] = [
+    new Blob([
+      detailsBlob.size.toString().padStart(8, '0')
+    ]),
+    await aesCrypt(detailsBlob, key, iv, 'encrypt')
+  ]
+  for (let i = 0; i < workingFile.size; i += chunkSize) {
+    const blobChunk = addPadding(workingFile.slice(i, i + chunkSize))
+    encryptedArray.push(
+      new Blob([
+        blobChunk.size.toString().padStart(8, '0')
+      ]),
+      await aesCrypt(blobChunk, key, iv, 'encrypt')
     )
   }
-  const finalName = `${await hashAndHex(name + Date.now().toString())}.jkl`
-  return new File(staged, finalName, { type: 'text/plain' })
+  const finalName = `${await hashAndHex(details.name + Date.now().toString())}.jkl`
+  return new File(encryptedArray, finalName, { type: 'text/plain' })
+}
+export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv: Uint8Array) {
+  let detailsBlob = new Blob([])
+  const blobParts: Blob[] = []
+  for (let i = 0; i < source.size;) {
+    const offset = i + 8
+    const segSize = Number(source.slice(i, offset).text())
+    const last = offset + segSize
+    const segment = source.slice(offset, last)
+    i = last
+
+    const rawBlob = await removePadding(await aesCrypt(segment, key, iv, 'decrypt'))
+    if (i === 0) {
+      detailsBlob = rawBlob
+    } else {
+      blobParts.push(rawBlob)
+    }
+  }
+  const details = JSON.parse(await detailsBlob.text())
+  return new File(blobParts, details.name, details)
 }

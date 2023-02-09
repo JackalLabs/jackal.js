@@ -1,7 +1,6 @@
 import { IFileConfigRelevant } from '@/interfaces'
 import { IFileDownloadHandler } from '@/interfaces/classes'
-import { aesCrypt, decryptPrep } from '@/utils/crypt'
-import { removePadding } from '@/utils/misc'
+import { convertFromEncryptedFile } from '@/utils/crypt'
 
 export default class FileDownloadHandler implements IFileDownloadHandler {
   private readonly file: File
@@ -16,25 +15,12 @@ export default class FileDownloadHandler implements IFileDownloadHandler {
     this.fileConfig = fileConfig
   }
 
-  static async trackFile (file: ArrayBuffer, fileConfig: IFileConfigRelevant, key: CryptoKey, iv: Uint8Array): Promise<IFileDownloadHandler> {
-    const decryptedFile: File = await convertToOriginalFile(file, key, iv)
+  static async trackFile (file: Blob, fileConfig: IFileConfigRelevant, key: CryptoKey, iv: Uint8Array): Promise<IFileDownloadHandler> {
+    const decryptedFile: File = await convertFromEncryptedFile(file, key, iv)
     return new FileDownloadHandler(decryptedFile, fileConfig, key, iv)
   }
 
   receiveBacon (): File {
     return this.file
   }
-}
-
-/** Helpers */
-async function convertToOriginalFile (file: ArrayBuffer, key: CryptoKey, iv: Uint8Array): Promise<File> {
-  const chunks: ArrayBuffer[] = decryptPrep(file)
-  const decChunks: ArrayBuffer[] = []
-  for (let i = 0; i < chunks.length; i++) {
-    decChunks.push(removePadding(await aesCrypt(chunks[i], key, iv, 'decrypt')))
-  }
-  const rawMeta = decChunks[0]
-  const data = decChunks.slice(1)
-  const meta = JSON.parse((new TextDecoder()).decode(rawMeta))
-  return new File(data, meta.name, meta)
 }

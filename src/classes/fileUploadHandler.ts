@@ -1,15 +1,12 @@
-import { IAesBundle, IFileBuffer } from '@/interfaces'
+import { IAesBundle } from '@/interfaces'
 import { IFileUploadHandler } from '@/interfaces/classes'
 import {
   genIv,
   genKey,
-  aesCrypt,
-  encryptPrep,
-  assembleEncryptedFile
+  convertToEncryptedFile
 } from '@/utils/crypt'
 import { hexFullPath, merkleMeBro } from '@/utils/hash'
 import { IFileMeta } from '@/interfaces'
-import { addPadding } from '@/utils/misc'
 
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File
@@ -82,39 +79,4 @@ export default class FileUploadHandler implements IFileUploadHandler {
       type: this.file.type
     }
   }
-}
-
-/** Helpers */
-async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Uint8Array): Promise<File> {
-  const read = await readFile(workingFile)
-  const chunks: ArrayBuffer[] = []
-  await encryptPrep(read.content, chunks)
-  chunks.unshift(await addPadding((new TextEncoder()).encode(JSON.stringify(read.details)).buffer))
-  const encChunks: ArrayBuffer[] = []
-  for (let i = 0; i < chunks.length; i++) {
-    encChunks.push(await aesCrypt(chunks[i], key, iv, 'encrypt'))
-  }
-  return await assembleEncryptedFile(encChunks, read.details.name)
-}
-async function readFile (workingFile: File): Promise<IFileBuffer> {
-  const details = {
-    name: workingFile.name,
-    lastModified: workingFile.lastModified,
-    type: workingFile.type,
-    size: workingFile.size,
-  }
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      resolve({
-        details,
-        content: (reader.result) ? reader.result as ArrayBuffer : new ArrayBuffer(0)
-      })
-    }
-    reader.onerror = (e) => {
-      console.warn(e)
-      reject()
-    }
-    reader.readAsArrayBuffer(workingFile)
-  })
 }

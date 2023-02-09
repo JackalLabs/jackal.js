@@ -2,10 +2,7 @@ import { IAesBundle, IChildDirInfo, IFileConfigRelevant, IFileMeta, IFolderFileF
 import { IFolderHandler } from '@/interfaces/classes'
 import { stripper } from '@/utils/misc'
 import {
-  aesCrypt,
-  assembleEncryptedFile,
-  decryptPrep,
-  encryptPrep,
+  convertFromEncryptedFile, convertToEncryptedFile,
   genIv,
   genKey
 } from '@/utils/crypt'
@@ -36,13 +33,8 @@ export default class FolderHandler implements IFolderHandler {
     this.uuid = ''
   }
 
-  static async trackFolder (data: ArrayBuffer, config: IFileConfigRelevant, key: CryptoKey, iv: Uint8Array): Promise<IFolderHandler> {
-    const decChunks: ArrayBuffer[] = await Promise.all(
-      decryptPrep(data)
-        .map((chunk: ArrayBuffer) => aesCrypt(chunk, key, iv, 'decrypt')
-    ))
-    const result = (new TextDecoder()).decode(await (new Blob([...decChunks])).arrayBuffer())
-    const folderDetails = JSON.parse(result.slice(0, result.lastIndexOf('}') + 1))
+  static async trackFolder (data: Blob, config: IFileConfigRelevant, key: CryptoKey, iv: Uint8Array): Promise<IFolderHandler> {
+    const folderDetails = JSON.parse(await (await convertFromEncryptedFile(data, key, iv)).text())
     return new FolderHandler(folderDetails, config, key, iv)
   }
   static async trackNewFolder (dirInfo: IChildDirInfo): Promise<IFolderHandler> {
@@ -125,14 +117,8 @@ export default class FolderHandler implements IFolderHandler {
     return this.folderDetails.whoOwnsMe
   }
   async getForUpload (): Promise<File> {
-    const str = JSON.stringify(this.folderDetails)
-    const chunks: ArrayBuffer[] = []
-    await encryptPrep((new TextEncoder()).encode(str), chunks)
-    const encChunks: ArrayBuffer[] = []
-    for (let i = 0; i < chunks.length; i++) {
-      encChunks.push(await aesCrypt(chunks[i], this.key, this.iv, 'encrypt'))
-    }
-    return await assembleEncryptedFile(encChunks, this.folderDetails.whoAmI)
+    const dirFile = new File([JSON.stringify(this.folderDetails)], this.folderDetails.whoAmI)
+    return await convertToEncryptedFile(dirFile, this.key, this.iv)
   }
   async getEnc (): Promise<IAesBundle> {
     return {
