@@ -47,12 +47,12 @@ export default class FileIo implements IFileIo {
     this.currentProvider = currentProvider
   }
 
-  static async trackIo (wallet: IWalletHandler, versionFilter?: string): Promise<FileIo> {
+  static async trackIo (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<FileIo> {
     const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery), versionFilter)
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
-  static async checkProviders (wallet: IWalletHandler, versionFilter?: string): Promise<IProviderChecks> {
+  static async checkProviders (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<IProviderChecks> {
     const raw = await fetchProviders(wallet.getProtoHandler().storageQuery)
     const filtered = await filterProviders(raw)
     return {
@@ -422,25 +422,23 @@ async function filterProviders (rawProviderList: IMiner[], max?: number) {
   })
   return filteredProviders.slice(0, Number(max) || 100)
 }
-async function verifyProviders (providers: IMiner[], versionFilter?: string): Promise<IMiner[]> {
-  if (versionFilter) console.log(`Checking for provider version : ${versionFilter}`)
-   const staged: boolean[] = await Promise.all(
+async function verifyProviders (providers: IMiner[], versionFilter?: string | string[]): Promise<IMiner[]> {
+  let versionArray: string[] = []
+  if (versionFilter) {
+    console.log(`Checking for provider version(s) : ${versionFilter}`);
+    (typeof versionFilter === 'string') ? versionArray.push(versionFilter as string) : versionArray.push(...versionFilter)
+  }
+  const staged: boolean[] = await Promise.all(
     providers.map(async (provider) => {
       const result: boolean = await fetch(
         `${provider.ip.replace(/\/+$/, '')}/version`,
         {
-          // signal: AbortSignal.timeout(5000)
           signal: AbortSignal.timeout(1500)
         })
         .then(async (res): Promise<boolean> => {
-          return res.ok && (versionFilter) ? (await res.json()).version === versionFilter : true
+          return res.ok && (versionFilter) ? versionArray.includes((await res.json()).version) : true
         })
-        .catch(err => {
-          // console.warn('verifyProviders Error')
-          // console.error(err)
-          return false
-        })
-      // console.warn(`${provider.ip} : ${result}`)
+        .catch(() => false)
       return result
   }))
   const verified = providers.filter((provider, index) => staged[index])
