@@ -204,7 +204,7 @@ export default class FileIo implements IFileIo {
       }
 
       const msgPost: EncodeObject = await buildPostFile(msgPostFileBundle, this.pH.fileTreeTx)
-      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid })
+      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid, payOnce: false })
       return [msgPost, msgSign]
     }))
 
@@ -328,7 +328,7 @@ export default class FileIo implements IFileIo {
         trackingNumber: workingUUID
       }, this.pH.fileTreeTx)
 
-      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid })
+      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid, payOnce: false })
       return [ msgPost, msgSign ]
     }))
     const readyToBroadcast: EncodeObject[] = []
