@@ -14,7 +14,7 @@ import {
 } from 'jackal.js-protos'
 import { IProtoHandler } from '@/interfaces/classes'
 
-export default interface IABCIHandler {
+export default interface IAbciHandler {
     getEcho (message: string): Promise<string>
     // getFlush ()
     getBlockInfo (versions: RequestInfo): Promise<ResponseInfo>

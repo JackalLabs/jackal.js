@@ -1,4 +1,4 @@
-import IABCIHandler from '@/interfaces/classes/IABCIHandler'
+import IAbciHandler from '@/interfaces/classes/IAbciHandler'
 import IFileDownloadHandler from '@/interfaces/classes/IFileDownloadHandler'
 import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
 import IFileIo from '@/interfaces/classes/IFileIo'
@@ -12,7 +12,7 @@ import IStorageHandler from '@/interfaces/classes/IStorageHandler'
 import IWalletHandler from '@/interfaces/classes/IWalletHandler'
 
 export {
-  IABCIHandler,
+  IAbciHandler,
   IFileDownloadHandler,
   IFileHandlerCore,
   IFileIo,
