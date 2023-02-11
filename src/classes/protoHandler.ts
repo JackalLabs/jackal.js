@@ -77,6 +77,9 @@ export default class ProtoHandler implements IProtoHandler {
 
 
   /** Static */
+  get ABCIQuery () {
+    return this.allQueryClients.abci
+  }
   get bankQuery () {
     return this.allQueryClients.bank
   }

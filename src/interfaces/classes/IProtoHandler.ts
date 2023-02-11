@@ -8,6 +8,7 @@ import {
   ITxRns,
   IQueryStorage,
   ITxStorage,
+  IQueryABCI,
   IQueryBank,
   ITxBank,
   IQueryDistribution,
@@ -42,6 +43,7 @@ export default interface IProtoHandler {
 
 
   /** Static */
+  ABCIQuery: IQueryABCI
   bankQuery: IQueryBank
   bankTx: ITxBank
   distributionQuery: IQueryDistribution
