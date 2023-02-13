@@ -1,4 +1,4 @@
-import { IAbciHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes';
+import { IAbciHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import {
   RequestInfo, ResponseInfo,
   ResponseSetOption,
@@ -21,6 +21,10 @@ export default class AbciHandler implements IAbciHandler {
   private constructor (wallet: IWalletHandler) {
     this.walletRef = wallet
     this.pH = wallet.getProtoHandler()
+  }
+
+  static async trackAbci (wallet: IWalletHandler): Promise<IAbciHandler> {
+    return new AbciHandler(wallet)
   }
 
   async getEcho (message: string): Promise<string> {
