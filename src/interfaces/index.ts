@@ -4,6 +4,7 @@ import ICoin from '@/interfaces/ICoin'
 import IDelegationRewards from '@/interfaces/IDelegationRewards'
 import IDelegationSummary from '@/interfaces/IDelegationSummary'
 import IDeleteItem from '@/interfaces/IDeleteItem'
+import IDownloadDetails from '@/interfaces/IDownloadDetails'
 import IEditorsViewers from '@/interfaces/IEditorsViewers'
 import IFileBuffer from '@/interfaces/file/IFileBuffer'
 import IFileConfigFull from '@/interfaces/file/IFileConfigFull'
@@ -50,6 +51,7 @@ export {
   IDelegationRewards,
   IDelegationSummary,
   IDeleteItem,
+  IDownloadDetails,
   IEditorsViewers,
   IFileBuffer,
   IFileConfigFull,

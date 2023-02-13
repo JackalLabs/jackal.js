@@ -16,7 +16,7 @@ import {
 } from '@/interfaces/classes'
 import {
   IAesBundle,
-  IDeleteItem,
+  IDeleteItem, IDownloadDetails,
   IEditorsViewers,
   IFileConfigFull,
   IFileConfigRaw,
@@ -206,7 +206,8 @@ export default class FileIo implements IFileIo {
     return [...needingReset, ...ready.flat()]
 
   }
-  async downloadFile (hexAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler> {
+  async downloadFile (downloadDetails: IDownloadDetails, completion: number): Promise<IFileDownloadHandler | IFolderHandler> {
+    const { hexAddress, owner, isFolder } = downloadDetails
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
     const { version, data } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
     if (!version) throw new Error('No Existing File')
@@ -244,25 +245,27 @@ export default class FileIo implements IFileIo {
 
             chunks.push(value);
             receivedLength += value.length;
-
-            console.log(`Received ${receivedLength} of ${contentLength}`)
+            completion = Math.floor(receivedLength / Number(contentLength)) || .01
+            console.log(`${completion * 100}% Complete`)
           }
 
 // Step 4: concatenate chunks into single Uint8Array
-          let chunksAll = new Uint8Array(receivedLength); // (4.1)
-          let position = 0;
-          for(let chunk of chunks) {
-            chunksAll.set(chunk, position); // (4.2)
-            position += chunk.length;
-          }
+//           let chunksAll = new Uint8Array(receivedLength); // (4.1)
+//           let position = 0;
+//           for(let chunk of chunks) {
+//             chunksAll.set(chunk, position); // (4.2)
+//             position += chunk.length;
+//           }
 
-          const rawFile = chunksAll
+
+          const rawFile = new Blob(chunks)
           // return resp.arrayBuffer()
 
 
 
 
-
+          console.log('config.editAccess[requester]')
+          console.log(config.editAccess[requester])
           const { key, iv } = await stringToAes(this.walletRef, config.editAccess[requester])
           if (isFolder) {
             return await FolderHandler.trackFolder(rawFile, config, key, iv)

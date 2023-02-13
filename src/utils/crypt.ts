@@ -1,6 +1,5 @@
 import { keyAlgo } from '@/utils/globals'
 import { hashAndHex } from '@/utils/hash'
-import { addPadding, removePadding } from '@/utils/misc'
 
 export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
@@ -51,17 +50,19 @@ export async function convertToEncryptedFile (workingFile: File, key: CryptoKey,
       size: workingFile.size,
     }
   const detailsBlob = new Blob([JSON.stringify(details)])
+  console.log('detailsBlob.size')
+  console.log(detailsBlob.size)
   const encryptedArray: Blob[] = [
     new Blob([
-      detailsBlob.size.toString().padStart(8, '0')
+      (detailsBlob.size + 16).toString().padStart(8, '0')
     ]),
     await aesCrypt(detailsBlob, key, iv, 'encrypt')
   ]
   for (let i = 0; i < workingFile.size; i += chunkSize) {
-    const blobChunk = addPadding(workingFile.slice(i, i + chunkSize))
+    const blobChunk = workingFile.slice(i, i + chunkSize)
     encryptedArray.push(
       new Blob([
-        blobChunk.size.toString().padStart(8, '0')
+        (blobChunk.size + 16).toString().padStart(8, '0')
       ]),
       await aesCrypt(blobChunk, key, iv, 'encrypt')
     )
@@ -74,17 +75,17 @@ export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv
   const blobParts: Blob[] = []
   for (let i = 0; i < source.size;) {
     const offset = i + 8
-    const segSize = Number(source.slice(i, offset).text())
+    const segSize = Number(await source.slice(i, offset).text())
     const last = offset + segSize
     const segment = source.slice(offset, last)
-    i = last
 
-    const rawBlob = await removePadding(await aesCrypt(segment, key, iv, 'decrypt'))
+    const rawBlob = await aesCrypt(segment, key, iv, 'decrypt')
     if (i === 0) {
       detailsBlob = rawBlob
     } else {
       blobParts.push(rawBlob)
     }
+    i = last
   }
   const details = JSON.parse(await detailsBlob.text())
   return new File(blobParts, details.name, details)
