@@ -10,7 +10,7 @@ export default class OracleHandler implements IOracleHandler {
     this.pH = wallet.getProtoHandler()
   }
 
-  static async trackStorage (wallet: IWalletHandler): Promise<IOracleHandler> {
+  static async trackOracle (wallet: IWalletHandler): Promise<IOracleHandler> {
     return new OracleHandler(wallet)
   }
 
