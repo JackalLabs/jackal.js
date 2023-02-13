@@ -5,4 +5,5 @@ export default interface IMiner {
   burnedContracts: string;
   creator: string;
   keybaseIdentity: string;
+  authClaimers: string[];
 }

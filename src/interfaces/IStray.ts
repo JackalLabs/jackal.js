@@ -4,4 +4,5 @@ export default interface IStray {
   signee: string;
   filesize: string;
   merkle: string;
+  end: number;
 }

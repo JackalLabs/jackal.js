@@ -1,6 +1,6 @@
 {
   "name": "jackal.js",
-  "version": "1.1.19",
+  "version": "1.1.20",
   "description": "Javascript library for interacting with the Jackal Chain",
   "keywords": [
     "jackal",
@@ -47,7 +47,7 @@
     "bip39": "^3.0.4",
     "bs58check": "^2.1.2",
     "eciesjs": "^0.3.15",
-    "jackal.js-protos": "^1.2.3"
+    "jackal.js-protos": "^1.2.5"
   },
   "devDependencies": {
     "@keplr-wallet/types": "^0.11.0",

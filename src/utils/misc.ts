@@ -14,16 +14,10 @@ export function orderStrings (sortable: string[]): string[] {
 export function stripper (value: string): string {
   return value.replace(/\/+/g, '')
 }
-export function addPadding (original: ArrayBuffer): ArrayBuffer {
-  let padSize = 16 - (original.byteLength % 16)
-  if (padSize === 0) {
-    padSize = 16
-  } else {
-    // do nothing
-  }
+export async function addPadding (original: ArrayBuffer): Promise<ArrayBuffer> {
+  let padSize = (16 - (original.byteLength % 16)) || 16
   const padArray = Array(padSize).fill(padSize)
-  const originalAsArray = Array.from(new Uint8Array(original))
-  return new Uint8Array([...originalAsArray, ...padArray]).buffer
+  return await (new Blob([original, new Uint8Array(padArray)])).arrayBuffer()
 }
 export function removePadding (chunk: ArrayBuffer): ArrayBuffer {
   const workingChunk = new Uint8Array(chunk)

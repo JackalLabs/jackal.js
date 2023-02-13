@@ -47,12 +47,12 @@ export default class FileIo implements IFileIo {
     this.currentProvider = currentProvider
   }
 
-  static async trackIo (wallet: IWalletHandler, versionFilter?: string): Promise<FileIo> {
+  static async trackIo (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<FileIo> {
     const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery), versionFilter)
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
-  static async checkProviders (wallet: IWalletHandler, versionFilter?: string): Promise<IProviderChecks> {
+  static async checkProviders (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<IProviderChecks> {
     const raw = await fetchProviders(wallet.getProtoHandler().storageQuery)
     const filtered = await filterProviders(raw)
     return {
@@ -135,17 +135,24 @@ export default class FileIo implements IFileIo {
       throw new Error('Empty File array submitted for upload')
     } else {
       const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
-      const ids: IQueueItemPostUpload[] = await Promise.all(toUpload.map(async (item: TFileOrFFile) => {
-        const itemName = item.getWhoAmI()
-        const jackalAddr = this.walletRef.getJackalAddress()
-        const { cfg, file } = (!existingChildren[itemName] && !item.isFolder)
-          ? { cfg: null, file: await item.getForUpload()}
-          : await prepExistingUpload(item, owner, this.walletRef)
+      const jackalAddr = this.walletRef.getJackalAddress()
 
-        item.setIds(await doUpload(url, jackalAddr, file))
-        return { handler: item, data: cfg }
-      }))
-      return await this.rawAfterUpload(ids)
+      const readyToUpload: any[] = []
+      for (let i = 0; i < toUpload.length; i++) {
+        const itemName = toUpload[i].getWhoAmI()
+        const { cfg, file } = (!existingChildren[itemName] && !toUpload[i].isFolder)
+          ? { cfg: null, file: await toUpload[i].getForUpload()}
+          : await prepExistingUpload(toUpload[i], owner, this.walletRef)
+        readyToUpload.push({ uploadable: file, handler: toUpload[i], data: cfg })
+      }
+
+      const uploadDone: IQueueItemPostUpload[] = await Promise.all(
+        readyToUpload.map(async (bundle) => {
+          bundle.handler.setIds(await doUpload(url, jackalAddr, bundle.uploadable))
+          return { handler: bundle.handler, data: bundle.data }
+        }))
+
+      return await this.rawAfterUpload(uploadDone)
     }
   }
   private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
@@ -197,7 +204,7 @@ export default class FileIo implements IFileIo {
       }
 
       const msgPost: EncodeObject = await buildPostFile(msgPostFileBundle, this.pH.fileTreeTx)
-      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid })
+      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid, payOnce: false })
       return [msgPost, msgSign]
     }))
 
@@ -321,7 +328,7 @@ export default class FileIo implements IFileIo {
         trackingNumber: workingUUID
       }, this.pH.fileTreeTx)
 
-      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid })
+      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid, payOnce: false })
       return [ msgPost, msgSign ]
     }))
     const readyToBroadcast: EncodeObject[] = []
@@ -421,25 +428,23 @@ async function filterProviders (rawProviderList: IMiner[], max?: number) {
   })
   return filteredProviders.slice(0, Number(max) || 100)
 }
-async function verifyProviders (providers: IMiner[], versionFilter?: string): Promise<IMiner[]> {
-  if (versionFilter) console.log(`Checking for provider version : ${versionFilter}`)
-   const staged: boolean[] = await Promise.all(
+async function verifyProviders (providers: IMiner[], versionFilter?: string | string[]): Promise<IMiner[]> {
+  let versionArray: string[] = []
+  if (versionFilter) {
+    console.log(`Checking for provider version(s) : ${versionFilter}`);
+    (typeof versionFilter === 'string') ? versionArray.push(versionFilter as string) : versionArray.push(...versionFilter)
+  }
+  const staged: boolean[] = await Promise.all(
     providers.map(async (provider) => {
       const result: boolean = await fetch(
         `${provider.ip.replace(/\/+$/, '')}/version`,
         {
-          // signal: AbortSignal.timeout(5000)
           signal: AbortSignal.timeout(1500)
         })
         .then(async (res): Promise<boolean> => {
-          return res.ok && (versionFilter) ? (await res.json()).version === versionFilter : true
+          return res.ok && (versionFilter) ? versionArray.includes((await res.json()).version) : true
         })
-        .catch(err => {
-          // console.warn('verifyProviders Error')
-          // console.error(err)
-          return false
-        })
-      // console.warn(`${provider.ip} : ${result}`)
+        .catch(() => false)
       return result
   }))
   const verified = providers.filter((provider, index) => staged[index])

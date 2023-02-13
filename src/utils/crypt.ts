@@ -40,22 +40,19 @@ export async function aesCrypt (data: ArrayBuffer, key: CryptoKey, iv: Uint8Arra
       })
   }
 }
-export function encryptPrep (source: ArrayBuffer): ArrayBuffer[] {
-  const paddedSource = addPadding(source)
-  const chunkSize = 33554432 /** in bytes */
+export async function encryptPrep (source: ArrayBuffer, ref: ArrayBuffer[]): Promise<void> {
+  const paddedSource = await addPadding(source)
+  const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
   const len = paddedSource.byteLength
   const count = Math.ceil(len / chunkSize)
-
   if (count === 1) {
-    return [paddedSource]
+    ref.push(paddedSource)
   } else {
-    const ret = []
     for (let i = 0; i < count; i++) {
       const startIndex = i * chunkSize
       const endIndex = (i + 1) * chunkSize
-      ret.push(paddedSource.slice(startIndex, endIndex))
+      ref.push(paddedSource.slice(startIndex, endIndex))
     }
-    return ret
   }
 }
 export function decryptPrep (source: ArrayBuffer): ArrayBuffer[] {
@@ -80,6 +77,5 @@ export async function assembleEncryptedFile (parts: ArrayBuffer[], name: string)
     )
   }
   const finalName = `${await hashAndHex(name + Date.now().toString())}.jkl`
-  const tstFile =  new File(staged, finalName, { type: 'text/plain' })
-  return tstFile
+  return new File(staged, finalName, { type: 'text/plain' })
 }
