@@ -62,6 +62,10 @@ export default class FileIo implements IFileIo {
     }
   }
 
+  async clearProblems (exclude: string): Promise<void> {
+    this.availableProviders = this.availableProviders.filter(prov => prov.ip !== exclude)
+    await this.shuffle()
+  }
   async shuffle (): Promise<void> {
     this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
   }
@@ -82,9 +86,9 @@ export default class FileIo implements IFileIo {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
     const jackalAddr = this.walletRef.getJackalAddress()
 
-    newDir.setIds(await doUpload(url, jackalAddr, await newDir.getForUpload()))
+    newDir.setIds(await this.tumbleUpload(jackalAddr, await newDir.getForUpload()))
     const { cfg, file } = await prepExistingUpload(parentDir, owner, this.walletRef)
-    parentDir.setIds(await doUpload(url, jackalAddr, file))
+    parentDir.setIds(await this.tumbleUpload(jackalAddr, file))
 
     return await this.rawAfterUpload([
       { handler: newDir, data: null },
@@ -148,7 +152,7 @@ export default class FileIo implements IFileIo {
 
       const uploadDone: IQueueItemPostUpload[] = await Promise.all(
         readyToUpload.map(async (bundle) => {
-          bundle.handler.setIds(await doUpload(url, jackalAddr, bundle.uploadable))
+          bundle.handler.setIds(await this.tumbleUpload(jackalAddr, bundle.uploadable))
           return { handler: bundle.handler, data: bundle.data }
         }))
 
@@ -253,7 +257,7 @@ export default class FileIo implements IFileIo {
             receivedLength += value.length;
             completion = Math.floor(receivedLength / Number(contentLength)) || .01
             console.log(`${completion * 100}% Complete`)
-          }
+          }go tool pprof  -http=localhost:9095 http://prov.sally.thepodocasts.com/debug/pprof/heap
 
 // Step 4: concatenate chunks into single Uint8Array
 //           let chunksAll = new Uint8Array(receivedLength); // (4.1)
@@ -303,7 +307,7 @@ export default class FileIo implements IFileIo {
     const msgs = await this.makeDelete(this.walletRef.getJackalAddress(), targets)
 
     const { cfg, file } = await prepExistingUpload(parent, parent.getWhoOwnsMe(), this.walletRef)
-    parent.setIds(await doUpload(url, parent.getWhoOwnsMe(), file))
+    parent.setIds(await this.tumbleUpload(parent.getWhoOwnsMe(), file))
     const uploadMsg = await this.rawAfterUpload([{ handler: parent, data: cfg }])
     msgs.push(...uploadMsg)
 
@@ -353,7 +357,7 @@ export default class FileIo implements IFileIo {
     }
 
     const msgs: EncodeObject[][] = await Promise.all(folderHandlerList.map(async (item: TFileOrFFile) => {
-      const { cid, fid } = await doUpload(url, this.walletRef.getJackalAddress(), await item.getForUpload())
+      const { cid, fid } = await this.tumbleUpload(this.walletRef.getJackalAddress(), await item.getForUpload())
       const folderView: any = {}
       const folderEdit: any = {}
       const perms = await aesToString(this.walletRef, pubKey, await item.getEnc())
@@ -405,6 +409,22 @@ export default class FileIo implements IFileIo {
     }))
     return readyToDelete.flat()
   }
+  private async tumbleUpload (sender: string, file: File): Promise<IProviderModifiedResponse> {
+    while (this.availableProviders.length > 0) {
+      const { ip } = this.currentProvider
+      console.log('Current Provider:', ip)
+      const url = `${ip.replace(/\/+$/, '')}/upload`
+      try {
+        return await doUpload(url, sender, file)
+      } catch (err) {
+        console.warn(err)
+        await this.clearProblems(ip)
+        continue
+      }
+    }
+    console.log('Provider Options Exhausted')
+    return { fid: [''], cid: '' }
+  }
 }
 
 /** Helpers */
@@ -431,6 +451,8 @@ export default class FileIo implements IFileIo {
     file: await data.getForUpload(await stringToAes(walletRef, editorKeys))
   }
 }
+
+
 async function doUpload (url: string, sender: string, file: File): Promise<IProviderModifiedResponse> {
   console.log('file.size')
   console.log(file.size)
@@ -438,9 +460,16 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
   fileFormData.set('file', file)
   fileFormData.set('sender', sender)
   return await fetch(url, { method: 'POST', body: fileFormData as FormData })
-    .then((resp): Promise<IProviderResponse> => resp.json())
+    .then((resp): Promise<IProviderResponse> => {
+      if (resp.status !== 200) throw new Error(`Status Message: ${resp.statusText}`)
+      return resp.json()
+    })
     .then((resp) => {
+      console.log('resp:', resp)
       return { fid: [resp.fid], cid: resp.cid }
+    })
+    .catch(err => {
+      throw new Error(err)
     })
 }
 
@@ -521,7 +550,11 @@ function verifyFileProviderIps (resp: SuccessIncluded<QueryFindFileResponse>): s
   }
 }
 async function getFileChainData (hexAddress: string, owner: string, fileTreeQuery: IQueryFileTree) {
+  console.log('getFileChainData')
+  console.log(hexAddress)
+  console.log(owner)
   const fileResp = await fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: owner })
+  console.log(fileResp)
   if (!fileResp.value || !fileResp.value.files) throw new Error('No address found!')
   const fileData = fileResp.value.files
   if (!fileResp.success) {
