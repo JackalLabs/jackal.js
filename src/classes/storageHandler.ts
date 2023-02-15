@@ -49,6 +49,9 @@ export default class StorageHandler implements IStorageHandler {
   async getClientFreeSpace (address: string): Promise<number> {
     return (await this.pH.storageQuery.queryGetClientFreeSpace({ address })).value.bytesfree
   }
+  async getStorageJklPrice (bytes?: number, duration?: string): Promise<number> {
+    return (await this.pH.storageQuery.queryPriceCheck({ bytes, duration })).value.price
+  }
   async getPayData (address: string): Promise<IPayData> {
     return (await this.pH.storageQuery.queryGetPayData({ address })).value
   }

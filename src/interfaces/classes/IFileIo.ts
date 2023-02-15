@@ -1,6 +1,6 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IFileDownloadHandler, IFolderHandler } from '@/interfaces/classes'
-import { IDeleteItem, IFolderAdd, IFolderChildFiles, IMiner } from '@/interfaces'
+import { IDeleteItem, IDownloadDetails, IFolderAdd, IFolderChildFiles, IMiner } from '@/interfaces'
 import type { TFileOrFFile } from '@/types/TFoldersAndFiles'
 
 export default interface IFileIo {
@@ -13,7 +13,7 @@ export default interface IFileIo {
   verifyFoldersExist (toCheck: string[]): Promise<number>
   uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<void>
   rawUploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<EncodeObject[]>
-  downloadFile (fileAddress: string, owner: string, isFolder: boolean): Promise<IFileDownloadHandler | IFolderHandler>
+  downloadFile (downloadDetails: IDownloadDetails, completion: number): Promise<IFileDownloadHandler | IFolderHandler>
   deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void>
   rawDeleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<EncodeObject[]>
   generateInitialDirs (initMsg: EncodeObject, startingDirs?: string[]): Promise<void>
