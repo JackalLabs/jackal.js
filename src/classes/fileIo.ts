@@ -257,8 +257,7 @@ export default class FileIo implements IFileIo {
             receivedLength += value.length;
             completion = Math.floor(receivedLength / Number(contentLength)) || .01
             console.log(`${completion * 100}% Complete`)
-          }go tool pprof  -http=localhost:9095 http://prov.sally.thepodocasts.com/debug/pprof/heap
-
+          }
 // Step 4: concatenate chunks into single Uint8Array
 //           let chunksAll = new Uint8Array(receivedLength); // (4.1)
 //           let position = 0;
