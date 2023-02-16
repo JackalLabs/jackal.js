@@ -7,7 +7,7 @@ export default interface IStorageHandler {
   upgradeStorage (forAddress: string, duration: number, space: number): Promise<DeliverTxResponse>
   makeStorageInitMsg (): EncodeObject
   getClientFreeSpace (address: string): Promise<number>
-  getStorageJklPrice (bytes?: number, duration?: string): Promise<number>
+  getStorageJklPrice (space: number, duration: number): Promise<number>
   getPayData (address: string): Promise<IPayData>
   getStoragePaymentInfo (address: string): Promise<IStoragePaymentInfo>
 }
