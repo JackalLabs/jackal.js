@@ -37,6 +37,7 @@ export function numToWholeTB (base: number | string): string {
   final *= 1000 /** MB */
   final *= 1000 /** GB */
   final *= 1000 /** TB */
+  final *= 3    /** Redundancy */
   console.info(final)
   return final.toString()
 }
