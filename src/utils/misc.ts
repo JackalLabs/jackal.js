@@ -1,3 +1,5 @@
+import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
+
 export function orderStrings (sortable: string[]): string[] {
   return sortable.sort((a: string, b: string) => {
     const lowerA = a.toLowerCase()
@@ -14,16 +16,6 @@ export function orderStrings (sortable: string[]): string[] {
 export function stripper (value: string): string {
   return value.replace(/\/+/g, '')
 }
-// export function addPadding (original: Blob): Blob {
-//   let padSize = (16 - (original.size % 16)) || 16
-//   const padArray = Array(padSize).fill(padSize)
-//   return (new Blob([original, new Uint8Array(padArray)]))
-// }
-// export async function removePadding (chunk: Blob): Promise<Blob> {
-//   const index = chunk.slice(-1)
-//   const padCount = Number(index)
-//   return chunk.slice(0, chunk.size - padCount)
-// }
 export function checkResults (response: any) {
   console.dir(response)
   if (response.gasUsed > response.gasWanted) {
@@ -50,4 +42,23 @@ export function bruteForceString (value: string): null | undefined | string {
     default:
       return value
   }
+}
+export async function handlePagination (handler: any, queryTag: string, additionalParams?: any) {
+  const raw: any[] = []
+  let nextPage: Uint8Array = new Uint8Array()
+  let foundTotal = 0
+  do {
+    let data = await handler[queryTag]({
+      ...additionalParams,
+      pagination: {
+        key: nextPage,
+        limit: 1000
+      }
+    })
+    raw.push(data.value)
+    const { nextKey, total } = data.value.pagination as PageResponse
+    nextPage = nextKey
+    foundTotal = total
+  } while (foundTotal === 1000)
+  return raw
 }
