@@ -130,7 +130,7 @@ export default class RnsHandler implements IRnsHandler {
       {}
     ))
       .reduce((acc: IRnsBidItem[], curr: any) => {
-        acc.push(...curr.names)
+        acc.push(...curr.bids)
         return acc
       }, [])
 
@@ -154,7 +154,7 @@ export default class RnsHandler implements IRnsHandler {
       {}
     ))
       .reduce((acc: IRnsForSaleItem[], curr: any) => {
-        acc.push(...curr.names)
+        acc.push(...curr.forsale)
         return acc
       }, [])
 
@@ -172,7 +172,7 @@ export default class RnsHandler implements IRnsHandler {
       {}
     ))
       .reduce((acc: IRnsForSaleItem[], curr: any) => {
-        acc.push(...curr.names)
+        acc.push(...curr.forsale)
         return acc
       }, [])
 
