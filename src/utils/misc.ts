@@ -46,7 +46,6 @@ export function bruteForceString (value: string): null | undefined | string {
 export async function handlePagination (handler: any, queryTag: string, additionalParams?: any) {
   const raw: any[] = []
   let nextPage: Uint8Array = new Uint8Array()
-  let foundTotal = 0
   do {
     let data = await handler[queryTag]({
       ...additionalParams,
@@ -56,9 +55,7 @@ export async function handlePagination (handler: any, queryTag: string, addition
       }
     })
     raw.push(data.value)
-    const { nextKey, total } = data.value.pagination as PageResponse
-    nextPage = nextKey
-    foundTotal = total
-  } while (foundTotal === 1000)
+    nextPage = (data.value.pagination as PageResponse).nextKey
+  } while (nextPage.length)
   return raw
 }
