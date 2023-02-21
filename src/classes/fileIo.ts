@@ -255,8 +255,8 @@ export default class FileIo implements IFileIo {
 
             chunks.push(value);
             receivedLength += value.length;
-            completion = Math.floor(receivedLength / Number(contentLength)) || .01
-            console.log(`${completion * 100}% Complete`)
+            completion = Math.floor((receivedLength / Number(contentLength)) * 100) || 1
+            console.log(`${completion}% Complete`)
           }
 // Step 4: concatenate chunks into single Uint8Array
 //           let chunksAll = new Uint8Array(receivedLength); // (4.1)

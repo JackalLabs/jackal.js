@@ -11,6 +11,8 @@ import {
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
+import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
+import { handlePagination } from '@/utils/misc'
 
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
@@ -122,9 +124,17 @@ export default class RnsHandler implements IRnsHandler {
     return (await this.pH.rnsQuery.queryBids({ index: trueIndex })).value.bids as IRnsBidItem
   }
   async findAllBids (): Promise<IRnsBidHashMap> {
-    const rawBids = await this.pH.rnsQuery.queryBidsAll({})
+    const data: IRnsBidItem[] = (await handlePagination(
+      this.pH.rnsQuery,
+      'queryBidsAll',
+      {}
+    ))
+      .reduce((acc: IRnsBidItem[], curr: any) => {
+        acc.push(...curr.names)
+        return acc
+      }, [])
 
-    return rawBids.value.bids.reduce((acc: IRnsBidHashMap, curr: IRnsBidItem) => {
+    return data.reduce((acc: IRnsBidHashMap, curr: IRnsBidItem) => {
       if (!acc[curr.name]?.length) {
         acc[curr.name] = [curr]
       } else {
@@ -138,18 +148,35 @@ export default class RnsHandler implements IRnsHandler {
     return (await this.pH.rnsQuery.queryForsale({ name: trueRns })).value.forsale as IRnsForSaleItem
   }
   async findAllForSaleNames (): Promise<IRnsForSaleHashMap> {
-    const rawForSale = await this.pH.rnsQuery.queryForsaleAll({})
+    const data: IRnsForSaleItem[] = (await handlePagination(
+      this.pH.rnsQuery,
+      'queryForsaleAll',
+      {}
+    ))
+      .reduce((acc: IRnsForSaleItem[], curr: any) => {
+        acc.push(...curr.names)
+        return acc
+      }, [])
 
-    return rawForSale.value.forsale.reduce((acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
+    return data.reduce((acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
       acc[curr.name] = curr
       return acc
     }, {})
   }
   async findExpandedForSaleNames (): Promise<IRnsExpandedForSaleHashMap> {
-    const rawForSale = await this.pH.rnsQuery.queryForsaleAll({})
     const rawOwned = await this.findExistingNames()
-    return rawForSale.value.forsale.reduce((acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
 
+    const data: IRnsForSaleItem[] = (await handlePagination(
+      this.pH.rnsQuery,
+      'queryForsaleAll',
+      {}
+    ))
+      .reduce((acc: IRnsForSaleItem[], curr: any) => {
+        acc.push(...curr.names)
+        return acc
+      }, [])
+
+    return data.reduce((acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
       acc[curr.name] = {
         ...curr,
         mine: !!rawOwned[reverseSanitizeRns(curr.name)]
@@ -158,11 +185,19 @@ export default class RnsHandler implements IRnsHandler {
     }, {})
   }
   async findExistingNames (): Promise<IRnsOwnedHashMap> {
-    const rawOwned = await this.pH.rnsQuery.queryListOwnedNames({
-      address: this.walletRef.getJackalAddress()
-    })
+    const address = this.walletRef.getJackalAddress()
 
-    return rawOwned.value.names.reduce((acc: IRnsOwnedHashMap, curr: IRnsOwnedItem) => {
+    const data: IRnsOwnedItem[] = (await handlePagination(
+      this.pH.rnsQuery,
+      'queryListOwnedNames',
+      { address }
+      ))
+      .reduce((acc: IRnsOwnedItem[], curr: any) => {
+      acc.push(...curr.names)
+      return acc
+    }, [])
+
+    return data.reduce((acc: IRnsOwnedHashMap, curr: IRnsOwnedItem) => {
       if (curr.locked) {
         acc.free = curr
       } else {
@@ -195,3 +230,4 @@ function sanitizeRnsData (data: string, caller: string) {
     return '{}'
   }
 }
+
