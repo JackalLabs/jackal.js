@@ -43,6 +43,9 @@ export default class WalletHandler implements IWalletHandler {
       const tAddr = txAddr || defaultTxAddr26657
 
       await window.keplr.enable(enabledChains || defaultChains)
+        .catch(err => {
+          throw err
+        })
       const signer = window.keplr.getOfflineSigner(signerChain || jackalMainnetChainId)
       const acct = (await signer.getAccounts())[0]
 
@@ -51,6 +54,9 @@ export default class WalletHandler implements IWalletHandler {
       const rnsInitComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).value.init
       const { value: { pubkey }, success} = (await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
       const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
+        .catch(err => {
+          throw err
+        })
       const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
@@ -120,6 +126,10 @@ async function makeSecret (chainId: string, acct: string): Promise<string> {
   if (!window.keplr) {
     throw new Error('Jackal.js requires Keplr to be installed!')
   } else {
-    return (await window.keplr.signArbitrary(chainId, acct, memo)).signature
+    const signed = await window.keplr.signArbitrary(chainId, acct, memo)
+      .catch(err => {
+        throw err
+      })
+    return signed.signature
   }
 }

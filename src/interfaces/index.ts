@@ -12,6 +12,9 @@ import IFileConfigRaw from '@/interfaces/file/IFileConfigRaw'
 import IFileConfigRelevant from '@/interfaces/file/IFileConfigRelevant'
 import IFileDetails from '@/interfaces/file/IFileDetails'
 import IFileMeta from '@/interfaces/file/IFileMeta'
+import IFileMetaHashMap from '@/interfaces/file/IFileMetaHashMap'
+import IUploadListItem from '@/interfaces/file/IUploadListItem'
+import IUploadList from '@/interfaces/file/IUploadList'
 import IFiletreeParsedContents from '@/interfaces/IFiletreeParsedContents'
 import IFolderAdd from '@/interfaces/IFolderAdd'
 import IFolderChildFiles from '@/interfaces/IFolderChildFiles'
@@ -59,6 +62,9 @@ export {
   IFileConfigRelevant,
   IFileDetails,
   IFileMeta,
+  IFileMetaHashMap,
+  IUploadListItem,
+  IUploadList,
   IFiletreeParsedContents,
   IFolderAdd,
   IFolderChildFiles,

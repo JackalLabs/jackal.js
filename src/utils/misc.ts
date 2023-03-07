@@ -59,3 +59,6 @@ export async function handlePagination (handler: any, queryTag: string, addition
   } while (nextPage.length)
   return raw
 }
+export async function setDelay (amt: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, Number(amt)))
+}

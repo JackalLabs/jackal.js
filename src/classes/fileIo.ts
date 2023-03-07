@@ -4,7 +4,7 @@ import { IQueryFileTree, IQueryStorage, ITxFileTree } from 'jackal.js-protos'
 
 import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
-import { bruteForceString } from '@/utils/misc'
+import { bruteForceString, setDelay } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
 import {
@@ -27,7 +27,8 @@ import {
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
-  IQueueItemPostUpload
+  IQueueItemPostUpload,
+  IUploadList, IUploadListItem
 } from '@/interfaces'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IProviderChecks from '@/interfaces/IProviderChecks'
@@ -118,6 +119,51 @@ export default class FileIo implements IFileIo {
     }
     return toCreate.length
   }
+  async staggeredUploadFiles (sourceHashMap: IUploadList): Promise<void> {
+    const sourceKeys = Object.keys(sourceHashMap)
+    const jackalAddr = this.walletRef.getJackalAddress()
+    let queueHashMap: { [key: string]: boolean } = {}
+    let tracker = { num: 0 }
+    for (let key of sourceKeys) {
+      queueHashMap[key] = false
+    }
+    await Promise.any(
+      Object.values(sourceHashMap).map(async (bundle: IUploadListItem) => {
+        const { exists, handler, key, uploadable } = bundle
+        let prom
+        if (exists && !handler.isFolder) {
+          const { cfg, file} = await prepExistingUpload(handler, jackalAddr, this.walletRef)
+          bundle.data = cfg
+          prom = await this.tumbleUpload(jackalAddr, file)
+        } else {
+          prom = await this.tumbleUpload(jackalAddr, uploadable)
+        }
+        handler.setIds(prom as IProviderModifiedResponse)
+        sourceHashMap[key].handler = handler
+        queueHashMap[key] = true
+        tracker.num++
+        console.log('Done')
+        return 'Done'
+      })
+    )
+      .catch(err => {
+        console.warn('All Uploads Failed')
+        console.error(err)
+      })
+    do {
+      await statusCheck(sourceKeys.length, tracker)
+      const processingNames: any[] = Object.keys(queueHashMap).filter(name => queueHashMap[name])
+      const processValues = processingNames.map(name => sourceHashMap[name])
+      if (processingNames.length === 0) {
+        // do nothing
+      } else {
+        await this.afterUpload(processValues)
+        for (let key of processingNames) {
+          delete queueHashMap[key]
+        }
+      }
+    } while (Object.keys(queueHashMap).length > 0)
+  }
   async uploadFiles (
     toUpload: TFileOrFFile[],
     owner: string,
@@ -125,7 +171,7 @@ export default class FileIo implements IFileIo {
   ): Promise<void> {
     const readyToBroadcast = await this.rawUploadFiles(toUpload, owner, existingChildren)
       .catch(err => {
-        throw new Error(err)
+        throw err
       })
     // await this.pH.debugBroadcaster(readyToBroadcast, true)
     await this.pH.debugBroadcaster(readyToBroadcast)
@@ -138,7 +184,6 @@ export default class FileIo implements IFileIo {
     if (!toUpload.length) {
       throw new Error('Empty File array submitted for upload')
     } else {
-      const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
       const jackalAddr = this.walletRef.getJackalAddress()
 
       const readyToUpload: any[] = []
@@ -163,6 +208,9 @@ export default class FileIo implements IFileIo {
     const readyToBroadcast = await this.rawAfterUpload(ids)
     // await this.pH.debugBroadcaster(readyToBroadcast, true)
     await this.pH.debugBroadcaster(readyToBroadcast)
+      .catch(err => {
+        throw err
+      })
   }
   private async rawAfterUpload (ids: IQueueItemPostUpload[]): Promise<EncodeObject[]> {
     const creator = this.walletRef.getJackalAddress()
@@ -468,7 +516,7 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
       return { fid: [resp.fid], cid: resp.cid }
     })
     .catch(err => {
-      throw new Error(err)
+      throw err
     })
 }
 
@@ -602,4 +650,16 @@ async function buildPostFile (data: IMsgPartialPostFileBundle, fileTreeTx: ITxFi
 }
 async function random (max: number) {
    return Math.floor(Math.random() * max)
+}
+async function statusCheck (target: number, current: any): Promise<void> {
+  await new Promise<void>(async (resolve) => {
+    for (let i = 0; i < 120; i++) {
+      if (current.num === target) {
+        resolve()
+      } else {
+        await setDelay(500)
+      }
+    }
+    resolve()
+  })
 }
