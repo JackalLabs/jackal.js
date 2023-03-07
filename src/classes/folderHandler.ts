@@ -1,4 +1,4 @@
-import { IAesBundle, IChildDirInfo, IFileConfigRelevant, IFileMeta, IFolderFileFrame } from '@/interfaces'
+import { IAesBundle, IChildDirInfo, IFileConfigRelevant, IFileMeta, IFileMetaHashMap, IFolderFileFrame } from '@/interfaces'
 import { IFolderHandler } from '@/interfaces/classes'
 import { stripper } from '@/utils/misc'
 import {
@@ -75,17 +75,13 @@ export default class FolderHandler implements IFolderHandler {
   addChildDirs (dirs: string[]): void {
     this.folderDetails.dirChildren = [...new Set([...this.folderDetails.dirChildren, ...dirs])]
   }
-  addChildFiles (newFiles: IFileMeta[]) {
-    const midStep = newFiles.reduce((acc: {[name: string]: IFileMeta}, curr: IFileMeta) => {
-      acc[stripper(curr.name)] = curr
-      return acc
-    }, {})
-    this.folderDetails.fileChildren = {...this.folderDetails.fileChildren, ...midStep}
+  addChildFiles (newFiles: IFileMetaHashMap): void {
+    this.folderDetails.fileChildren = {...this.folderDetails.fileChildren, ...newFiles}
   }
-  removeChildDirs (toRemove: string[]) {
+  removeChildDirs (toRemove: string[]): void {
     this.folderDetails.dirChildren = this.folderDetails.dirChildren.filter((saved: string) => !toRemove.includes(saved))
   }
-  removeChildFiles (toRemove: string[]) {
+  removeChildFiles (toRemove: string[]): void {
     for (let i = 0; i < toRemove.length; i++) {
       delete this.folderDetails.fileChildren[toRemove[i]]
     }
@@ -97,11 +93,11 @@ export default class FolderHandler implements IFolderHandler {
     return await hexFullPath(await this.getFullMerkle(), child)
   }
 
-  setIds (idObj: { cid: string, fid: string[] }) {
+  setIds (idObj: { cid: string, fid: string[] }): void {
     this.cid = idObj.cid
     this.fid = idObj.fid
   }
-  setUUID (uuid: string) {
+  setUUID (uuid: string): void {
     this.uuid = uuid
   }
   getIds () {
@@ -127,7 +123,7 @@ export default class FolderHandler implements IFolderHandler {
       key: this.key
     }
   }
-  getMerklePath () {
+  getMerklePath (): Promise<string> {
     return merkleMeBro(this.folderDetails.whereAmI)
   }
 }
