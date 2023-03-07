@@ -28,7 +28,7 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
         return new Blob([res])
       })
       .catch(err => {
-        throw new Error(err)
+        throw err
       })
   } else {
     return await crypto.subtle.decrypt(algo, key, workingData)
@@ -36,7 +36,7 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
         return new Blob([res])
       })
       .catch(err => {
-        throw new Error(err)
+        throw err
       })
   }
 }
