@@ -28,6 +28,7 @@ import {
   IProviderModifiedResponse,
   IProviderResponse,
   IQueueItemPostUpload,
+  IStaggeredTracker,
   IUploadList, IUploadListItem
 } from '@/interfaces'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
@@ -79,8 +80,9 @@ export default class FileIo implements IFileIo {
   }
   async uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void> {
     const readyToBroadcast = await this.rawUploadFolders(toUpload, owner)
-    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
-    await this.pH.debugBroadcaster(readyToBroadcast, {})
+    const memo = ``
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
   async rawUploadFolders (toUpload: IFolderAdd, owner: string): Promise<EncodeObject[]> {
     const { newDir, parentDir } = toUpload
@@ -119,11 +121,10 @@ export default class FileIo implements IFileIo {
     }
     return toCreate.length
   }
-  async staggeredUploadFiles (sourceHashMap: IUploadList): Promise<void> {
+  async staggeredUploadFiles ( sourceHashMap: IUploadList, tracker: IStaggeredTracker): Promise<void> {
     const sourceKeys = Object.keys(sourceHashMap)
     const jackalAddr = this.walletRef.getJackalAddress()
     let queueHashMap: { [key: string]: boolean } = {}
-    let tracker = { num: 0 }
     for (let key of sourceKeys) {
       queueHashMap[key] = false
     }
@@ -141,7 +142,7 @@ export default class FileIo implements IFileIo {
         handler.setIds(prom as IProviderModifiedResponse)
         sourceHashMap[key].handler = handler
         queueHashMap[key] = true
-        tracker.num++
+        tracker.complete++
         console.log('Done')
         return 'Done'
       })
@@ -158,10 +159,10 @@ export default class FileIo implements IFileIo {
         // do nothing
       } else {
         const readyToBroadcast = await this.rawAfterUpload(processValues)
+
         const memo = `Processing batch of ${processValues.length} uploads`
-        
         // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-        await this.pH.debugBroadcaster(readyToBroadcast, { memo })
+        await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
           .catch(err => {
             throw err
           })
@@ -181,8 +182,9 @@ export default class FileIo implements IFileIo {
       .catch(err => {
         throw err
       })
-    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
-    await this.pH.debugBroadcaster(readyToBroadcast, {})
+    const memo = ``
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
   async rawUploadFiles (
     toUpload: TFileOrFFile[],
@@ -214,8 +216,9 @@ export default class FileIo implements IFileIo {
   }
   private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
     const readyToBroadcast = await this.rawAfterUpload(ids)
-    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
-    await this.pH.debugBroadcaster(readyToBroadcast, {})
+    const memo = ``
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
       .catch(err => {
         throw err
       })
@@ -350,8 +353,9 @@ export default class FileIo implements IFileIo {
   }
   async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
     const readyToBroadcast = await this.rawDeleteTargets(targets, parent)
-    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
-    await this.pH.debugBroadcaster(readyToBroadcast, {})
+    const memo = ``
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
   async rawDeleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<EncodeObject[]> {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
@@ -370,8 +374,9 @@ export default class FileIo implements IFileIo {
   }
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
     const readyToBroadcast = await this.rawGenerateInitialDirs(initMsg, startingDirs)
-    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
-    await this.pH.debugBroadcaster(readyToBroadcast, {})
+    const memo = ``
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
   async rawGenerateInitialDirs (
     initMsg: EncodeObject | null,
@@ -659,10 +664,10 @@ async function buildPostFile (data: IMsgPartialPostFileBundle, fileTreeTx: ITxFi
 async function random (max: number) {
    return Math.floor(Math.random() * max)
 }
-async function statusCheck (target: number, current: any): Promise<void> {
+async function statusCheck (target: number, tracker: IStaggeredTracker): Promise<void> {
   await new Promise<void>(async (resolve) => {
-    for (let i = 0; i < 120; i++) {
-      if (current.num === target) {
+    for (tracker.timer = 120; tracker.timer > 0; tracker.timer--) {
+      if (tracker.complete === target) {
         resolve()
       } else {
         await setDelay(500)

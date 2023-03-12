@@ -41,6 +41,7 @@ import IRnsOwnedHashMap from '@/interfaces/rns/IRnsOwnedHashMap'
 import IRnsOwnedItem from '@/interfaces/rns/IRnsOwnedItem'
 import IRnsRecordItem from '@/interfaces/rns/IRnsRecordItem'
 import IRnsRegistrationItem from '@/interfaces/rns/IRnsRegistrationItem'
+import IStaggeredTracker from '@/interfaces/IStaggeredTracker'
 import IStakingValidator from '@/interfaces/IStakingValidator'
 import IStorageClientFree from '@/interfaces/IStorageClientFree'
 import IStoragePaymentInfo from '@/interfaces/IStoragePaymentInfo'
@@ -91,6 +92,7 @@ export {
   IRnsOwnedItem,
   IRnsRecordItem,
   IRnsRegistrationItem,
+  IStaggeredTracker,
   IStakingValidator,
   IStorageClientFree,
   IStoragePaymentInfo,
