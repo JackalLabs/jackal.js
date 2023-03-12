@@ -25,8 +25,8 @@ import { DeliverTxResponse } from '@cosmjs/stargate'
 export default interface IProtoHandler {
 
   /** General */
-  broadcaster (msgs: EncodeObject[]): Promise<DeliverTxResponse>
-  debugBroadcaster (msgs: EncodeObject[], step?: boolean): Promise<DeliverTxResponse | null>
+  broadcaster (msgs: EncodeObject[], msg?: string): Promise<DeliverTxResponse>
+  debugBroadcaster (msgs: EncodeObject[], extra: { memo?: string, step?: boolean }): Promise<DeliverTxResponse | null>
   rawBroadcaster: TMasterBroadcaster
 
   /** Custom */

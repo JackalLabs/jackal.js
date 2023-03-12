@@ -79,8 +79,8 @@ export default class FileIo implements IFileIo {
   }
   async uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void> {
     const readyToBroadcast = await this.rawUploadFolders(toUpload, owner)
-    // await this.pH.debugBroadcaster(readyToBroadcast, true)
-    await this.pH.debugBroadcaster(readyToBroadcast)
+    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
+    await this.pH.debugBroadcaster(readyToBroadcast, {})
   }
   async rawUploadFolders (toUpload: IFolderAdd, owner: string): Promise<EncodeObject[]> {
     const { newDir, parentDir } = toUpload
@@ -157,7 +157,15 @@ export default class FileIo implements IFileIo {
       if (processingNames.length === 0) {
         // do nothing
       } else {
-        await this.afterUpload(processValues)
+        const readyToBroadcast = await this.rawAfterUpload(processValues)
+        const memo = `Processing batch of ${processValues.length} uploads`
+        
+        // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+        await this.pH.debugBroadcaster(readyToBroadcast, { memo })
+          .catch(err => {
+            throw err
+          })
+
         for (let key of processingNames) {
           delete queueHashMap[key]
         }
@@ -173,8 +181,8 @@ export default class FileIo implements IFileIo {
       .catch(err => {
         throw err
       })
-    // await this.pH.debugBroadcaster(readyToBroadcast, true)
-    await this.pH.debugBroadcaster(readyToBroadcast)
+    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
+    await this.pH.debugBroadcaster(readyToBroadcast, {})
   }
   async rawUploadFiles (
     toUpload: TFileOrFFile[],
@@ -206,8 +214,8 @@ export default class FileIo implements IFileIo {
   }
   private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
     const readyToBroadcast = await this.rawAfterUpload(ids)
-    // await this.pH.debugBroadcaster(readyToBroadcast, true)
-    await this.pH.debugBroadcaster(readyToBroadcast)
+    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
+    await this.pH.debugBroadcaster(readyToBroadcast, {})
       .catch(err => {
         throw err
       })
@@ -342,8 +350,8 @@ export default class FileIo implements IFileIo {
   }
   async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
     const readyToBroadcast = await this.rawDeleteTargets(targets, parent)
-    // await this.pH.debugBroadcaster(readyToBroadcast, true)
-    await this.pH.debugBroadcaster(readyToBroadcast)
+    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
+    await this.pH.debugBroadcaster(readyToBroadcast, {})
   }
   async rawDeleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<EncodeObject[]> {
     const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
@@ -362,8 +370,8 @@ export default class FileIo implements IFileIo {
   }
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
     const readyToBroadcast = await this.rawGenerateInitialDirs(initMsg, startingDirs)
-    // await this.pH.debugBroadcaster(readyToBroadcast, true)
-    await this.pH.debugBroadcaster(readyToBroadcast)
+    // await this.pH.debugBroadcaster(readyToBroadcast, { step: true})
+    await this.pH.debugBroadcaster(readyToBroadcast, {})
   }
   async rawGenerateInitialDirs (
     initMsg: EncodeObject | null,
