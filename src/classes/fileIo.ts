@@ -121,7 +121,7 @@ export default class FileIo implements IFileIo {
     }
     return toCreate.length
   }
-  async staggeredUploadFiles ( sourceHashMap: IUploadList, tracker: IStaggeredTracker): Promise<void> {
+  async staggeredUploadFiles (sourceHashMap: IUploadList, tracker: IStaggeredTracker): Promise<void> {
     const sourceKeys = Object.keys(sourceHashMap)
     const jackalAddr = this.walletRef.getJackalAddress()
     let queueHashMap: { [key: string]: boolean } = {}
@@ -377,6 +377,9 @@ export default class FileIo implements IFileIo {
     const memo = ``
     // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
     await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+      .catch(err => {
+        console.error(err)
+      })
   }
   async rawGenerateInitialDirs (
     initMsg: EncodeObject | null,
@@ -436,7 +439,11 @@ export default class FileIo implements IFileIo {
         trackingNumber: workingUUID
       }, this.pH.fileTreeTx)
 
-      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid, payOnce: false })
+      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({
+        creator,
+        cid,
+        payOnce: false
+      })
       return [ msgPost, msgSign ]
     }))
     const readyToBroadcast: EncodeObject[] = []

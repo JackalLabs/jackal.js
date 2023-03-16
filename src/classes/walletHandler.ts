@@ -1,7 +1,6 @@
-import { AccountData, EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
+import { AccountData, EncodeObject, isOfflineDirectSigner, OfflineSigner } from '@cosmjs/proto-signing'
 import { encrypt, decrypt, PrivateKey } from 'eciesjs'
 import { Window as KeplrWindow } from '@keplr-wallet/types'
-
 import { defaultQueryAddr9091, defaultTxAddr26657, jackalMainnetChainId } from '@/utils/globals'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
@@ -21,6 +20,7 @@ export default class WalletHandler implements IWalletHandler {
   private fileTreeInitComplete: boolean
   private readonly jackalAccount: AccountData
   private readonly pH: IProtoHandler
+  readonly isDirect: boolean
 
   private constructor (signer: OfflineSigner, keyPair: PrivateKey, rnsInitComplete: boolean, fileTreeInitComplete: boolean, acct: AccountData, pH: IProtoHandler) {
     this.signer = signer
@@ -29,6 +29,7 @@ export default class WalletHandler implements IWalletHandler {
     this.fileTreeInitComplete = fileTreeInitComplete
     this.jackalAccount = acct
     this.pH = pH
+    this.isDirect = isOfflineDirectSigner(signer)
   }
 
   static async trackWallet (config: IWalletConfig): Promise<IWalletHandler> {
@@ -46,7 +47,7 @@ export default class WalletHandler implements IWalletHandler {
         .catch(err => {
           throw err
         })
-      const signer = window.keplr.getOfflineSigner(signerChain || jackalMainnetChainId)
+      const signer = await window.keplr.getOfflineSignerAuto(signerChain || jackalMainnetChainId)
       const acct = (await signer.getAccounts())[0]
 
       const pH = await ProtoHandler.trackProto(signer, tAddr, qAddr)
