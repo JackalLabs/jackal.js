@@ -17,7 +17,7 @@ import {
   ITxGov,
   IQueryStaking,
   ITxStaking,
-  TMasterBroadcaster
+  TMasterBroadcaster, IQueryNotifications, ITxNotifications
 } from 'jackal.js-protos'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { DeliverTxResponse } from '@cosmjs/stargate'
@@ -25,14 +25,16 @@ import { DeliverTxResponse } from '@cosmjs/stargate'
 export default interface IProtoHandler {
 
   /** General */
-  broadcaster (msgs: EncodeObject[]): Promise<DeliverTxResponse>
-  debugBroadcaster (msgs: EncodeObject[], step?: boolean): Promise<DeliverTxResponse | null>
+  broadcaster (msgs: EncodeObject[], msg?: string): Promise<DeliverTxResponse>
+  debugBroadcaster (msgs: EncodeObject[], extra: { memo?: string, step?: boolean }): Promise<DeliverTxResponse | null>
   rawBroadcaster: TMasterBroadcaster
 
   /** Custom */
   fileTreeQuery: IQueryFileTree
   fileTreeTx: ITxFileTree
   jklMintQuery: IQueryJklMint
+  notificationsQuery: IQueryNotifications
+  notificationsTx: ITxNotifications
   oracleQuery: IQueryOracle
   oracleTx: ITxOracle
   rnsQuery: IQueryRns

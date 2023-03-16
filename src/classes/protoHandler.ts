@@ -25,17 +25,20 @@ export default class ProtoHandler implements IProtoHandler {
   }
 
   /** General */
-  broadcaster (msgs: EncodeObject[]): Promise<DeliverTxResponse> {
-    return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo: '' })
+  broadcaster (msgs: EncodeObject[], memo = ''): Promise<DeliverTxResponse> {
+    return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo })
       .catch(err => {
         throw err
       })
   }
-  async debugBroadcaster (msgs: EncodeObject[], step?: boolean): Promise<DeliverTxResponse | null> {
-    if (step) {
+  async debugBroadcaster (
+    msgs: EncodeObject[],
+    extra: { memo?: string, step?: boolean } = { memo: '', step: false }
+  ): Promise<DeliverTxResponse | null> {
+    if (extra.step) {
       for (let i = 0; i < msgs.length; i++) {
         console.log(msgs[i].typeUrl)
-        const resp = await this.broadcaster([msgs[i]])
+        const resp = await this.broadcaster([msgs[i]], extra.memo)
           .catch(err => {
             throw err
           })
@@ -43,7 +46,7 @@ export default class ProtoHandler implements IProtoHandler {
       }
       return null
     } else {
-      const resp = await this.broadcaster(msgs)
+      const resp = await this.broadcaster(msgs, extra.memo)
         .catch(err => {
           throw err
         })
@@ -64,6 +67,12 @@ export default class ProtoHandler implements IProtoHandler {
   }
   get jklMintQuery () {
     return this.allQueryClients.jklMint
+  }
+  get notificationsQuery () {
+    return this.allQueryClients.notifications
+  }
+  get notificationsTx () {
+    return this.allTxClients.notifications
   }
   get oracleQuery () {
     return this.allQueryClients.oracle

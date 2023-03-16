@@ -1,6 +1,6 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IFileDownloadHandler, IFolderHandler } from '@/interfaces/classes'
-import { IDeleteItem, IDownloadDetails, IFolderAdd, IFolderChildFiles, IMiner, IUploadList } from '@/interfaces'
+import { IDeleteItem, IDownloadDetails, IFolderAdd, IFolderChildFiles, IMiner, IStaggeredTracker, IUploadList } from '@/interfaces'
 import type { TFileOrFFile } from '@/types/TFoldersAndFiles'
 
 export default interface IFileIo {
@@ -11,7 +11,7 @@ export default interface IFileIo {
   uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void>
   rawUploadFolders (toUpload: IFolderAdd, owner: string): Promise<EncodeObject[]>
   verifyFoldersExist (toCheck: string[]): Promise<number>
-  staggeredUploadFiles (sourceHashMap: IUploadList): Promise<void>
+  staggeredUploadFiles (sourceHashMap: IUploadList, tracker: IStaggeredTracker): Promise<void>
   uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<void>
   rawUploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<EncodeObject[]>
   downloadFile (downloadDetails: IDownloadDetails, completion: number): Promise<IFileDownloadHandler | IFolderHandler>

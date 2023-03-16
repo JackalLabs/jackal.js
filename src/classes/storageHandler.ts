@@ -26,7 +26,7 @@ export default class StorageHandler implements IStorageHandler {
       paymentDenom: 'ujkl'
     })
     // await this.pH.debugBroadcaster([msg], true)
-    return await this.pH.debugBroadcaster([msg]) as DeliverTxResponse
+    return await this.pH.debugBroadcaster([msg], {}) as DeliverTxResponse
   }
   async upgradeStorage (forAddress: string, duration: number, space: number): Promise<DeliverTxResponse> {
     const msg: EncodeObject = this.pH.storageTx.msgUpgradeStorage({
@@ -37,7 +37,7 @@ export default class StorageHandler implements IStorageHandler {
       paymentDenom: 'ujkl'
     })
     // await this.pH.debugBroadcaster([msg], true)
-    return await this.pH.debugBroadcaster([msg]) as DeliverTxResponse
+    return await this.pH.debugBroadcaster([msg], {}) as DeliverTxResponse
   }
   makeStorageInitMsg (): EncodeObject {
     return this.pH.fileTreeTx.msgPostkey({
