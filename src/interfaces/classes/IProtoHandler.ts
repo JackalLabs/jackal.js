@@ -17,7 +17,7 @@ import {
   ITxGov,
   IQueryStaking,
   ITxStaking,
-  TMasterBroadcaster
+  TMasterBroadcaster, IQueryNotifications, ITxNotifications
 } from 'jackal.js-protos'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { DeliverTxResponse } from '@cosmjs/stargate'
@@ -33,6 +33,8 @@ export default interface IProtoHandler {
   fileTreeQuery: IQueryFileTree
   fileTreeTx: ITxFileTree
   jklMintQuery: IQueryJklMint
+  notificationsQuery: IQueryNotifications
+  notificationsTx: ITxNotifications
   oracleQuery: IQueryOracle
   oracleTx: ITxOracle
   rnsQuery: IQueryRns
