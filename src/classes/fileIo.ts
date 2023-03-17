@@ -7,6 +7,7 @@ import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
 import { bruteForceString, setDelay } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
+import WalletHandler from '@/classes/walletHandler'
 import {
   IFileDownloadHandler,
   IFileIo,
@@ -350,6 +351,46 @@ export default class FileIo implements IFileIo {
     } else {
       throw new Error('No available providers!')
     }
+  }
+  async deleteFolder(dirName: string, parentPath: string): Promise<void> {
+    const readyToBroadcast = await this.rawDeleteFolder(dirName, parentPath)
+      .catch(err => {
+        throw err
+      })
+    const memo = ``
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+  }
+  async rawDeleteFolder(dirName: string, parentPath: string): Promise<EncodeObject[]> {
+    const hexTarget = await WalletHandler.getAbitraryMerkle(parentPath, dirName)
+    const tmpDir = await this.downloadFile(
+        {
+          hexAddress: hexTarget,
+          owner: this.walletRef.getJackalAddress(),
+          isFolder: true
+        },
+        0
+      ) as IFolderHandler
+    const locationAddress = `${tmpDir.getWhereAmI()}/${tmpDir.getWhoAmI()}`
+
+    const files = Object.keys(tmpDir.getChildFiles() || {}) || []
+    const dirs = tmpDir.getChildDirs()
+
+    const combinedList = [...files, ...dirs]
+    const tmp: IDeleteItem[] = await Promise.all(combinedList.map(async (value: string) => {
+      return {
+        location: locationAddress,
+        name: value
+      }
+    }))
+
+    const deletions: EncodeObject[] = await this.makeDelete(this.walletRef.getJackalAddress(), tmp)
+
+    await Promise.all(dirs.map(async (dir) => {
+      deletions.push(...(await this.rawDeleteFolder(dir, locationAddress)))
+    }))
+
+    return deletions
   }
   async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
     const readyToBroadcast = await this.rawDeleteTargets(targets, parent)

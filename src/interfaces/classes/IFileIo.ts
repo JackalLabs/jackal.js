@@ -15,6 +15,8 @@ export default interface IFileIo {
   uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<void>
   rawUploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<EncodeObject[]>
   downloadFile (downloadDetails: IDownloadDetails, completion: number): Promise<IFileDownloadHandler | IFolderHandler>
+  deleteFolder(dirName: string, parentPath: string): Promise<void>
+  rawDeleteFolder(dirName: string, parentPath: string): Promise<EncodeObject[]>
   deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void>
   rawDeleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<EncodeObject[]>
   generateInitialDirs (initMsg: EncodeObject, startingDirs?: string[]): Promise<void>
