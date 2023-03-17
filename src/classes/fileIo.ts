@@ -276,7 +276,7 @@ export default class FileIo implements IFileIo {
     return [...needingReset, ...ready.flat()]
 
   }
-  async downloadFile (downloadDetails: IDownloadDetails, completion: number): Promise<IFileDownloadHandler | IFolderHandler> {
+  async downloadFile (downloadDetails: IDownloadDetails, completion: { track: number }): Promise<IFileDownloadHandler | IFolderHandler> {
     const { hexAddress, owner, isFolder } = downloadDetails
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
     const { version, data } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
@@ -293,48 +293,26 @@ export default class FileIo implements IFileIo {
         const url = `${fileProviders[i].replace(/\/+$/, '')}/download/${version}`
         try {
           const resp = await fetch(url)
-
-          const contentLength = resp.headers.get('Content-Length');
-          console.log('content-length')
-          console.log(contentLength)
+          const contentLength = resp.headers.get('Content-Length')
 
           if (!resp.body) throw new Error()
-          const reader = resp.body.getReader();
+          const reader = resp.body.getReader()
 
-// Step 2: get total length
-
-// Step 3: read the data
-          let receivedLength = 0; // received that many bytes at the moment
-          let chunks = []; // array of received binary chunks (comprises the body)
+          let receivedLength = 0
+          let chunks = []
           while(true) {
-            const {done, value} = await reader.read();
-
+            const {done, value} = await reader.read()
             if (done) {
-              break;
+              break
             }
 
-            chunks.push(value);
-            receivedLength += value.length;
-            completion = Math.floor((receivedLength / Number(contentLength)) * 100) || 1
-            console.log(`${completion}% Complete`)
+            chunks.push(value)
+            receivedLength += value.length
+            completion.track = Math.floor((receivedLength / Number(contentLength)) * 100) || 1
+            // console.log(`${completion.track}% Complete`)
           }
-// Step 4: concatenate chunks into single Uint8Array
-//           let chunksAll = new Uint8Array(receivedLength); // (4.1)
-//           let position = 0;
-//           for(let chunk of chunks) {
-//             chunksAll.set(chunk, position); // (4.2)
-//             position += chunk.length;
-//           }
-
 
           const rawFile = new Blob(chunks)
-          // return resp.arrayBuffer()
-
-
-
-
-          console.log('config.editAccess[requester]')
-          console.log(config.editAccess[requester])
           const { key, iv } = await stringToAes(this.walletRef, config.editAccess[requester])
           if (isFolder) {
             return await FolderHandler.trackFolder(rawFile, config, key, iv)
@@ -369,7 +347,7 @@ export default class FileIo implements IFileIo {
           owner: this.walletRef.getJackalAddress(),
           isFolder: true
         },
-        0
+      { track: 0 }
       ) as IFolderHandler
     const locationAddress = `${tmpDir.getWhereAmI()}/${tmpDir.getWhoAmI()}`
 
