@@ -7,6 +7,7 @@ import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
 import { bruteForceString, setDelay } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
+import WalletHandler from '@/classes/walletHandler'
 import {
   IFileDownloadHandler,
   IFileIo,
@@ -275,7 +276,7 @@ export default class FileIo implements IFileIo {
     return [...needingReset, ...ready.flat()]
 
   }
-  async downloadFile (downloadDetails: IDownloadDetails, completion: number): Promise<IFileDownloadHandler | IFolderHandler> {
+  async downloadFile (downloadDetails: IDownloadDetails, completion: { track: number }): Promise<IFileDownloadHandler | IFolderHandler> {
     const { hexAddress, owner, isFolder } = downloadDetails
     const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
     const { version, data } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
@@ -292,48 +293,26 @@ export default class FileIo implements IFileIo {
         const url = `${fileProviders[i].replace(/\/+$/, '')}/download/${version}`
         try {
           const resp = await fetch(url)
-
-          const contentLength = resp.headers.get('Content-Length');
-          console.log('content-length')
-          console.log(contentLength)
+          const contentLength = resp.headers.get('Content-Length')
 
           if (!resp.body) throw new Error()
-          const reader = resp.body.getReader();
+          const reader = resp.body.getReader()
 
-// Step 2: get total length
-
-// Step 3: read the data
-          let receivedLength = 0; // received that many bytes at the moment
-          let chunks = []; // array of received binary chunks (comprises the body)
+          let receivedLength = 0
+          let chunks = []
           while(true) {
-            const {done, value} = await reader.read();
-
+            const {done, value} = await reader.read()
             if (done) {
-              break;
+              break
             }
 
-            chunks.push(value);
-            receivedLength += value.length;
-            completion = Math.floor((receivedLength / Number(contentLength)) * 100) || 1
-            console.log(`${completion}% Complete`)
+            chunks.push(value)
+            receivedLength += value.length
+            completion.track = Math.floor((receivedLength / Number(contentLength)) * 100) || 1
+            // console.log(`${completion.track}% Complete`)
           }
-// Step 4: concatenate chunks into single Uint8Array
-//           let chunksAll = new Uint8Array(receivedLength); // (4.1)
-//           let position = 0;
-//           for(let chunk of chunks) {
-//             chunksAll.set(chunk, position); // (4.2)
-//             position += chunk.length;
-//           }
-
 
           const rawFile = new Blob(chunks)
-          // return resp.arrayBuffer()
-
-
-
-
-          console.log('config.editAccess[requester]')
-          console.log(config.editAccess[requester])
           const { key, iv } = await stringToAes(this.walletRef, config.editAccess[requester])
           if (isFolder) {
             return await FolderHandler.trackFolder(rawFile, config, key, iv)
@@ -350,6 +329,46 @@ export default class FileIo implements IFileIo {
     } else {
       throw new Error('No available providers!')
     }
+  }
+  async deleteFolder(dirName: string, parentPath: string): Promise<void> {
+    const readyToBroadcast = await this.rawDeleteFolder(dirName, parentPath)
+      .catch(err => {
+        throw err
+      })
+    const memo = ``
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+  }
+  async rawDeleteFolder(dirName: string, parentPath: string): Promise<EncodeObject[]> {
+    const hexTarget = await WalletHandler.getAbitraryMerkle(parentPath, dirName)
+    const tmpDir = await this.downloadFile(
+        {
+          hexAddress: hexTarget,
+          owner: this.walletRef.getJackalAddress(),
+          isFolder: true
+        },
+      { track: 0 }
+      ) as IFolderHandler
+    const locationAddress = `${tmpDir.getWhereAmI()}/${tmpDir.getWhoAmI()}`
+
+    const files = Object.keys(tmpDir.getChildFiles() || {}) || []
+    const dirs = tmpDir.getChildDirs()
+
+    const combinedList = [...files, ...dirs]
+    const tmp: IDeleteItem[] = await Promise.all(combinedList.map(async (value: string) => {
+      return {
+        location: locationAddress,
+        name: value
+      }
+    }))
+
+    const deletions: EncodeObject[] = await this.makeDelete(this.walletRef.getJackalAddress(), tmp)
+
+    await Promise.all(dirs.map(async (dir) => {
+      deletions.push(...(await this.rawDeleteFolder(dir, locationAddress)))
+    }))
+
+    return deletions
   }
   async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
     const readyToBroadcast = await this.rawDeleteTargets(targets, parent)
