@@ -68,7 +68,7 @@ export function estimateGas (msgArray: EncodeObject[]): number {
   const gas = msgArray.reduce((acc, curr) => {
     return acc + (hashMap[curr.typeUrl] || 0)
   }, 0)
-  return (gas + baseRate) * 1000
+  return (gas + baseRate) * 1200
 }
 /** @private */
 export function finalizeGas (msgArray: EncodeObject[]): IGasRate {
