@@ -3,12 +3,12 @@ import { IGasHashMap, IGasRate } from '@/interfaces'
 
 const hashMap: IGasHashMap = {
   /** Filetree */
-  '/canine_chain.filetree.MsgPostFile': 56,
+  '/canine_chain.filetree.MsgPostFile': 70,
   '/canine_chain.filetree.MsgAddViewers': 142,
   '/canine_chain.filetree.MsgPostkey': 12,
   '/canine_chain.filetree.MsgDeleteFile': 9,
   '/canine_chain.filetree.MsgRemoveViewers': 142,
-  '/canine_chain.filetree.MsgMakeRoot': 20,
+  '/canine_chain.filetree.MsgMakeRoot': 46,
   '/canine_chain.filetree.MsgAddEditors': 142,
   '/canine_chain.filetree.MsgRemoveEditors': 142,
   '/canine_chain.filetree.MsgResetEditors': 142,
@@ -68,7 +68,7 @@ export function estimateGas (msgArray: EncodeObject[]): number {
   const gas = msgArray.reduce((acc, curr) => {
     return acc + (hashMap[curr.typeUrl] || 0)
   }, 0)
-  return (gas + baseRate) * 1000
+  return (gas + baseRate) * 1100
 }
 /** @private */
 export function finalizeGas (msgArray: EncodeObject[]): IGasRate {
