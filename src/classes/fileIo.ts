@@ -590,11 +590,16 @@ async function filterProviders (rawProviderList: IMiner[], max?: number) {
   return filteredProviders.slice(0, Number(max) || 100)
 }
 async function verifyProviders (providers: IMiner[], versionFilter?: string | string[]): Promise<IMiner[]> {
-  let versionArray: string[] = []
+  const versionArray: string[] = []
   if (versionFilter) {
     console.log(`Checking for provider version(s) : ${versionFilter}`);
     (typeof versionFilter === 'string') ? versionArray.push(versionFilter as string) : versionArray.push(...versionFilter)
   }
+  const preRegExArray: string[] = versionArray
+    .map(s => {
+      return s.split('.').slice(0, 2).join('.')
+    })
+  const regEx = new RegExp(`(${preRegExArray.join('|')})\\..+$`)
   const staged: boolean[] = await Promise.all(
     providers.map(async (provider) => {
       const result: boolean = await fetch(
@@ -603,7 +608,12 @@ async function verifyProviders (providers: IMiner[], versionFilter?: string | st
           signal: AbortSignal.timeout(1500)
         })
         .then(async (res): Promise<boolean> => {
-          return res.ok && (versionFilter) ? versionArray.includes((await res.json()).version) : true
+          if (res.ok && versionFilter) {
+            const verResp = (await res.json()).version as string
+            return regEx.test(verResp)
+          } else {
+            return true
+          }
         })
         .catch(() => false)
       return result
