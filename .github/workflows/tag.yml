@@ -1,0 +1,14 @@
+name: Tag Version
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+jobs:
+  tag-npm-release:
+    name: Tag new npm package releases
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: neverendingqs/gh-action-tag-on-npm-version@master
