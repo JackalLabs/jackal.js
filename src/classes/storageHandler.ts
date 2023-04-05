@@ -1,7 +1,7 @@
 import { IProtoHandler, IStorageHandler, IWalletHandler } from '@/interfaces/classes'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IPayData, IStoragePaymentInfo } from '@/interfaces'
-import { numToWholeTB } from '@/utils/misc'
+import { numTo3xTB, numToWholeTB } from '@/utils/misc'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default class StorageHandler implements IStorageHandler {
@@ -22,7 +22,7 @@ export default class StorageHandler implements IStorageHandler {
       creator: this.walletRef.getJackalAddress(),
       forAddress,
       duration: `${(duration * 720) || 720}h`,
-      bytes: numToWholeTB(space),
+      bytes: numTo3xTB(space),
       paymentDenom: 'ujkl'
     })
     // await this.pH.debugBroadcaster([msg], true)
@@ -33,7 +33,7 @@ export default class StorageHandler implements IStorageHandler {
       creator: this.walletRef.getJackalAddress(),
       forAddress,
       duration: `${(duration * 720) || 720}h`,
-      bytes: numToWholeTB(space),
+      bytes: numTo3xTB(space),
       paymentDenom: 'ujkl'
     })
     // await this.pH.debugBroadcaster([msg], true)
@@ -51,7 +51,7 @@ export default class StorageHandler implements IStorageHandler {
   }
   async getStorageJklPrice (space: number, duration: number): Promise<number> {
     const request = {
-      bytes: Number(numToWholeTB(space)),
+      bytes: Number(numTo3xTB(space)),
       duration: `${(duration * 720) || 720}h`,
     }
     return (await this.pH.storageQuery.queryPriceCheck(request)).value.price

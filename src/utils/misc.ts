@@ -23,8 +23,13 @@ export function checkResults (response: any) {
     alert('Ran out of gas. Please refresh page and try again with fewer items.')
   }
 }
+
 export function numToWholeTB (base: number | string): string {
-  let final = Math.floor(Number(base)) || 0
+  return numTo3xTB(Math.floor(Number(base)) || 0)
+}
+
+export function numTo3xTB (base: number | string): string {
+  let final = Math.max(Number(base), 0)
   final *= 1000 /** KB */
   final *= 1000 /** MB */
   final *= 1000 /** GB */
