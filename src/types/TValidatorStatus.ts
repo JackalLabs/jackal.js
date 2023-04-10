@@ -1,1 +1,1 @@
-export type TValidatorStatus = 'ALL' | 'UNSPECIFIED' | 'UNBONDED' | 'UNBONDING' | 'BONDED'
+export type TValidatorStatus = 'UNSPECIFIED' | 'UNBONDED' | 'UNBONDING' | 'BONDED'
