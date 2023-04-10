@@ -1,6 +1,8 @@
 import { IGovHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import { ICoin, IDelegationRewards, IDelegationSummary, IStakingValidator } from '@/interfaces'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
+import IStakingValidatorMap from '@/interfaces/IStakingValidatorMap'
+import IStakingValidatorExtendedMap from '@/interfaces/IStakingValidatorExtendedMap'
 
 export default class GovHandler implements IGovHandler {
   private readonly walletRef: IWalletHandler
@@ -53,6 +55,14 @@ export default class GovHandler implements IGovHandler {
       delegatorAddr: this.walletRef.getJackalAddress()
     })).value.validators as IStakingValidator[]
   }
+  async getAllDelegatorValidatorDetailsMap (): Promise<IStakingValidatorMap> {
+    const vals = await this.getAllDelegatorValidatorDetails()
+    return vals
+      .reduce((acc, curr) => {
+        acc[curr.operatorAddress] = curr
+        return acc
+      }, {} as IStakingValidatorMap)
+  }
   async getValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
     const result = (await this.pH.stakingQuery.queryValidator({
       validatorAddr: validatorAddress
@@ -67,6 +77,43 @@ export default class GovHandler implements IGovHandler {
     return (await this.pH.stakingQuery.queryValidators({
       status: statusMap[status.toUpperCase()]
     })).value.validators as IStakingValidator[]
+  }
+  async getAllValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorMap> {
+    const vals = await this.getAllValidatorDetails(status)
+    return vals
+      .reduce((acc, curr) => {
+        acc[curr.operatorAddress] = curr
+        return acc
+      }, {} as IStakingValidatorMap)
+  }
+  async getAllMergedValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorExtendedMap> {
+    const staked = await this.getAllDelegatorValidatorDetailsMap()
+    const allOfStatus = await this.getAllValidatorDetailsMap(status)
+    const complete: IStakingValidatorExtendedMap = {}
+    for (let val in allOfStatus) {
+      if (staked[val]) {
+        complete[val] = { ...allOfStatus[val], stakedWith: true }
+      } else {
+        complete[val] = { ...allOfStatus[val], stakedWith: false }
+      }
+    }
+    return complete
+  }
+  async getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap> {
+    const staked = await this.getAllDelegatorValidatorDetailsMap()
+    const allActive = this.getAllValidatorDetailsMap('BONDED')
+    const allUnbonding = this.getAllValidatorDetailsMap('UNBONDING')
+    const allUnbonded = this.getAllValidatorDetailsMap('UNBONDED')
+    const merged = { ...await allActive, ...await allUnbonding, ...await allUnbonded }
+    const complete: IStakingValidatorExtendedMap = {}
+    for (let val in merged) {
+      if (staked[val]) {
+        complete[val] = { ...merged[val], stakedWith: true }
+      } else {
+        complete[val] = { ...merged[val], stakedWith: false }
+      }
+    }
+    return complete
   }
   async claimDelegatorRewards (validatorAddresses: string[]): Promise<void> {
     const { msgWithdrawDelegatorReward } = await this.pH.distributionTx
