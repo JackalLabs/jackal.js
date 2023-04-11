@@ -10,6 +10,7 @@ import {
   IStakingValidatorStakedMap
 } from '@/interfaces'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
+import { EncodeObject } from '@cosmjs/proto-signing'
 
 export default class GovHandler implements IGovHandler {
   private readonly walletRef: IWalletHandler
@@ -165,9 +166,8 @@ export default class GovHandler implements IGovHandler {
     return flagStaked(merged, await staked)
   }
   async claimDelegatorRewards (validatorAddresses: string[]): Promise<void> {
-    const { msgWithdrawDelegatorReward } = await this.pH.distributionTx
     const msgs = validatorAddresses.map((address: string) => {
-      return msgWithdrawDelegatorReward({
+      return this.pH.distributionTx.msgWithdrawDelegatorReward({
         delegatorAddress: this.walletRef.getJackalAddress(),
         validatorAddress: address
       })
@@ -175,16 +175,49 @@ export default class GovHandler implements IGovHandler {
     // await this.pH.debugBroadcaster(msgs, true)
     await this.pH.debugBroadcaster(msgs, {})
   }
-  async delegateTokens (validatorAddress: string, amount: number): Promise<void> {
-    const { msgDelegate } = await this.pH.stakingTx
-    const msg = msgDelegate({
+  rawDelegateTokens (validatorAddress: string, amount: number | string): EncodeObject {
+    return this.pH.stakingTx.msgDelegate({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorAddress,
-        amount: {
-          denom: 'ujkl',
-          amount: amount.toString()
-        }
-      })
+      amount: {
+        denom: 'ujkl',
+        amount: amount.toString()
+      }
+    })
+  }
+  async delegateTokens (validatorAddress: string, amount: number | string): Promise<void> {
+    const msg = this.rawDelegateTokens(validatorAddress, amount)
+    // await this.pH.debugBroadcaster([msg], true)
+    await this.pH.debugBroadcaster([msg], {})
+  }
+  rawUndelegateTokens (validatorAddress: string, amount: number | string): EncodeObject {
+    return this.pH.stakingTx.msgUndelegate({
+      delegatorAddress: this.walletRef.getJackalAddress(),
+      validatorAddress,
+      amount: {
+        denom: 'ujkl',
+        amount: amount.toString()
+      }
+    })
+  }
+  async undelegateTokens (validatorAddress: string, amount: number | string): Promise<void> {
+    const msg = this.rawUndelegateTokens(validatorAddress, amount)
+    // await this.pH.debugBroadcaster([msg], true)
+    await this.pH.debugBroadcaster([msg], {})
+  }
+  rawRedelegateTokens (fromAddress: string, toAddress: string, amount: number | string): EncodeObject {
+    return this.pH.stakingTx.msgBeginRedelegate({
+      delegatorAddress: this.walletRef.getJackalAddress(),
+      validatorSrcAddress: fromAddress,
+      validatorDstAddress: toAddress,
+      amount: {
+        denom: 'ujkl',
+        amount: amount.toString()
+      }
+    })
+  }
+  async redelegateTokens (fromAddress: string, toAddress: string, amount: number | string): Promise<void> {
+    const msg = this.rawRedelegateTokens(fromAddress, toAddress, amount)
     // await this.pH.debugBroadcaster([msg], true)
     await this.pH.debugBroadcaster([msg], {})
   }

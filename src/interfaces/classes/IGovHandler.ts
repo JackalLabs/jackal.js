@@ -8,6 +8,7 @@ import {
 } from '@/interfaces/'
 import ICoin from '@/interfaces/ICoin'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
+import { EncodeObject } from '@cosmjs/proto-signing'
 
 export default interface IGovHandler {
 
@@ -30,6 +31,11 @@ export default interface IGovHandler {
   getInactiveMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap>
   getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap>
   claimDelegatorRewards (validatorAddresses: string[]): Promise<void>
+  rawDelegateTokens (validatorAddress: string, amount: number): EncodeObject
   delegateTokens (validatorAddress: string, amount: number): Promise<void>
+  rawUndelegateTokens (validatorAddress: string, amount: number | string): EncodeObject
+  undelegateTokens (validatorAddress: string, amount: number | string): Promise<void>
+  rawRedelegateTokens (fromAddress: string, toAddress: string, amount: number | string): EncodeObject
+  redelegateTokens (fromAddress: string, toAddress: string, amount: number | string): Promise<void>
 
 }
