@@ -89,15 +89,8 @@ export default class GovHandler implements IGovHandler {
   async getMergedValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorExtendedMap> {
     const staked = await this.getAllDelegatorValidatorDetailsMap()
     const allOfStatus = await this.getAllValidatorDetailsMap(status)
-    const complete: IStakingValidatorExtendedMap = {}
-    for (let val in allOfStatus) {
-      if (staked[val]) {
-        complete[val] = { ...allOfStatus[val], stakedWith: true }
-      } else {
-        complete[val] = { ...allOfStatus[val], stakedWith: false }
-      }
-    }
-    return complete
+    return flagStaked(allOfStatus, staked)
+
   }
   async getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap> {
     const staked = await this.getAllDelegatorValidatorDetailsMap()
@@ -105,15 +98,7 @@ export default class GovHandler implements IGovHandler {
     const allUnbonded = this.getAllValidatorDetailsMap('UNBONDED')
     const allActive = this.getAllValidatorDetailsMap('BONDED')
     const merged = { ...await allUnbonding, ...await allUnbonded, ...await allActive }
-    const complete: IStakingValidatorExtendedMap = {}
-    for (let val in merged) {
-      if (staked[val]) {
-        complete[val] = { ...merged[val], stakedWith: true }
-      } else {
-        complete[val] = { ...merged[val], stakedWith: false }
-      }
-    }
-    return complete
+    return flagStaked(merged, staked)
   }
   async claimDelegatorRewards (validatorAddresses: string[]): Promise<void> {
     const { msgWithdrawDelegatorReward } = await this.pH.distributionTx
@@ -146,4 +131,16 @@ const statusMap: { [key: string]: string } = {
   'UNBONDED': 'BOND_STATUS_UNBONDED',
   'UNBONDING': 'BOND_STATUS_UNBONDING',
   'BONDED': 'BOND_STATUS_BONDED'
+}
+
+function flagStaked (base: IStakingValidatorMap, staked: IStakingValidatorMap): IStakingValidatorExtendedMap {
+  const final: IStakingValidatorExtendedMap = {}
+  for (let val in base) {
+    if (staked[val]) {
+      final[val] = { ...base[val], stakedWith: true }
+    } else {
+      final[val] = { ...base[val], stakedWith: false }
+    }
+  }
+  return final
 }
