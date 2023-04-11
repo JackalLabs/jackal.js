@@ -1,4 +1,4 @@
-import { IDelegationRewards, IStakingValidator } from '@/interfaces/'
+import { IDelegationRewards, IDelegationSummaryMap, IStakingValidator } from '@/interfaces/'
 import ICoin from '@/interfaces/ICoin'
 import IStakingValidatorExtendedMap from '@/interfaces/IStakingValidatorExtendedMap'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
@@ -9,6 +9,7 @@ export default interface IGovHandler {
   getTotalRewards (): Promise<IDelegationRewards>
   getRewards (validatorAddress: string): Promise<ICoin[]>
   getTotalStaked (): Promise<number>
+  getStakedMap (): Promise<IDelegationSummaryMap>
   getDelegatorValidatorDetails (validatorAddress: string): Promise<IStakingValidator>
   getAllDelegatorValidatorDetails (): Promise<IStakingValidator[]>
   getAllDelegatorValidatorDetailsMap (): Promise<IStakingValidatorMap>

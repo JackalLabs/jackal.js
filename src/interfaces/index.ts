@@ -3,6 +3,7 @@ import IChildDirInfo from '@/interfaces/IChildDirInfo'
 import ICoin from '@/interfaces/ICoin'
 import IDelegationRewards from '@/interfaces/IDelegationRewards'
 import IDelegationSummary from '@/interfaces/IDelegationSummary'
+import IDelegationSummaryMap from '@/interfaces/IDelegationSummaryMap'
 import IDeleteItem from '@/interfaces/IDeleteItem'
 import IDownloadDetails from '@/interfaces/IDownloadDetails'
 import IEditorsViewers from '@/interfaces/IEditorsViewers'
@@ -54,6 +55,7 @@ export {
   ICoin,
   IDelegationRewards,
   IDelegationSummary,
+  IDelegationSummaryMap,
   IDeleteItem,
   IDownloadDetails,
   IEditorsViewers,

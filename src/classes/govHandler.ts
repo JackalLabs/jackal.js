@@ -1,5 +1,5 @@
 import { IGovHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
-import { ICoin, IDelegationRewards, IDelegationSummary, IStakingValidator } from '@/interfaces'
+import { ICoin, IDelegationRewards, IDelegationSummary, IDelegationSummaryMap, IStakingValidator } from '@/interfaces'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
 import IStakingValidatorMap from '@/interfaces/IStakingValidatorMap'
 import IStakingValidatorExtendedMap from '@/interfaces/IStakingValidatorExtendedMap'
@@ -39,6 +39,15 @@ export default class GovHandler implements IGovHandler {
       return acc
     }, 0)
   }
+  async getStakedMap (): Promise<IDelegationSummaryMap> {
+    const delegations = (await this.pH.stakingQuery.queryDelegatorDelegations({
+      delegatorAddr: this.walletRef.getJackalAddress()
+    })).value.delegationResponses as IDelegationSummary[]
+    return delegations.reduce((acc: IDelegationSummaryMap, del: IDelegationSummary) => {
+      acc[del.delegation.validatorAddress] = del
+      return acc
+    }, {})
+  }
   async getDelegatorValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
     const result = (await this.pH.stakingQuery.queryDelegatorValidator({
       delegatorAddr: this.walletRef.getJackalAddress(),
@@ -58,10 +67,10 @@ export default class GovHandler implements IGovHandler {
   async getAllDelegatorValidatorDetailsMap (): Promise<IStakingValidatorMap> {
     const vals = await this.getAllDelegatorValidatorDetails()
     return vals
-      .reduce((acc, curr) => {
+      .reduce((acc: IStakingValidatorMap, curr: IStakingValidator) => {
         acc[curr.operatorAddress] = curr
         return acc
-      }, {} as IStakingValidatorMap)
+      }, {})
   }
   async getValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
     const result = (await this.pH.stakingQuery.queryValidator({
