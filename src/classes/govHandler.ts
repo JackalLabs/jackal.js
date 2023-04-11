@@ -86,7 +86,7 @@ export default class GovHandler implements IGovHandler {
         return acc
       }, {} as IStakingValidatorMap)
   }
-  async getAllMergedValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorExtendedMap> {
+  async getMergedValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorExtendedMap> {
     const staked = await this.getAllDelegatorValidatorDetailsMap()
     const allOfStatus = await this.getAllValidatorDetailsMap(status)
     const complete: IStakingValidatorExtendedMap = {}
@@ -101,10 +101,10 @@ export default class GovHandler implements IGovHandler {
   }
   async getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap> {
     const staked = await this.getAllDelegatorValidatorDetailsMap()
-    const allActive = this.getAllValidatorDetailsMap('BONDED')
     const allUnbonding = this.getAllValidatorDetailsMap('UNBONDING')
     const allUnbonded = this.getAllValidatorDetailsMap('UNBONDED')
-    const merged = { ...await allActive, ...await allUnbonding, ...await allUnbonded }
+    const allActive = this.getAllValidatorDetailsMap('BONDED')
+    const merged = { ...await allUnbonding, ...await allUnbonded, ...await allActive }
     const complete: IStakingValidatorExtendedMap = {}
     for (let val in merged) {
       if (staked[val]) {

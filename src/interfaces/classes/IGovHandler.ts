@@ -15,7 +15,7 @@ export default interface IGovHandler {
   getValidatorDetails (validatorAddress: string): Promise<IStakingValidator>
   getAllValidatorDetails (status: string): Promise<IStakingValidator[]>
   getAllValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorMap>
-  getAllMergedValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorExtendedMap>
+  getMergedValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorExtendedMap>
   getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap>
   claimDelegatorRewards (validatorAddresses: string[]): Promise<void>
   delegateTokens (validatorAddress: string, amount: number): Promise<void>
