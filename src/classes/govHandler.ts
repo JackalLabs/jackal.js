@@ -135,13 +135,20 @@ export default class GovHandler implements IGovHandler {
     }
     return final
   }
+  async getInactiveMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap> {
+    const staked = this.getAllDelegatorValidatorDetailsMap()
+    const allUnbonding = this.getAllValidatorDetailsMap('UNBONDING')
+    const allUnbonded = this.getAllValidatorDetailsMap('UNBONDED')
+    const merged = { ...await allUnbonding, ...await allUnbonded }
+    return flagStaked(merged, await staked)
+  }
   async getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap> {
-    const staked = await this.getAllDelegatorValidatorDetailsMap()
+    const staked = this.getAllDelegatorValidatorDetailsMap()
     const allUnbonding = this.getAllValidatorDetailsMap('UNBONDING')
     const allUnbonded = this.getAllValidatorDetailsMap('UNBONDED')
     const allActive = this.getAllValidatorDetailsMap('BONDED')
     const merged = { ...await allUnbonding, ...await allUnbonded, ...await allActive }
-    return flagStaked(merged, staked)
+    return flagStaked(merged, await staked)
   }
   async claimDelegatorRewards (validatorAddresses: string[]): Promise<void> {
     const { msgWithdrawDelegatorReward } = await this.pH.distributionTx
