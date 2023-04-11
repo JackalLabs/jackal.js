@@ -1,8 +1,14 @@
 import { IGovHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
-import { ICoin, IDelegationRewards, IDelegationSummary, IDelegationSummaryMap, IStakingValidator } from '@/interfaces'
+import {
+  ICoin,
+  IDelegationRewards,
+  IDelegationSummary,
+  IDelegationSummaryMap,
+  IStakingValidator,
+  IStakingValidatorExtendedMap,
+  IStakingValidatorMap
+} from '@/interfaces'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
-import IStakingValidatorMap from '@/interfaces/IStakingValidatorMap'
-import IStakingValidatorExtendedMap from '@/interfaces/IStakingValidatorExtendedMap'
 
 export default class GovHandler implements IGovHandler {
   private readonly walletRef: IWalletHandler

@@ -1,8 +1,12 @@
-import { IDelegationRewards, IDelegationSummaryMap, IStakingValidator } from '@/interfaces/'
+import {
+  IDelegationRewards,
+  IDelegationSummaryMap,
+  IStakingValidator,
+  IStakingValidatorExtendedMap,
+  IStakingValidatorMap
+} from '@/interfaces/'
 import ICoin from '@/interfaces/ICoin'
-import IStakingValidatorExtendedMap from '@/interfaces/IStakingValidatorExtendedMap'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
-import IStakingValidatorMap from '@/interfaces/IStakingValidatorMap'
 
 export default interface IGovHandler {
 

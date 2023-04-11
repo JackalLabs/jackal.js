@@ -44,6 +44,9 @@ import IRnsRecordItem from '@/interfaces/rns/IRnsRecordItem'
 import IRnsRegistrationItem from '@/interfaces/rns/IRnsRegistrationItem'
 import IStaggeredTracker from '@/interfaces/IStaggeredTracker'
 import IStakingValidator from '@/interfaces/IStakingValidator'
+import IStakingValidatorExtended from '@/interfaces/IStakingValidatorExtended'
+import IStakingValidatorExtendedMap from '@/interfaces/IStakingValidatorExtendedMap'
+import IStakingValidatorMap from '@/interfaces/IStakingValidatorMap'
 import IStorageClientFree from '@/interfaces/IStorageClientFree'
 import IStoragePaymentInfo from '@/interfaces/IStoragePaymentInfo'
 import IStray from '@/interfaces/IStray'
@@ -96,6 +99,9 @@ export {
   IRnsRegistrationItem,
   IStaggeredTracker,
   IStakingValidator,
+  IStakingValidatorExtended,
+  IStakingValidatorExtendedMap,
+  IStakingValidatorMap,
   IStorageClientFree,
   IStoragePaymentInfo,
   IStray,

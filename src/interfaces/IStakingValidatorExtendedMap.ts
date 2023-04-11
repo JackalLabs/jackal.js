@@ -1,5 +1,5 @@
-import IStakingValidatorExtended from '@/interfaces/IStakingValidatorExtended'
+import { IStakingValidatorExtended } from '@/interfaces'
 
-export default class IStakingValidatorExtendedMap {
+export default interface IStakingValidatorExtendedMap {
   [key: string]: IStakingValidatorExtended
 }

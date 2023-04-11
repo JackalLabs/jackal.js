@@ -1,4 +1,4 @@
-import IStakingValidator from '@/interfaces/IStakingValidator'
+import { IStakingValidator } from '@/interfaces'
 
 export default interface IStakingValidatorExtended extends IStakingValidator {
   stakedWith: boolean
