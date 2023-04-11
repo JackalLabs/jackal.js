@@ -58,15 +58,7 @@ export default class GovHandler implements IGovHandler {
   async getStakedValidatorDetailsMap (): Promise<IStakingValidatorStakedMap> {
     const allVals = await this.getCompleteMergedValidatorDetailsMap()
     const staked = await this.getStakedMap()
-    const final: IStakingValidatorStakedMap = {}
-    for (let val in staked) {
-      if (allVals[val]) {
-        final[val] = { ...allVals[val], stakedDetails: staked[val] }
-      } else {
-        // do nothing
-      }
-    }
-    return final
+    return await includeStaked(staked, allVals, true)
   }
   async getDelegatorValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
     const result = (await this.pH.stakingQuery.queryDelegatorValidator({
@@ -125,15 +117,14 @@ export default class GovHandler implements IGovHandler {
     const allOfStatus = await this.getAllValidatorDetailsMap(status)
     const flagged = flagStaked(allOfStatus, staked)
     const stakedMap = await this.getStakedMap()
-    const final: IStakingValidatorStakedMap = {}
-    for (let val in stakedMap) {
-      if (flagged[val]) {
-        final[val] = { ...flagged[val], stakedDetails: stakedMap[val] }
-      } else {
-        final[val] = { ...flagged[val] }
-      }
-    }
-    return final
+    return await includeStaked(stakedMap, flagged)
+  }
+  async getInactiveMergedValidatorDetailsStakedMap (): Promise<IStakingValidatorExtendedMap> {
+    const staked = await this.getAllDelegatorValidatorDetailsMap()
+    const allInactive = await this.getInactiveMergedValidatorDetailsMap()
+    const flagged = flagStaked(allInactive, staked)
+    const stakedMap = await this.getStakedMap()
+    return await includeStaked(stakedMap, flagged)
   }
   async getInactiveMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap> {
     const staked = this.getAllDelegatorValidatorDetailsMap()
@@ -190,6 +181,19 @@ function flagStaked (base: IStakingValidatorMap, staked: IStakingValidatorMap): 
       final[val] = { ...base[val], stakedWith: true }
     } else {
       final[val] = { ...base[val], stakedWith: false }
+    }
+  }
+  return final
+}
+async function includeStaked (stakedMap: IDelegationSummaryMap, flagged: IStakingValidatorExtendedMap, ignore?: boolean): Promise<IStakingValidatorStakedMap> {
+  const final: IStakingValidatorStakedMap = {}
+  for (let val in stakedMap) {
+    if (flagged[val]) {
+      final[val] = { ...flagged[val], stakedDetails: stakedMap[val] }
+    } else if (ignore) {
+      // do nothing
+    } else {
+      final[val] = { ...flagged[val] }
     }
   }
   return final
