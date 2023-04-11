@@ -12,7 +12,9 @@ import { TValidatorStatus } from '@/types/TValidatorStatus'
 export default interface IGovHandler {
 
   getTotalRewards (): Promise<IDelegationRewards>
+  getCondensedTotalRewards (): Promise<number>
   getRewards (validatorAddress: string): Promise<ICoin[]>
+  getCondensedRewards (validatorAddress: string): Promise<number>
   getTotalStaked (): Promise<number>
   getStakedMap (): Promise<IDelegationSummaryMap>
   getStakedValidatorDetailsMap (): Promise<IStakingValidatorStakedMap>
