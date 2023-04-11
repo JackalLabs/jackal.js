@@ -6,7 +6,8 @@ import {
   IDelegationSummaryMap,
   IStakingValidator,
   IStakingValidatorExtendedMap,
-  IStakingValidatorMap
+  IStakingValidatorMap,
+  IStakingValidatorStakedMap
 } from '@/interfaces'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
 
@@ -53,6 +54,19 @@ export default class GovHandler implements IGovHandler {
       acc[del.delegation.validatorAddress] = del
       return acc
     }, {})
+  }
+  async getStakedValidatorDetailsMap (): Promise<IStakingValidatorStakedMap> {
+    const allVals = await this.getCompleteMergedValidatorDetailsMap()
+    const staked = await this.getStakedMap()
+    const final: IStakingValidatorStakedMap = {}
+    for (let val in staked) {
+      if (allVals[val]) {
+        final[val] = { ...allVals[val], stakedDetails: staked[val] }
+      } else {
+        // do nothing
+      }
+    }
+    return final
   }
   async getDelegatorValidatorDetails (validatorAddress: string): Promise<IStakingValidator> {
     const result = (await this.pH.stakingQuery.queryDelegatorValidator({
@@ -105,7 +119,21 @@ export default class GovHandler implements IGovHandler {
     const staked = await this.getAllDelegatorValidatorDetailsMap()
     const allOfStatus = await this.getAllValidatorDetailsMap(status)
     return flagStaked(allOfStatus, staked)
-
+  }
+  async getMergedValidatorDetailsStakedMap (status: TValidatorStatus): Promise<IStakingValidatorStakedMap> {
+    const staked = await this.getAllDelegatorValidatorDetailsMap()
+    const allOfStatus = await this.getAllValidatorDetailsMap(status)
+    const flagged = flagStaked(allOfStatus, staked)
+    const stakedMap = await this.getStakedMap()
+    const final: IStakingValidatorStakedMap = {}
+    for (let val in stakedMap) {
+      if (flagged[val]) {
+        final[val] = { ...flagged[val], stakedDetails: stakedMap[val] }
+      } else {
+        final[val] = { ...flagged[val] }
+      }
+    }
+    return final
   }
   async getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap> {
     const staked = await this.getAllDelegatorValidatorDetailsMap()

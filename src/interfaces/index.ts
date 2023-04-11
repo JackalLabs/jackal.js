@@ -47,6 +47,8 @@ import IStakingValidator from '@/interfaces/IStakingValidator'
 import IStakingValidatorExtended from '@/interfaces/IStakingValidatorExtended'
 import IStakingValidatorExtendedMap from '@/interfaces/IStakingValidatorExtendedMap'
 import IStakingValidatorMap from '@/interfaces/IStakingValidatorMap'
+import IStakingValidatorStaked from '@/interfaces/IStakingValidatorStaked'
+import IStakingValidatorStakedMap from '@/interfaces/IStakingValidatorStakedMap'
 import IStorageClientFree from '@/interfaces/IStorageClientFree'
 import IStoragePaymentInfo from '@/interfaces/IStoragePaymentInfo'
 import IStray from '@/interfaces/IStray'
@@ -102,6 +104,8 @@ export {
   IStakingValidatorExtended,
   IStakingValidatorExtendedMap,
   IStakingValidatorMap,
+  IStakingValidatorStaked,
+  IStakingValidatorStakedMap,
   IStorageClientFree,
   IStoragePaymentInfo,
   IStray,

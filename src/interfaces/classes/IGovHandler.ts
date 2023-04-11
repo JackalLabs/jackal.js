@@ -3,7 +3,8 @@ import {
   IDelegationSummaryMap,
   IStakingValidator,
   IStakingValidatorExtendedMap,
-  IStakingValidatorMap
+  IStakingValidatorMap,
+  IStakingValidatorStakedMap
 } from '@/interfaces/'
 import ICoin from '@/interfaces/ICoin'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
@@ -14,6 +15,7 @@ export default interface IGovHandler {
   getRewards (validatorAddress: string): Promise<ICoin[]>
   getTotalStaked (): Promise<number>
   getStakedMap (): Promise<IDelegationSummaryMap>
+  getStakedValidatorDetailsMap (): Promise<IStakingValidatorStakedMap>
   getDelegatorValidatorDetails (validatorAddress: string): Promise<IStakingValidator>
   getAllDelegatorValidatorDetails (): Promise<IStakingValidator[]>
   getAllDelegatorValidatorDetailsMap (): Promise<IStakingValidatorMap>
@@ -21,6 +23,7 @@ export default interface IGovHandler {
   getAllValidatorDetails (status: string): Promise<IStakingValidator[]>
   getAllValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorMap>
   getMergedValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorExtendedMap>
+  getMergedValidatorDetailsStakedMap (status: TValidatorStatus): Promise<IStakingValidatorStakedMap>
   getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap>
   claimDelegatorRewards (validatorAddresses: string[]): Promise<void>
   delegateTokens (validatorAddress: string, amount: number): Promise<void>
