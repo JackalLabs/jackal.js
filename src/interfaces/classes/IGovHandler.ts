@@ -1,6 +1,8 @@
 import {
   IDelegationRewards,
   IDelegationSummaryMap,
+  IPropDetails,
+  IPropDetailsMap,
   IStakingValidator,
   IStakingValidatorExtendedMap,
   IStakingValidatorMap,
@@ -10,7 +12,6 @@ import ICoin from '@/interfaces/ICoin'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { TPropStatus } from '@/types/TPropStatus'
-import { IPropDetails, IPropDetailsMap } from '@/interfaces/gov'
 
 export default interface IGovHandler {
 

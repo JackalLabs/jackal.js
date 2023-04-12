@@ -4,6 +4,8 @@ import {
   IDelegationRewards,
   IDelegationSummary,
   IDelegationSummaryMap,
+  IPropDetails,
+  IPropDetailsMap,
   IStakingValidator,
   IStakingValidatorExtendedMap,
   IStakingValidatorMap,
@@ -11,9 +13,7 @@ import {
 } from '@/interfaces'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import type { IPropDetails } from '@/interfaces/gov'
 import { TPropStatus } from '@/types/TPropStatus'
-import { IPropDetailsMap } from '@/interfaces/gov'
 
 export default class GovHandler implements IGovHandler {
   private readonly walletRef: IWalletHandler
