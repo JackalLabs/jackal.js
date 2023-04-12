@@ -9,9 +9,12 @@ import {
 import ICoin from '@/interfaces/ICoin'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
 import { EncodeObject } from '@cosmjs/proto-signing'
+import { TPropStatus } from '@/types/TPropStatus'
+import { IPropDetails, IPropDetailsMap } from '@/interfaces/gov'
 
 export default interface IGovHandler {
 
+  /** Staking Queries */
   getTotalRewards (): Promise<IDelegationRewards>
   getCondensedTotalRewards (): Promise<number>
   getRewards (validatorAddress: string): Promise<ICoin[]>
@@ -30,6 +33,15 @@ export default interface IGovHandler {
   getInactiveMergedValidatorDetailsStakedMap (): Promise<IStakingValidatorExtendedMap>
   getInactiveMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap>
   getCompleteMergedValidatorDetailsMap (): Promise<IStakingValidatorExtendedMap>
+  /** End Staking Queries */
+  /** Voting Queries */
+  getPropDetails (proposalId: number): Promise<IPropDetails>
+  getAllPropDetailsInStatus (status: TPropStatus): Promise<IPropDetails[]>
+  getAllPropDetailsInStatusMap (status: TPropStatus): Promise<IPropDetailsMap>
+  getAllCompletedPropDetailsMap (): Promise<IPropDetailsMap>
+  /** End Voting Queries */
+
+  /** Staking Msgs */
   claimDelegatorRewards (validatorAddresses: string[]): Promise<void>
   rawDelegateTokens (validatorAddress: string, amount: number): EncodeObject
   delegateTokens (validatorAddress: string, amount: number): Promise<void>
@@ -37,5 +49,8 @@ export default interface IGovHandler {
   undelegateTokens (validatorAddress: string, amount: number | string): Promise<void>
   rawRedelegateTokens (fromAddress: string, toAddress: string, amount: number | string): EncodeObject
   redelegateTokens (fromAddress: string, toAddress: string, amount: number | string): Promise<void>
+  /** End Staking Msgs */
+  /** Voting Msgs */
 
+  /** End Voting Msgs */
 }

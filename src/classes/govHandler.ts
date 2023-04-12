@@ -11,6 +11,9 @@ import {
 } from '@/interfaces'
 import { TValidatorStatus } from '@/types/TValidatorStatus'
 import { EncodeObject } from '@cosmjs/proto-signing'
+import type { IPropDetails } from '@/interfaces/gov'
+import { TPropStatus } from '@/types/TPropStatus'
+import { IPropDetailsMap } from '@/interfaces/gov'
 
 export default class GovHandler implements IGovHandler {
   private readonly walletRef: IWalletHandler
@@ -25,6 +28,7 @@ export default class GovHandler implements IGovHandler {
     return new GovHandler(wallet)
   }
 
+  /** Staking Queries */
   async getTotalRewards (): Promise<IDelegationRewards> {
     const ret = await this.pH.distributionQuery.queryDelegationTotalRewards({
       delegatorAddress: this.walletRef.getJackalAddress()
@@ -116,7 +120,7 @@ export default class GovHandler implements IGovHandler {
   }
   async getAllValidatorDetails (status: TValidatorStatus): Promise<IStakingValidator[]> {
     return (await this.pH.stakingQuery.queryValidators({
-      status: statusMap[status.toUpperCase()]
+      status: validatorStatusMap[status.toUpperCase()]
     })).value.validators as IStakingValidator[]
   }
   async getAllValidatorDetailsMap (status: TValidatorStatus): Promise<IStakingValidatorMap> {
@@ -134,13 +138,9 @@ export default class GovHandler implements IGovHandler {
   }
   async getMergedValidatorDetailsStakedMap (status: TValidatorStatus): Promise<IStakingValidatorStakedMap> {
     const staked = await this.getAllDelegatorValidatorDetailsMap()
-    console.log(staked)
     const allOfStatus = await this.getAllValidatorDetailsMap(status)
-    console.log(allOfStatus)
     const flagged = flagStaked(allOfStatus, staked)
-    console.log(flagged)
     const stakedMap = await this.getStakedMap()
-    console.log(stakedMap)
     return await includeStaked(stakedMap, flagged)
   }
   async getInactiveMergedValidatorDetailsStakedMap (): Promise<IStakingValidatorExtendedMap> {
@@ -165,6 +165,36 @@ export default class GovHandler implements IGovHandler {
     const merged = { ...await allUnbonding, ...await allUnbonded, ...await allActive }
     return flagStaked(merged, await staked)
   }
+  /** End Staking Queries */
+  /** Voting Queries */
+  async getPropDetails (proposalId: number): Promise<IPropDetails> {
+    const prop = await this.pH.govQuery.queryProposal({
+      proposalId
+    })
+    return prop.value.proposal as IPropDetails
+  }
+  async getAllPropDetailsInStatus (status: TPropStatus): Promise<IPropDetails[]> {
+    return (await this.pH.govQuery.queryProposals({
+      proposalStatus: propStatusMap[status.toUpperCase()]
+    })).value.proposals as IPropDetails[]
+  }
+  async getAllPropDetailsInStatusMap (status: TPropStatus): Promise<IPropDetailsMap> {
+    const props = await this.getAllPropDetailsInStatus(status)
+    return props
+      .reduce((acc, curr) => {
+        acc[curr.proposalId] = curr
+        return acc
+      }, {} as IPropDetailsMap)
+  }
+  async getAllCompletedPropDetailsMap (): Promise<IPropDetailsMap> {
+    const allPassed = this.getAllPropDetailsInStatusMap('PASSED')
+    const allVeto = this.getAllPropDetailsInStatusMap('VETO')
+    const allFailed = this.getAllPropDetailsInStatusMap('FAILED')
+    return { ...await allVeto, ...await allFailed, ...await allPassed }
+  }
+  /** End Voting Queries */
+
+  /** Staking Msgs */
   async claimDelegatorRewards (validatorAddresses: string[]): Promise<void> {
     const msgs = validatorAddresses.map((address: string) => {
       return this.pH.distributionTx.msgWithdrawDelegatorReward({
@@ -221,13 +251,27 @@ export default class GovHandler implements IGovHandler {
     // await this.pH.debugBroadcaster([msg], true)
     await this.pH.debugBroadcaster([msg], {})
   }
+  /** End Staking Msgs */
+  /** Voting Msgs */
+
+  /** End Voting Msgs */
 }
 
-const statusMap: { [key: string]: string } = {
+/** Helpers */
+const validatorStatusMap: { [key: string]: string } = {
   'UNSPECIFIED': 'BOND_STATUS_UNSPECIFIED',
   'UNBONDED': 'BOND_STATUS_UNBONDED',
   'UNBONDING': 'BOND_STATUS_UNBONDING',
   'BONDED': 'BOND_STATUS_BONDED'
+}
+const propStatusMap: { [key: string]: number } = {
+  'UNSPECIFIED': 0,
+  'DEPOSIT': 1,
+  'VOTING': 2,
+  'PASSED': 3,
+  'VETO': 4,
+  'FAILED': 5,
+  'UNRECOGNIZED': -1
 }
 
 function flagStaked (base: IStakingValidatorMap, staked: IStakingValidatorMap): IStakingValidatorExtendedMap {
