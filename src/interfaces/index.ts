@@ -1,101 +1,31 @@
-import IAesBundle from '@/interfaces/IAesBundle'
-import IChildDirInfo from '@/interfaces/IChildDirInfo'
-import ICoin from '@/interfaces/ICoin'
-import IDelegationRewards from '@/interfaces/IDelegationRewards'
-import IDelegationSummary from '@/interfaces/IDelegationSummary'
-import IDeleteItem from '@/interfaces/IDeleteItem'
-import IDownloadDetails from '@/interfaces/IDownloadDetails'
-import IEditorsViewers from '@/interfaces/IEditorsViewers'
-import IFileBuffer from '@/interfaces/file/IFileBuffer'
-import IFileConfigFull from '@/interfaces/file/IFileConfigFull'
-import IFileConfigRaw from '@/interfaces/file/IFileConfigRaw'
-import IFileConfigRelevant from '@/interfaces/file/IFileConfigRelevant'
-import IFileDetails from '@/interfaces/file/IFileDetails'
-import IFileMeta from '@/interfaces/file/IFileMeta'
-import IFileMetaHashMap from '@/interfaces/file/IFileMetaHashMap'
-import IUploadListItem from '@/interfaces/file/IUploadListItem'
-import IUploadList from '@/interfaces/file/IUploadList'
-import IFiletreeParsedContents from '@/interfaces/IFiletreeParsedContents'
-import IFolderAdd from '@/interfaces/IFolderAdd'
-import IFolderChildFiles from '@/interfaces/IFolderChildFiles'
-import IFolderDownload from '@/interfaces/IFolderDownload'
-import IFolderFileFrame from '@/interfaces/IFolderFileFrame'
-import IGasHashMap from '@/interfaces/IGasHashMap'
-import IGasRate from '@/interfaces/IGasRate'
-import IMiner from '@/interfaces/IMiner'
-import IMsgFinalPostFileBundle from '@/interfaces/IMsgFinalPostFileBundle'
-import IMsgPartialPostFileBundle from '@/interfaces/IMsgPartialPostFileBundle'
-import IOracleFeed from '@/interfaces/IOracleFeed'
-import IPayData from '@/interfaces/IPayData'
-import IProtoReqs from '@/interfaces/IProtoReqs'
-import IProviderModifiedResponse from '@/interfaces/IProviderModifiedResponse'
-import IProviderResponse from '@/interfaces/IProviderResponse'
-import IQueueItemPostUpload from '@/interfaces/IQueueItemPostUpload'
-import IRnsBidHashMap from '@/interfaces/rns/IRnsBidHashMap'
-import IRnsBidItem from '@/interfaces/rns/IRnsBidItem'
-import IRnsExpandedForSaleHashMap from '@/interfaces/rns/IRnsExpandedForSaleHashMap'
-import IRnsExpandedForSaleItem from '@/interfaces/rns/IRnsExpandedForSaleItem'
-import IRnsForSaleHashMap from '@/interfaces/rns/IRnsForSaleHashMap'
-import IRnsForSaleItem from '@/interfaces/rns/IRnsForSaleItem'
-import IRnsOwnedHashMap from '@/interfaces/rns/IRnsOwnedHashMap'
-import IRnsOwnedItem from '@/interfaces/rns/IRnsOwnedItem'
-import IRnsRecordItem from '@/interfaces/rns/IRnsRecordItem'
-import IRnsRegistrationItem from '@/interfaces/rns/IRnsRegistrationItem'
-import IStaggeredTracker from '@/interfaces/IStaggeredTracker'
-import IStakingValidator from '@/interfaces/IStakingValidator'
-import IStorageClientFree from '@/interfaces/IStorageClientFree'
-import IStoragePaymentInfo from '@/interfaces/IStoragePaymentInfo'
-import IStray from '@/interfaces/IStray'
-import IWalletConfig from '@/interfaces/IWalletConfig'
+export { default as IAesBundle }  from '@/interfaces/IAesBundle'
+export { default as IChildDirInfo }  from '@/interfaces/IChildDirInfo'
+export { default as ICoin }  from '@/interfaces/ICoin'
+export { default as IDeleteItem }  from '@/interfaces/IDeleteItem'
+export { default as IDownloadDetails }  from '@/interfaces/IDownloadDetails'
+export { default as IEditorsViewers }  from '@/interfaces/IEditorsViewers'
+export { default as IFiletreeParsedContents }  from '@/interfaces/IFiletreeParsedContents'
+export { default as IFolderAdd }  from '@/interfaces/IFolderAdd'
+export { default as IFolderChildFiles }  from '@/interfaces/IFolderChildFiles'
+export { default as IFolderDownload }  from '@/interfaces/IFolderDownload'
+export { default as IFolderFileFrame }  from '@/interfaces/IFolderFileFrame'
+export { default as IGasHashMap }  from '@/interfaces/IGasHashMap'
+export { default as IGasRate }  from '@/interfaces/IGasRate'
+export { default as IMiner }  from '@/interfaces/IMiner'
+export { default as IMsgFinalPostFileBundle }  from '@/interfaces/IMsgFinalPostFileBundle'
+export { default as IMsgPartialPostFileBundle }  from '@/interfaces/IMsgPartialPostFileBundle'
+export { default as IOracleFeed }  from '@/interfaces/IOracleFeed'
+export { default as IPayData }  from '@/interfaces/IPayData'
+export { default as IProtoReqs }  from '@/interfaces/IProtoReqs'
+export { default as IProviderModifiedResponse }  from '@/interfaces/IProviderModifiedResponse'
+export { default as IProviderResponse }  from '@/interfaces/IProviderResponse'
+export { default as IQueueItemPostUpload }  from '@/interfaces/IQueueItemPostUpload'
+export { default as IStaggeredTracker }  from '@/interfaces/IStaggeredTracker'
+export { default as IStorageClientFree }  from '@/interfaces/IStorageClientFree'
+export { default as IStoragePaymentInfo }  from '@/interfaces/IStoragePaymentInfo'
+export { default as IStray }  from '@/interfaces/IStray'
+export { default as IWalletConfig }  from '@/interfaces/IWalletConfig'
 
-export {
-  IAesBundle,
-  IChildDirInfo,
-  ICoin,
-  IDelegationRewards,
-  IDelegationSummary,
-  IDeleteItem,
-  IDownloadDetails,
-  IEditorsViewers,
-  IFileBuffer,
-  IFileConfigFull,
-  IFileConfigRaw,
-  IFileConfigRelevant,
-  IFileDetails,
-  IFileMeta,
-  IFileMetaHashMap,
-  IUploadListItem,
-  IUploadList,
-  IFiletreeParsedContents,
-  IFolderAdd,
-  IFolderChildFiles,
-  IFolderDownload,
-  IFolderFileFrame,
-  IGasHashMap,
-  IGasRate,
-  IMiner,
-  IMsgFinalPostFileBundle,
-  IMsgPartialPostFileBundle,
-  IOracleFeed,
-  IPayData,
-  IProtoReqs,
-  IProviderModifiedResponse,
-  IProviderResponse,
-  IQueueItemPostUpload,
-  IRnsBidHashMap,
-  IRnsBidItem,
-  IRnsExpandedForSaleHashMap,
-  IRnsExpandedForSaleItem,
-  IRnsForSaleHashMap,
-  IRnsForSaleItem,
-  IRnsOwnedHashMap,
-  IRnsOwnedItem,
-  IRnsRecordItem,
-  IRnsRegistrationItem,
-  IStaggeredTracker,
-  IStakingValidator,
-  IStorageClientFree,
-  IStoragePaymentInfo,
-  IStray,
-  IWalletConfig
-}
+export * from '@/interfaces/file'
+export * from '@/interfaces/gov'
+export * from '@/interfaces/rns'
