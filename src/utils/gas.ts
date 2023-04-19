@@ -14,6 +14,12 @@ const hashMap: IGasHashMap = {
   '/canine_chain.filetree.MsgResetEditors': 142,
   '/canine_chain.filetree.MsgResetViewers': 142,
   '/canine_chain.filetree.MsgChangeOwner': 142,
+  /** Notifications */
+  '/canine_chain.notifications.MsgCreateNotifications': 142,
+  '/canine_chain.notifications.MsgUpdateNotifications': 142,
+  '/canine_chain.notifications.MsgDeleteNotifications': 142,
+  '/canine_chain.notifications.MsgSetCounter': 142,
+  '/canine_chain.notifications.MsgBlockSenders': 142,
   /** Oracle */
   '/canine_chain.oracle.MsgCreateFeed': 142,
   '/canine_chain.oracle.MsgUpdateFeed': 142,
@@ -55,6 +61,8 @@ const hashMap: IGasHashMap = {
   '/cosmos.gov.v1beta1.MsgSubmitProposal': 142,
   '/cosmos.gov.v1beta1.MsgVote': 142,
   '/cosmos.gov.v1beta1.MsgVoteWeighted': 142,
+  /** Slashing */
+  '/cosmos.slashing.v1beta1.MsgUnjail': 142,
   /** Staking */
   '/cosmos.staking.v1beta1.MsgBeginRedelegate': 142,
   '/cosmos.staking.v1beta1.MsgCreateValidator': 142,
