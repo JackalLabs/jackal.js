@@ -206,9 +206,12 @@ export default class RnsHandler implements IRnsHandler {
       return acc
     }, {})
   }
-  async findMatchingAddress (rns: string): Promise<string> {
+  async findSingleRns (rns: string): Promise<IRnsOwnedItem> {
     const trueRns = sanitizeRns(rns)
-    return (await this.pH.rnsQuery.queryNames({ index: trueRns })).value.names?.value || ''
+    return (await this.pH.rnsQuery.queryNames({ index: trueRns })).value.names as IRnsOwnedItem
+  }
+  async findMatchingAddress (rns: string): Promise<string> {
+    return (await this.findSingleRns(rns)).value || ''
   }
 }
 
