@@ -67,3 +67,14 @@ export async function handlePagination (handler: any, queryTag: string, addition
 export async function setDelay (amt: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, Number(amt)))
 }
+
+export async function getAvgBlockTime (rpc: string, blocks: number): Promise<number> {
+    const info = await fetch(rpc+"/block").then(res => res.json());
+    const blockTime = fetch(rpc+`/block?height=${info.result.block.header.height-blocks}`).then(res => res.json());
+
+    return blockTime.then(data => {
+        const old = Date.parse(data.result.block.header.time);
+        const now = Date.parse(info.result.block.header.time);
+        return (now-old)/blocks;
+    });
+}

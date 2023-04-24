@@ -27,7 +27,11 @@
     {
       "name": "Christopher Simanjuntak",
       "email": "chris@jackallabs.io"
-    }
+    },
+	{
+	  "name": "Daniel Ahn",
+	  "email": "danny@jackallabs.io"
+	}
   ],
   "license": "SEE LICENSE IN LICENSE",
   "repository": {
