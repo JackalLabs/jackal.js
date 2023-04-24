@@ -3,21 +3,15 @@ import { EncodeObject } from '@cosmjs/proto-signing'
 import { IQueryFileTree, IQueryStorage, ITxFileTree } from 'jackal.js-protos'
 
 import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
-import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
+import { aesToString, genIv, genKey, stringToAes } from '@/utils/crypt'
 import { bruteForceString, setDelay } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
 import WalletHandler from '@/classes/walletHandler'
+import { IFileDownloadHandler, IFileIo, IFolderHandler, IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import {
-  IFileDownloadHandler,
-  IFileIo,
-  IFolderHandler,
-  IProtoHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
-import {
-  IAesBundle,
-  IDeleteItem, IDownloadDetails,
+  IDeleteItem,
+  IDownloadDetails,
   IEditorsViewers,
   IFileConfigFull,
   IFileConfigRaw,
@@ -30,7 +24,8 @@ import {
   IProviderResponse,
   IQueueItemPostUpload,
   IStaggeredTracker,
-  IUploadList, IUploadListItem
+  IUploadList,
+  IUploadListItem
 } from '@/interfaces'
 import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IProviderChecks from '@/interfaces/IProviderChecks'
@@ -670,20 +665,6 @@ async function matchOwnerToCid (pH: IProtoHandler, cid: string, owner: string): 
    } else {
      return false
    }
-}
-async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
-  const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
-  const theKey = wallet.asymmetricEncrypt(await exportJackalKey(aes.key), pubKey)
-  return `${theIv}|${theKey}`
-}
-async function stringToAes (wallet: IWalletHandler, source: string): Promise<IAesBundle> {
-  if (source.indexOf('|') < 0) throw new Error('stringToAes() : Invalid source string')
-
-  const parts = source.split('|')
-  return {
-    iv: new Uint8Array(wallet.asymmetricDecrypt(parts[0])),
-    key: await importJackalKey(new Uint8Array(wallet.asymmetricDecrypt(parts[1])))
-  }
 }
 async function buildPostFile (data: IMsgPartialPostFileBundle, fileTreeTx: ITxFileTree): Promise<EncodeObject> {
   return fileTreeTx.msgPostFile({

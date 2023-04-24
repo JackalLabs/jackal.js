@@ -6,6 +6,9 @@ import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import { ICoin, IWalletConfig } from '@/interfaces'
 import ProtoHandler from '@/classes/protoHandler'
+import { QueryPubkeyResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
+import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
+import { Pubkey } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/pubkey'
 
 declare global {
   interface Window extends KeplrWindow {}
@@ -119,6 +122,14 @@ export default class WalletHandler implements IWalletHandler {
   }
   asymmetricDecrypt (toDecrypt: string): ArrayBuffer {
     return new Uint8Array(decrypt(this.keyPair.toHex(), Buffer.from(toDecrypt, 'hex')))
+  }
+  async findPubKey (address: string): Promise<string> {
+    const result = await this.pH.fileTreeQuery.queryPubkey({ address })
+    if (!result.success) {
+      throw new Error(`${address} does not have a pubkey registered`)
+    } else {
+      return (result.value.pubkey as Pubkey).key
+    }
   }
 }
 
