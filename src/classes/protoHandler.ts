@@ -25,20 +25,20 @@ export default class ProtoHandler implements IProtoHandler {
   }
 
   /** General */
-  broadcaster (msgs: EncodeObject[], memo = ''): Promise<DeliverTxResponse> {
-    return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo })
+  broadcaster (msgs: EncodeObject[], memo = '', gas?: string): Promise<DeliverTxResponse> {
+    return this.masterBroadcaster(msgs, { fee: gas ? { amount: [], gas } : finalizeGas(msgs), memo })
       .catch(err => {
         throw err
       })
   }
   async debugBroadcaster (
     msgs: EncodeObject[],
-    extra: { memo?: string, step?: boolean } = { memo: '', step: false }
+    extra: { gas?: string, memo?: string, step?: boolean } = { gas: '', memo: '', step: false }
   ): Promise<DeliverTxResponse | null> {
     if (extra.step) {
       for (let i = 0; i < msgs.length; i++) {
         console.log(msgs[i].typeUrl)
-        const resp = await this.broadcaster([msgs[i]], extra.memo)
+        const resp = await this.broadcaster([msgs[i]], extra.memo, extra.gas)
           .catch(err => {
             throw err
           })
@@ -46,7 +46,7 @@ export default class ProtoHandler implements IProtoHandler {
       }
       return null
     } else {
-      const resp = await this.broadcaster(msgs, extra.memo)
+      const resp = await this.broadcaster(msgs, extra.memo, extra.gas)
         .catch(err => {
           throw err
         })

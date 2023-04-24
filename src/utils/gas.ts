@@ -1,5 +1,5 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IGasHashMap, IGasRate } from '@/interfaces'
+import { IGasHashMap, IGasRate, IWrappedEncodeObject } from '@/interfaces'
 
 const hashMap: IGasHashMap = {
   /** Filetree */
@@ -72,18 +72,33 @@ const hashMap: IGasHashMap = {
 }
 const baseRate = 56
 
-export function estimateGas (msgArray: EncodeObject[]): number {
+export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): number {
   const gas = msgArray.reduce((acc, curr) => {
-    return acc + (hashMap[curr.typeUrl] || 0)
+    if (isIWrappedEncodeObject(curr)) {
+      switch (true) {
+        case curr.encodedObject.typeUrl.includes('MsgMakeRoot'):
+          const baseValue = 15
+          const modified = .04 * Number(curr.modifier) || 0
+          return acc + (baseValue + modified)
+        default:
+          return acc + (hashMap[curr.encodedObject.typeUrl] || 142)
+      }
+    } else {
+      return acc + (hashMap[curr.typeUrl] || 142)
+    }
   }, 0)
   return (gas + baseRate) * 1100
 }
 /** @private */
-export function finalizeGas (msgArray: EncodeObject[]): IGasRate {
+export function finalizeGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): IGasRate {
   const totalGas = estimateGas(msgArray)
   return {
     amount: [],
     // gas: '2000000'
     gas: totalGas.toString()
   }
+}
+
+function isIWrappedEncodeObject(toCheck: EncodeObject | IWrappedEncodeObject): toCheck is IWrappedEncodeObject {
+  return Object.keys(toCheck).includes('encodedObject')
 }

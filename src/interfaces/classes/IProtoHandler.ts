@@ -26,7 +26,7 @@ export default interface IProtoHandler {
 
   /** General */
   broadcaster (msgs: EncodeObject[], msg?: string): Promise<DeliverTxResponse>
-  debugBroadcaster (msgs: EncodeObject[], extra: { memo?: string, step?: boolean }): Promise<DeliverTxResponse | null>
+  debugBroadcaster (msgs: EncodeObject[], extra: { gas?: string, memo?: string, step?: boolean }): Promise<DeliverTxResponse | null>
   rawBroadcaster: TMasterBroadcaster
 
   /** Custom */
