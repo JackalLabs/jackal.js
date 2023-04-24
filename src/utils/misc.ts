@@ -13,9 +13,11 @@ export function orderStrings (sortable: string[]): string[] {
     }
   })
 }
+
 export function stripper (value: string): string {
   return value.replace(/\/+/g, '')
 }
+
 export function checkResults (response: any) {
   console.dir(response)
   if (response.gasUsed > response.gasWanted) {
@@ -38,6 +40,7 @@ export function numTo3xTB (base: number | string): string {
   console.info(final)
   return final.toString()
 }
+
 export function bruteForceString (value: string): null | undefined | string {
   switch (value.toLowerCase()) {
     case 'null':
@@ -48,6 +51,7 @@ export function bruteForceString (value: string): null | undefined | string {
       return value
   }
 }
+
 export async function handlePagination (handler: any, queryTag: string, additionalParams?: any) {
   const raw: any[] = []
   let nextPage: Uint8Array = new Uint8Array()
@@ -64,8 +68,19 @@ export async function handlePagination (handler: any, queryTag: string, addition
   } while (nextPage.length)
   return raw
 }
+
 export async function setDelay (amt: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, Number(amt)))
+}
+
+export async function blockToDate (rpcUrl: string, currentBlockHeight: number, targetBlockHeight: number | string) {
+  const targetHeight = Number(targetBlockHeight) || 0
+  /** Block time in milliseconds */
+  const blockTime = await getAvgBlockTime(rpcUrl, 20)
+  const blockDiff = targetHeight - currentBlockHeight
+  const diffMs = blockDiff * blockTime
+  const now = Date.now()
+  return new Date(now + diffMs)
 }
 
 export async function getAvgBlockTime (rpc: string, blocks: number): Promise<number> {
@@ -75,6 +90,6 @@ export async function getAvgBlockTime (rpc: string, blocks: number): Promise<num
     return blockTime.then(data => {
         const old = Date.parse(data.result.block.header.time);
         const now = Date.parse(info.result.block.header.time);
-        return (now-old)/blocks;
+        return Math.round((now-old)/blocks);
     });
 }

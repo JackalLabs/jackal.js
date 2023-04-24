@@ -39,6 +39,9 @@ import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 /** External */
 import { OfflineSigner } from '@cosmjs/proto-signing'
 
+/** Functions */
+export { blockToDate } from '@/utils/misc'
+
 /** Exports */
 export {
   AbciHandler,
