@@ -1,20 +1,22 @@
-import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
-import { IChildDirInfo, IFileMetaHashMap, IFolderChildFiles, IFolderFileFrame } from '@/interfaces'
+import { IFileMeta, IFileMetaHashMap, IFolderFileFrame } from '@/interfaces'
+import { IWalletHandler } from '@/interfaces/classes/index'
+import { EncodeObject } from '@cosmjs/proto-signing'
 
-export default interface IFolderHandler extends IFileHandlerCore {
+export default interface IFolderHandler {
+  isFolder: boolean
 
+  getWhoAmI (): string
+  getWhereAmI (): string
   getWhoOwnsMe (): string
-  getMerklePath (): Promise<string>
   getFolderDetails (): IFolderFileFrame
   getChildDirs (): string[]
-  getChildFiles (): IFolderChildFiles
-  addChildDirs (dirs: string[]): void
-
-  makeChildDirInfo (childName: string): IChildDirInfo
-  addChildFiles (newFiles: IFileMetaHashMap): void
-  removeChildDirs (toRemove: string[]): void
-  removeChildFiles (toRemove: string[]): void
-  getFullMerkle (): Promise<string>
+  getChildFiles (): { [name: string]: IFileMeta }
+  getForFiletree (walletRef: IWalletHandler): Promise<EncodeObject>
   getChildMerkle (child: string): Promise<string>
 
+  addChildDirs (childNames: string[], walletRef: IWalletHandler): Promise<EncodeObject[]>
+  addChildFiles (newFiles: IFileMetaHashMap, walletRef: IWalletHandler): Promise<EncodeObject>
+  removeChildDirs (toRemove: string[], walletRef: IWalletHandler): Promise<EncodeObject>
+  removeChildFiles (toRemove: string[], walletRef: IWalletHandler): Promise<EncodeObject>
+  removeChildDirsAndFiles (dirs: string[], files: string[], walletRef: IWalletHandler): Promise<EncodeObject>
 }
