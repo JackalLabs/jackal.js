@@ -11,10 +11,7 @@ import {
 import { Notifications } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/notifications'
 import { NotiCounter } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/noti_counter'
 import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
-import { aesToString, encryptString, genIv, genKey } from '@/utils/crypt'
-import { Pubkey } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/pubkey'
-import { hashAndHex, merkleMeBro } from '@/utils/hash'
-import { IEditorsViewers } from '@/interfaces'
+import { IReadableNoti } from '@/interfaces'
 
 export default class OracleHandler implements INotificationHandler {
   private readonly walletRef: IWalletHandler
@@ -124,10 +121,26 @@ export default class OracleHandler implements INotificationHandler {
     return await this.makeStandardizedShareNotification('dbfs-remove', address)
   }
 
+  /** Read Encrypted Notifications */
+  async readMyShareNoti (index: number): Promise<IReadableNoti> {
+    const { notifications } = await this.getNotification (this.walletRef.getJackalAddress(), index)
+    return processNotiRead(notifications as Notifications, this.walletRef)
+  }
+  async readAllMyShareNotis (): Promise<IReadableNoti[]> {
+    const data = await this.getSingleAddressNotifications(this.walletRef.getJackalAddress())
+    return data.notifications.map((noti: Notifications) => processNotiRead(noti, this.walletRef))
+  }
+
   /** Private Methods */
   async getBaseNotiCounter (forAddress: string): Promise<SuccessIncluded<QueryGetNotiCounterResponse>> {
     return (await this.pH.notificationsQuery.queryNotiCounter({
       address: forAddress
     }))
   }
+}
+
+/** Helpers */
+function processNotiRead (noti: Notifications, walletRef: IWalletHandler) {
+  const contents = new TextDecoder().decode(walletRef.asymmetricDecrypt(noti.notification))
+  return { from: noti.sender, to: noti.address, contents }
 }

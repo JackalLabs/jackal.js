@@ -6,6 +6,7 @@ import {
   QueryGetNotiCounterResponse,
   QueryGetNotificationsResponse
 } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/query'
+import { IReadableNoti } from '@/interfaces'
 
 export default interface INotificationHandler {
   makeNotification (notification: string, address: string): EncodeObject
@@ -26,4 +27,7 @@ export default interface INotificationHandler {
   makeAddShareNoti (address: string): Promise<EncodeObject>
   makeUpdateShareNoti (address: string): Promise<EncodeObject>
   makeRemoveShareNoti (address: string): Promise<EncodeObject>
+
+  readMyShareNoti (index: number): Promise<IReadableNoti>
+  readAllMyShareNotis (): Promise<IReadableNoti[]>
 }
