@@ -4,12 +4,13 @@ import { IDeleteItem, IDownloadDetails, IFolderAdd, IFolderChildFiles, IMiner, I
 import type { TFileOrFFile } from '@/types/TFoldersAndFiles'
 
 export default interface IFileIo {
+  getCurrentProvider (): IMiner
   shuffle (): Promise<void>
   refresh (): Promise<void>
   forceProvider (toSet: IMiner): void
 
-  uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void>
-  rawUploadFolders (toUpload: IFolderAdd, owner: string): Promise<EncodeObject[]>
+  createFolders (parentDir: IFolderHandler, newDirs: string[]): Promise<void>
+  rawCreateFolders (parentDir: IFolderHandler, newDirs: string[]): Promise<EncodeObject[]>
   verifyFoldersExist (toCheck: string[]): Promise<number>
   staggeredUploadFiles (sourceHashMap: IUploadList, tracker: IStaggeredTracker): Promise<void>
   uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<void>
