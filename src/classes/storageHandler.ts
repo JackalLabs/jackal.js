@@ -67,7 +67,7 @@ export default class StorageHandler implements IStorageHandler {
 
   /** Manage FT Noti */
   async saveSharing (toAddress: string, shared: ISharedTracker): Promise<EncodeObject> {
-    return await saveCompressedFileTree(toAddress, shared, this.walletRef)
+    return await saveCompressedFileTree(toAddress, `s/Sharing/${toAddress}`, shared, this.walletRef)
   }
   async readSharing (owner: string, rawPath: string): Promise<ISharedTracker> {
     const shared = await readCompressedFileTree(owner, rawPath, this.walletRef)

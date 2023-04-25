@@ -19,7 +19,7 @@ export function decompressData (input: string): string {
 
 export async function saveCompressedFileTree (
   toAddress: string,
-  // shared: ISharedTracker,
+  rawPath: string,
   rawContents: { [key: string]: any },
   walletRef: IWalletHandler
 ): Promise<EncodeObject> {
