@@ -1,11 +1,11 @@
-import Plzsu from '@karnthis/plzsu'
+import PLZSU from '@karnthis/plzsu'
 
-const plzsu = new Plzsu()
+const Plzsu = new PLZSU()
 
 export function compressData (input: string): string {
-  return `jklpc1${plzsu.compress(input)}`
+  return `jklpc1${Plzsu.compress(input)}`
 }
 export function decompressData (input: string): string {
   if (!input.startsWith('jklpc1')) throw new Error('Invalid Decompression String')
-  return plzsu.decompress(input.substring(6))
+  return Plzsu.decompress(input.substring(6))
 }

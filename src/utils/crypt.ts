@@ -1,6 +1,6 @@
 import { keyAlgo } from '@/utils/globals'
 import { hashAndHex } from '@/utils/hash'
-import { compressData } from '@/utils/compression'
+import { compressData, decompressData } from '@/utils/compression'
 import { IWalletHandler } from '@/interfaces/classes'
 import { IAesBundle } from '@/interfaces'
 
@@ -117,7 +117,7 @@ export async function compressEncryptString (input: string, key: CryptoKey, iv: 
 }
 export async function decryptDecompressString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
   const decryptBlob = await aesCrypt(new Blob([input]), key, iv, 'decrypt')
-  return compressData(await decryptBlob.text())
+  return decompressData(await decryptBlob.text())
 }
 export async function encryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
   return await (await aesCrypt(new Blob([input]), key, iv, 'encrypt')).text()
