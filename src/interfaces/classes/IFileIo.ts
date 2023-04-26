@@ -5,21 +5,22 @@ import type { TFileOrFFile } from '@/types/TFoldersAndFiles'
 
 export default interface IFileIo {
   getCurrentProvider (): IMiner
+  forceProvider (toSet: IMiner): void
+  clearProblems (exclude: string): Promise<void>
   shuffle (): Promise<void>
   refresh (): Promise<void>
-  forceProvider (toSet: IMiner): void
 
   createFolders (parentDir: IFolderHandler, newDirs: string[]): Promise<void>
   rawCreateFolders (parentDir: IFolderHandler, newDirs: string[]): Promise<EncodeObject[]>
   verifyFoldersExist (toCheck: string[]): Promise<number>
-  staggeredUploadFiles (sourceHashMap: IUploadList, tracker: IStaggeredTracker): Promise<void>
-  uploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<void>
-  rawUploadFiles (toUpload: TFileOrFFile[], owner: string, existingChildren: IFolderChildFiles): Promise<EncodeObject[]>
+  staggeredUploadFiles (sourceHashMap: IUploadList, parent: IFolderHandler, tracker: IStaggeredTracker): Promise<void>
+  downloadFolder (rawPath: string): Promise<IFolderHandler>
   downloadFile (downloadDetails: IDownloadDetails, completion: { track: number }): Promise<IFileDownloadHandler | IFolderHandler>
-  deleteFolder(dirName: string, parentPath: string): Promise<void>
-  rawDeleteFolder(dirName: string, parentPath: string): Promise<EncodeObject[]>
-  deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void>
-  rawDeleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<EncodeObject[]>
-  generateInitialDirs (initMsg: EncodeObject, startingDirs?: string[]): Promise<void>
-  rawGenerateInitialDirs (initMsg: EncodeObject, startingDirs?: string[]): Promise<EncodeObject[]>
+  deleteTargets (targets: string[], parent: IFolderHandler): Promise<void>
+  rawDeleteTargets (targets: string[], parent: IFolderHandler): Promise<EncodeObject[]>
+  generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void>
+  rawGenerateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<EncodeObject[]>
+  convertFolderType (rawPath: string): Promise<void>
+  rawConvertFolderType (rawPath: string): Promise<EncodeObject[]>
+  checkFolderIsFileTree (rawPath: string): Promise<boolean>
 }

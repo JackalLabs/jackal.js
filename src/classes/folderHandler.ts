@@ -1,24 +1,24 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IChildDirInfo, IFileMeta, IFileMetaHashMap, IFolderFileFrame } from '@/interfaces'
+import { IChildDirInfo, IFileMeta, IFileMetaHashMap, IFolderFrame } from '@/interfaces'
 import { IFolderHandler, IWalletHandler } from '@/interfaces/classes'
 import { stripper } from '@/utils/misc'
 import { merkleMeBro } from '@/utils/hash'
 import { saveCompressedFileTree } from '@/utils/compression'
 
 export default class FolderHandler implements IFolderHandler {
-  private readonly folderDetails: IFolderFileFrame
+  private readonly folderDetails: IFolderFrame
   readonly isFolder: boolean
 
-  private constructor (folderDetails: IFolderFileFrame) {
+  private constructor (folderDetails: IFolderFrame) {
     this.folderDetails = folderDetails
     this.isFolder = true
   }
 
-  static async trackFolder (dirInfo:  IFolderFileFrame): Promise<IFolderHandler> {
+  static async trackFolder (dirInfo:  IFolderFrame): Promise<IFolderHandler> {
     return new FolderHandler(dirInfo)
   }
   static async trackNewFolder (dirInfo: IChildDirInfo): Promise<IFolderHandler> {
-    const folderDetails: IFolderFileFrame = {
+    const folderDetails: IFolderFrame = {
       whoAmI: stripper(dirInfo.myName),
       whereAmI: dirInfo.myParent,
       whoOwnsMe: dirInfo.myOwner,
@@ -37,7 +37,7 @@ export default class FolderHandler implements IFolderHandler {
   getWhoOwnsMe (): string {
     return this.folderDetails.whoOwnsMe
   }
-  getFolderDetails (): IFolderFileFrame {
+  getFolderDetails (): IFolderFrame {
     return this.folderDetails
   }
   getChildDirs (): string[] {

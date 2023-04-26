@@ -8,7 +8,7 @@ export { default as IFiletreeParsedContents }  from '@/interfaces/IFiletreeParse
 export { default as IFolderAdd }  from '@/interfaces/IFolderAdd'
 export { default as IFolderChildFiles }  from '@/interfaces/IFolderChildFiles'
 export { default as IFolderDownload }  from '@/interfaces/IFolderDownload'
-export { default as IFolderFileFrame }  from '@/interfaces/IFolderFileFrame'
+export { default as IFolderFrame }  from '@/interfaces/IFolderFileFrame'
 export { default as IGasHashMap }  from '@/interfaces/IGasHashMap'
 export { default as IGasRate }  from '@/interfaces/IGasRate'
 export { default as IMiner }  from '@/interfaces/IMiner'
