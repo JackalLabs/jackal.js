@@ -1,5 +1,5 @@
 import { DeliverTxResponse } from '@cosmjs/stargate'
-import { IPayData, IStoragePaymentInfo } from '@/interfaces'
+import { IPayData, ISharedTracker, IStoragePaymentInfo } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 
 export default interface IStorageHandler {
@@ -10,4 +10,7 @@ export default interface IStorageHandler {
   getStorageJklPrice (space: number, duration: number): Promise<number>
   getPayData (address: string): Promise<IPayData>
   getStoragePaymentInfo (address: string): Promise<IStoragePaymentInfo>
+  saveSharing (toAddress: string, shared: ISharedTracker): Promise<EncodeObject>
+  readSharing (owner: string, rawPath: string): Promise<ISharedTracker>
+  stopSharing (rawPath: string): Promise<EncodeObject>
 }

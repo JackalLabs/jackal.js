@@ -1,8 +1,9 @@
 import { IProtoHandler, IStorageHandler, IWalletHandler } from '@/interfaces/classes'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IPayData, IStoragePaymentInfo } from '@/interfaces'
-import { numTo3xTB, numToWholeTB } from '@/utils/misc'
+import { IPayData, ISharedTracker, IStoragePaymentInfo } from '@/interfaces'
+import { numTo3xTB } from '@/utils/misc'
 import { DeliverTxResponse } from '@cosmjs/stargate'
+import { readCompressedFileTree, removeCompressedFileTree, saveCompressedFileTree } from '@/utils/compression'
 
 export default class StorageHandler implements IStorageHandler {
   private readonly walletRef: IWalletHandler
@@ -63,4 +64,20 @@ export default class StorageHandler implements IStorageHandler {
     const result = (await this.pH.storageQuery.queryStoragePaymentInfo({ address })).value.storagePaymentInfo
     return (result) ? result : { spaceAvailable: 0, spaceUsed: 0, address: '' }
   }
+
+  /** Manage FT Noti */
+  async saveSharing (toAddress: string, shared: ISharedTracker): Promise<EncodeObject> {
+    return await saveCompressedFileTree(toAddress, `s/Sharing/${toAddress}`, shared, this.walletRef)
+  }
+  async readSharing (owner: string, rawPath: string): Promise<ISharedTracker> {
+    const shared = await readCompressedFileTree(owner, rawPath, this.walletRef)
+      .catch(err => {
+        throw new Error(`Storage.Handler - readSharing() JSON Parse Failed: ${err.message}`)
+      })
+    return shared as ISharedTracker
+  }
+  async stopSharing (rawPath: string): Promise<EncodeObject> {
+    return await removeCompressedFileTree(rawPath, this.walletRef)
+  }
+
 }

@@ -1,5 +1,13 @@
 import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
 
+export function deprecated (thing: string, version: string, opts?: { aggressive?: boolean, replacement?: string }) {
+  let notice = `${thing} is deprecated as of: ${version}`
+  if (opts?.replacement) {
+    notice += ` - Please use ${opts.replacement} instead`
+  }
+  console.error(notice)
+  if (opts?.aggressive) alert(notice)
+}
 export function orderStrings (sortable: string[]): string[] {
   return sortable.sort((a: string, b: string) => {
     const lowerA = a.toLowerCase()

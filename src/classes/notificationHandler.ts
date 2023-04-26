@@ -10,6 +10,8 @@ import {
 } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/query'
 import { Notifications } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/notifications'
 import { NotiCounter } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/noti_counter'
+import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
+import { IReadableNoti } from '@/interfaces'
 
 export default class OracleHandler implements INotificationHandler {
   private readonly walletRef: IWalletHandler
@@ -84,10 +86,11 @@ export default class OracleHandler implements INotificationHandler {
         return acc
       }, [])
   }
+  async checkNotificationInit (forAddress: string): Promise<boolean> {
+    return (await this.getBaseNotiCounter(forAddress)).success
+  }
   async getNotificationCounter (forAddress: string): Promise<QueryGetNotiCounterResponse> {
-    return (await this.pH.notificationsQuery.queryNotiCounter({
-      address: forAddress
-    })).value
+    return (await this.getBaseNotiCounter(forAddress)).value
   }
   async getAllNotificationCounters (): Promise<QueryAllNotiCounterResponse> {
     return (await handlePagination(
@@ -100,4 +103,44 @@ export default class OracleHandler implements INotificationHandler {
         return acc
       }, [])
   }
+
+  /** Standardized Messages */
+  async makeStandardizedShareNotification (type: string, address: string): Promise<EncodeObject> {
+    const pubKey = await this.walletRef.findPubKey(address)
+    const baseNoti = { type }
+    const bufNoti = new TextEncoder().encode(JSON.stringify(baseNoti))
+    return this.makeNotification(this.walletRef.asymmetricEncrypt(bufNoti, pubKey), address)
+  }
+  async makeAddShareNoti (address: string): Promise<EncodeObject> {
+    return await this.makeStandardizedShareNotification('dbfs-update', address)
+  }
+  async makeUpdateShareNoti (address: string): Promise<EncodeObject> {
+    return await this.makeStandardizedShareNotification('dbfs-update', address)
+  }
+  async makeRemoveShareNoti (address: string): Promise<EncodeObject> {
+    return await this.makeStandardizedShareNotification('dbfs-remove', address)
+  }
+
+  /** Read Encrypted Notifications */
+  async readMyShareNoti (index: number): Promise<IReadableNoti> {
+    const { notifications } = await this.getNotification (this.walletRef.getJackalAddress(), index)
+    return processNotiRead(notifications as Notifications, this.walletRef)
+  }
+  async readAllMyShareNotis (): Promise<IReadableNoti[]> {
+    const data = await this.getSingleAddressNotifications(this.walletRef.getJackalAddress())
+    return data.notifications.map((noti: Notifications) => processNotiRead(noti, this.walletRef))
+  }
+
+  /** Private Methods */
+  async getBaseNotiCounter (forAddress: string): Promise<SuccessIncluded<QueryGetNotiCounterResponse>> {
+    return (await this.pH.notificationsQuery.queryNotiCounter({
+      address: forAddress
+    }))
+  }
+}
+
+/** Helpers */
+function processNotiRead (noti: Notifications, walletRef: IWalletHandler) {
+  const contents = new TextDecoder().decode(walletRef.asymmetricDecrypt(noti.notification))
+  return { from: noti.sender, to: noti.address, contents }
 }

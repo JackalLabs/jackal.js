@@ -1,5 +1,8 @@
 import { keyAlgo } from '@/utils/globals'
 import { hashAndHex } from '@/utils/hash'
+import { compressData, decompressData } from '@/utils/compression'
+import { IWalletHandler } from '@/interfaces/classes'
+import { IAesBundle } from '@/interfaces'
 
 export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
@@ -40,6 +43,22 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
       })
   }
 }
+export async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
+  const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
+  const theKey = wallet.asymmetricEncrypt(await exportJackalKey(aes.key), pubKey)
+  return `${theIv}|${theKey}`
+}
+export async function stringToAes (wallet: IWalletHandler, source: string): Promise<IAesBundle> {
+  if (source.indexOf('|') < 0) {
+    throw new Error('stringToAes() : Invalid source string')
+  }
+
+  const parts = source.split('|')
+  return {
+    iv: new Uint8Array(wallet.asymmetricDecrypt(parts[0])),
+    key: await importJackalKey(new Uint8Array(wallet.asymmetricDecrypt(parts[1])))
+  }
+}
 
 export async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Uint8Array): Promise<File> {
   const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
@@ -70,7 +89,7 @@ export async function convertToEncryptedFile (workingFile: File, key: CryptoKey,
   const finalName = `${await hashAndHex(details.name + Date.now().toString())}.jkl`
   return new File(encryptedArray, finalName, { type: 'text/plain' })
 }
-export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv: Uint8Array) {
+export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv: Uint8Array): Promise<File> {
   let detailsBlob = new Blob([])
   const blobParts: Blob[] = []
   for (let i = 0; i < source.size;) {
@@ -89,4 +108,20 @@ export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv
   }
   const details = JSON.parse(await detailsBlob.text())
   return new File(blobParts, details.name, details)
+}
+
+export async function compressEncryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+  const compString = compressData(input)
+  const cryptBlob = await aesCrypt(new Blob([compString]), key, iv, 'encrypt')
+  return await cryptBlob.text()
+}
+export async function decryptDecompressString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+  const decryptBlob = await aesCrypt(new Blob([input]), key, iv, 'decrypt')
+  return decompressData(await decryptBlob.text())
+}
+export async function encryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+  return await (await aesCrypt(new Blob([input]), key, iv, 'encrypt')).text()
+}
+export async function decryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+  return await (await aesCrypt(new Blob([input]), key, iv, 'decrypt')).text()
 }
