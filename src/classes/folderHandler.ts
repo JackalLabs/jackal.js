@@ -49,7 +49,8 @@ export default class FolderHandler implements IFolderHandler {
   async getForFiletree (walletRef: IWalletHandler): Promise<EncodeObject> {
     return await saveCompressedFileTree(
       walletRef.getJackalAddress(),
-      `${this.getWhereAmI()}/${this.getWhoAmI()}`,
+      this.getWhereAmI(),
+      this.getWhoAmI(),
       this.folderDetails,
       walletRef
     )

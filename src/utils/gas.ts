@@ -9,6 +9,7 @@ const hashMap: IGasHashMap = {
   '/canine_chain.filetree.MsgDeleteFile': 9,
   '/canine_chain.filetree.MsgRemoveViewers': 142,
   '/canine_chain.filetree.MsgMakeRoot': 46,
+  '/canine_chain.filetree.MsgMakeRootV2': 46,
   '/canine_chain.filetree.MsgAddEditors': 142,
   '/canine_chain.filetree.MsgRemoveEditors': 142,
   '/canine_chain.filetree.MsgResetEditors': 142,

@@ -1,10 +1,10 @@
 import PLZSU from '@karnthis/plzsu'
-import { ISharedTracker } from '@/interfaces'
+import { IEditorsViewers, IMsgPartialPostFileBundle, IPermsParts } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { aesToString, compressEncryptString, decryptDecompressString, genIv, genKey, stringToAes } from '@/utils/crypt'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
-import { Files } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/files'
-import { MsgMakeRoot } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/tx'
+import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
+import { MsgMakeRoot } from 'jackal.js-protos/src/postgen/canine_chain/filetree/tx'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 
 const Plzsu = new PLZSU()
@@ -20,6 +20,7 @@ export function decompressData (input: string): string {
 export async function saveCompressedFileTree (
   toAddress: string,
   rawPath: string,
+  rawTarget: string,
   rawContents: { [key: string]: any },
   walletRef: IWalletHandler
 ): Promise<EncodeObject> {
@@ -27,11 +28,17 @@ export async function saveCompressedFileTree (
     iv: genIv(),
     key: await genKey()
   }
-  const msg: any = {
-    creator: walletRef.getJackalAddress(),
+  const creator = walletRef.getJackalAddress()
+  const account = await hashAndHex(creator)
+  const msg: IMsgPartialPostFileBundle = {
+    account,
+    creator,
     contents: await compressEncryptString(JSON.stringify(rawContents), aes.key, aes.iv),
-    rootHashPath: await merkleMeBro(`s/Sharing/${toAddress}`),
-    trackingNumber: self.crypto.randomUUID()
+    hashParent: await merkleMeBro(rawPath),
+    hashChild: await hashAndHex(rawTarget),
+    trackingNumber: self.crypto.randomUUID(),
+    editors: '',
+    viewers: ''
   }
   msg.account = await hashAndHex(msg.creator)
   const basePerms: any = {
@@ -39,12 +46,29 @@ export async function saveCompressedFileTree (
     aes
   }
   const selfPubKey = walletRef.getPubkey()
-  const destPubKey = walletRef.findPubKey(toAddress)
-  const me = await makePermsBlock({ ...basePerms, pubKey: selfPubKey, usr: msg.creator }, walletRef)
-  const them = await makePermsBlock({ ...basePerms, pubKey: destPubKey, usr: toAddress }, walletRef)
-  msg.editors = JSON.stringify(me)
-  msg.viewers = JSON.stringify({...me, ...them})
-  return makeSharedBlock(msg, walletRef.getProtoHandler())
+
+
+  const me = {
+    ...basePerms,
+    pubKey: selfPubKey,
+    usr: creator
+  }
+  msg.editors = JSON.stringify(await makePermsBlock({ base: 'e', ...me }, walletRef))
+  if (toAddress === creator) {
+    msg.viewers = JSON.stringify(await makePermsBlock({ base: 'v', ...me }, walletRef))
+  } else {
+    const destPubKey = await walletRef.findPubKey(toAddress)
+    const them = {
+      ...basePerms,
+      pubKey: destPubKey,
+      usr: toAddress
+    }
+    msg.viewers = JSON.stringify({
+      ...await makePermsBlock({ base: 'v', ...me }, walletRef),
+      ...await makePermsBlock({ base: 'v', ...them }, walletRef)
+    })
+  }
+  return buildPostFile(msg, walletRef.getProtoHandler())
 }
 export async function readCompressedFileTree (
   owner: string,
@@ -54,18 +78,23 @@ export async function readCompressedFileTree (
   const hexAddress = await merkleMeBro(rawPath)
   const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
   const result = await walletRef.getProtoHandler().fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: hexedOwner })
+  console.log(result)
   if (!result.success) {
     throw new Error('Share Data Not Found')
   } else {
     try {
       const { contents, viewingAccess, trackingNumber } = result.value.files as Files
       const parsedVA = JSON.parse(viewingAccess)
+      console.log('parsedVA')
+      console.log(parsedVA)
       const viewName = await hashAndHex(`s${trackingNumber}${walletRef.getJackalAddress()}`)
+      console.log(parsedVA[viewName])
       const keys = await stringToAes(walletRef, parsedVA[viewName])
       const final = await decryptDecompressString(contents, keys.key, keys.iv)
+      console.log(final)
       return JSON.parse(final)
     } catch (err: any) {
-      throw new Error(err)
+      throw err
     }
   }
 }
@@ -93,9 +122,9 @@ function makeSharedBlock (msg: MsgMakeRoot, pH: IProtoHandler): EncodeObject {
     trackingNumber: msg.trackingNumber
   })
 }
-async function makePermsBlock (parts: any, walletRef: IWalletHandler): Promise<{ [user: string]: string }> {
-  const perms: { [user: string]: string } = {}
-  const user = await hashAndHex(`s${parts.num}${parts.usr}`)
+export async function makePermsBlock (parts: IPermsParts, walletRef: IWalletHandler): Promise<IEditorsViewers> {
+  const perms: IEditorsViewers = {}
+  const user = await hashAndHex(`${parts.base}${parts.num}${parts.usr}`)
   const value = await aesToString(
     walletRef,
     parts.pubKey,
@@ -103,4 +132,17 @@ async function makePermsBlock (parts: any, walletRef: IWalletHandler): Promise<{
   )
   perms[user] = value
   return perms
+}
+
+export async function buildPostFile (data: IMsgPartialPostFileBundle, pH: IProtoHandler): Promise<EncodeObject> {
+  return pH.fileTreeTx.msgPostFile({
+    creator: data.creator,
+    account: data.account,
+    hashParent: data.hashParent,
+    hashChild: data.hashChild,
+    contents: data.contents,
+    editors: data.editors,
+    viewers: data.viewers,
+    trackingNumber: data.trackingNumber
+  })
 }

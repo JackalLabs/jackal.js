@@ -1,13 +1,12 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 // import { randomUUID, random } from 'make-random'
-import { IQueryFileTree, IQueryStorage, ITxFileTree } from 'jackal.js-protos'
+import { IQueryFileTree, IQueryStorage } from 'jackal.js-protos'
 
 import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import { aesToString, convertFromEncryptedFile, genIv, genKey, stringToAes } from '@/utils/crypt'
 import { bruteForceString, setDelay, stripper } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
-import WalletHandler from '@/classes/walletHandler'
 import {
   IFileDownloadHandler,
   IFileIo,
@@ -24,8 +23,7 @@ import {
   IFileConfigFull,
   IFileConfigRaw,
   IFiletreeParsedContents,
-  IFolderAdd,
-  IFolderChildFiles, IFolderFrame,
+  IFolderFrame,
   IMiner,
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
@@ -35,11 +33,10 @@ import {
   IUploadList,
   IUploadListItem
 } from '@/interfaces'
-import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IProviderChecks from '@/interfaces/IProviderChecks'
-import { QueryFindFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/storage/query'
-import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
-import { readCompressedFileTree, removeCompressedFileTree, saveCompressedFileTree } from '@/utils/compression'
+import { QueryFindFileResponse } from 'jackal.js-protos/src/postgen/canine_chain/storage/query'
+import SuccessIncluded from 'jackal.js-protos/src/types/TSuccessIncluded'
+import { buildPostFile, makePermsBlock, readCompressedFileTree, removeCompressedFileTree } from '@/utils/compression'
 import IFileMetaHashMap from '../interfaces/file/IFileMetaHashMap'
 
 export default class FileIo implements IFileIo {
@@ -100,15 +97,12 @@ export default class FileIo implements IFileIo {
   async verifyFoldersExist (toCheck: string[]): Promise<number> {
     const toCreate = []
     for (let i = 0; i < toCheck.length; i++) {
-      const data = await readCompressedFileTree(this.walletRef.getJackalAddress(), `s/${toCheck[i]}`, this.walletRef)
-        .catch(err => {
-          throw err
-        })
-      if (!data) {
+      const check = await this.checkFolderIsFileTree(`s/${toCheck[i]}`)
+      if (check) {
+        console.info(`${toCheck[i]} exists`)
+      } else {
         console.warn(`${toCheck[i]} does not exist`)
         toCreate.push(toCheck[i])
-      } else {
-        console.info(`${toCheck[i]} exists`)
       }
     }
     if (toCreate.length) {
@@ -218,7 +212,7 @@ export default class FileIo implements IFileIo {
         )
         needingReset.push(...delItem)
       }
-      const msgPost: EncodeObject = await buildPostFile(msgPostFileBundle, this.pH.fileTreeTx)
+      const msgPost: EncodeObject = await buildPostFile(msgPostFileBundle, this.pH)
       const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid, payOnce: false })
       return [msgPost, msgSign]
     }))
@@ -228,7 +222,10 @@ export default class FileIo implements IFileIo {
   async downloadFolder (rawPath: string): Promise<IFolderHandler> {
     const owner = this.walletRef.getJackalAddress()
     try {
-      const data = await readCompressedFileTree(owner, rawPath, this.walletRef) as IFolderFrame
+      const data = await readCompressedFileTree(owner, rawPath, this.walletRef)
+        .catch((err: Error) => {
+          throw err
+        }) as IFolderFrame
       return await FolderHandler.trackFolder(data)
     } catch (err) {
       console.log(err)
@@ -346,15 +343,22 @@ export default class FileIo implements IFileIo {
   ): Promise<EncodeObject[]> {
     const toGenerate = startingDirs || ['Config', 'Home', 'WWW']
     const creator = this.walletRef.getJackalAddress()
-    const dirMsgs: EncodeObject[] = await Promise.all(
+    const dirMsgs: EncodeObject[][] = await Promise.all(
       toGenerate.map(async (pathName: string) => {
-        const folderDetails: IChildDirInfo = {
-          myName: stripper(pathName),
-          myParent: 's/',
-          myOwner: creator
+        try {
+          const tmp = await this.rawConvertFolderType(`s/${stripper(pathName)}`)
+          console.dir(tmp)
+          return tmp
+        } catch (err) {
+          console.error(err)
+          const folderDetails: IChildDirInfo = {
+            myName: stripper(pathName),
+            myParent: 's',
+            myOwner: creator
+          }
+          const handler = await FolderHandler.trackNewFolder(folderDetails)
+          return [await handler.getForFiletree(this.walletRef)]
         }
-        const handler = await FolderHandler.trackNewFolder(folderDetails)
-        return await handler.getForFiletree(this.walletRef)
       })
     )
     const readyToBroadcast: EncodeObject[] = []
@@ -362,8 +366,8 @@ export default class FileIo implements IFileIo {
       readyToBroadcast.push(initMsg)
     }
     readyToBroadcast.push(
-      await saveCompressedFileTree(this.walletRef.getJackalAddress(), '/s', {}, this.walletRef),
-      ...dirMsgs
+      await this.createRoot(),
+      ...dirMsgs.flat()
     )
     return readyToBroadcast
   }
@@ -442,6 +446,23 @@ export default class FileIo implements IFileIo {
     }
     console.log('Provider Options Exhausted')
     return { fid: [''], cid: '' }
+  }
+  private async createRoot () {
+    const common = {
+      aes: {
+        iv: genIv(),
+        key: await genKey()
+      },
+      num: self.crypto.randomUUID(),
+      pubKey: this.walletRef.getPubkey(),
+      usr: this.walletRef.getJackalAddress()
+    }
+    return this.pH.fileTreeTx.msgMakeRootV2({
+      creator: this.walletRef.getJackalAddress(),
+      editors: JSON.stringify(await makePermsBlock({ base: 'e', ...common }, this.walletRef)),
+      viewers: JSON.stringify(await makePermsBlock({ base: 'v', ...common }, this.walletRef)),
+      trackingNumber: self.crypto.randomUUID()
+    })
   }
 
 }
@@ -603,18 +624,6 @@ async function matchOwnerToCid (pH: IProtoHandler, cid: string, owner: string): 
    } else {
      return false
    }
-}
-async function buildPostFile (data: IMsgPartialPostFileBundle, fileTreeTx: ITxFileTree): Promise<EncodeObject> {
-  return fileTreeTx.msgPostFile({
-    creator: data.creator,
-    account: data.account,
-    hashParent: data.hashParent,
-    hashChild: data.hashChild,
-    contents: data.contents,
-    editors: data.editors,
-    viewers: data.viewers,
-    trackingNumber: data.trackingNumber
-  })
 }
 async function random (max: number) {
    return Math.floor(Math.random() * max)
