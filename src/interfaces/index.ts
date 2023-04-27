@@ -16,6 +16,7 @@ export { default as IMsgFinalPostFileBundle }  from '@/interfaces/IMsgFinalPostF
 export { default as IMsgPartialPostFileBundle }  from '@/interfaces/IMsgPartialPostFileBundle'
 export { default as IOracleFeed }  from '@/interfaces/IOracleFeed'
 export { default as IPayData }  from '@/interfaces/IPayData'
+export { default as IPermsParts }  from '@/interfaces/IPermsParts'
 export { default as IProtoReqs }  from '@/interfaces/IProtoReqs'
 export { default as IProviderModifiedResponse }  from '@/interfaces/IProviderModifiedResponse'
 export { default as IProviderResponse }  from '@/interfaces/IProviderResponse'
