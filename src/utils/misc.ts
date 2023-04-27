@@ -1,5 +1,13 @@
 import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
 
+/**
+ * Notify that function is deprecated and should no longer be used.
+ * @param {string} thing - Name of deprecated item. Example: "[ParentContext] functionName()".
+ * @param {string} version - First version with deprecated item. Example: "v1.1.1".
+ * @param {{aggressive?: boolean, replacement?: string}} opts -
+ * Aggressive: TRUE to trigger alert.
+ * Replacement: the function name that should be used instead. Example: "replacementFunction()".
+ */
 export function deprecated (thing: string, version: string, opts?: { aggressive?: boolean, replacement?: string }) {
   let notice = `${thing} is deprecated as of: ${version}`
   if (opts?.replacement) {
@@ -8,6 +16,12 @@ export function deprecated (thing: string, version: string, opts?: { aggressive?
   console.error(notice)
   if (opts?.aggressive) alert(notice)
 }
+
+/**
+ * Sort array of strings in A-Z order.
+ * @param {string[]} sortable - Array of string to organize.
+ * @returns {string[]} - Array of sorted strings.
+ */
 export function orderStrings (sortable: string[]): string[] {
   return sortable.sort((a: string, b: string) => {
     const lowerA = a.toLowerCase()
@@ -22,10 +36,19 @@ export function orderStrings (sortable: string[]): string[] {
   })
 }
 
+/**
+ * Remove trailing slashes "/".
+ * @param {string} value - Starting string.
+ * @returns {string} - String without trailing slashes.
+ */
 export function stripper (value: string): string {
   return value.replace(/\/+/g, '')
 }
 
+/**
+ * Check chain response for insufficient gas.
+ * @param response - @cosmjs/stargate DeliverTxResponse.
+ */
 export function checkResults (response: any) {
   console.dir(response)
   if (response.gasUsed > response.gasWanted) {
@@ -34,10 +57,20 @@ export function checkResults (response: any) {
   }
 }
 
+/**
+ * Round number to whole TB (See numTo3xTB().
+ * @param {number | string} base - Accepts number or number-like string.
+ * @returns {string} - Whole TB as string for Msg compatibility.
+ */
 export function numToWholeTB (base: number | string): string {
   return numTo3xTB(Math.floor(Number(base)) || 0)
 }
 
+/**
+ * Round any number to TB.
+ * @param {number | string} base - Accepts number or number-like string.
+ * @returns {string} - Total TB as string for Msg compatibility.
+ */
 export function numTo3xTB (base: number | string): string {
   let final = Math.max(Number(base), 0)
   final *= 1000 /** KB */
@@ -49,6 +82,11 @@ export function numTo3xTB (base: number | string): string {
   return final.toString()
 }
 
+/**
+ * Forces string "null" or "undefined" to their proper types. Needed for handling some responses.
+ * @param {string} value - String to check.
+ * @returns {string | undefined | null} - Returns null or undefined if string matches, otherwise returns original string.
+ */
 export function bruteForceString (value: string): null | undefined | string {
   switch (value.toLowerCase()) {
     case 'null':
@@ -60,6 +98,13 @@ export function bruteForceString (value: string): null | undefined | string {
   }
 }
 
+/**
+ * TODO
+ * @param handler
+ * @param {string} queryTag
+ * @param additionalParams
+ * @returns {Promise<any[]>}
+ */
 export async function handlePagination (handler: any, queryTag: string, additionalParams?: any) {
   const raw: any[] = []
   let nextPage: Uint8Array = new Uint8Array()
@@ -77,10 +122,23 @@ export async function handlePagination (handler: any, queryTag: string, addition
   return raw
 }
 
+/**
+ * Set a timer.
+ * @param {number} amt - Duration of timeer in ms.
+ * @returns {Promise<void>}
+ */
 export async function setDelay (amt: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, Number(amt)))
 }
 
+/**
+ * Convert chain block height to UTC Date
+ * TODO - add return statement
+ * @param {string} rpcUrl - RPC node address to query.
+ * @param {number} currentBlockHeight - Current chain height.
+ * @param {number | string} targetBlockHeight - Number or number-like string of future chain height.
+ * @returns {Promise<Date>} - Date object for future date matching input future chain height.
+ */
 export async function blockToDate (rpcUrl: string, currentBlockHeight: number, targetBlockHeight: number | string) {
   const targetHeight = Number(targetBlockHeight) || 0
   /** Block time in milliseconds */
@@ -91,6 +149,12 @@ export async function blockToDate (rpcUrl: string, currentBlockHeight: number, t
   return new Date(now + diffMs)
 }
 
+/**
+ * Fine average block time of recent blocks.
+ * @param {string} rpc - RPC node address to query.
+ * @param {number} blocks - Number of blocks to use for average.
+ * @returns {Promise<number>} - Time in ms per block of submitted window.
+ */
 export async function getAvgBlockTime (rpc: string, blocks: number): Promise<number> {
     const info = await fetch(rpc+"/block").then(res => res.json());
     const blockTime = fetch(rpc+`/block?height=${info.result.block.header.height-blocks}`).then(res => res.json());
