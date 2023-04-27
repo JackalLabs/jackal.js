@@ -31,9 +31,9 @@ export async function hashAndHex (input: string): Promise<string> {
 /** @private */
 /**
  * Create a Merkle Hex string.
- * @param {string} path - Hex string to use as base
+ * @param {string} path - Hex string to use as base.
  * @param {string} fileName - Raw string that will use hashAndHex() before combining with path.
- * @returns {Promise<string>} - Resulting Merkle Hex string
+ * @returns {Promise<string>} - Resulting Merkle Hex string.
  */
 export async function hexFullPath (path: string, fileName: string): Promise<string> {
   return await hashAndHex(`${path}${await hashAndHex(fileName)}`)
@@ -42,7 +42,7 @@ export async function hexFullPath (path: string, fileName: string): Promise<stri
 /**
  * Create a Merkle Hex string from a directory path.
  * @param {string} path - Directory path as delimited by slashes "/".
- * @returns {Promise<string>} - Resulting Merkle Hex string
+ * @returns {Promise<string>} - Resulting Merkle Hex string.
  */
 export async function merkleMeBro (path: string): Promise<string> {
   const pathArray = path.split('/')
