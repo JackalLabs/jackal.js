@@ -72,6 +72,11 @@ const hashMap: IGasHashMap = {
 }
 const baseRate = 56
 
+/**
+ * Generates gas total estimate from list of Tx instances.
+ * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @returns {number} - Adjusted number of gas units collection is expected to require.
+ */
 export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): number {
   const gas = msgArray.reduce((acc, curr) => {
     if (isIWrappedEncodeObject(curr)) {
@@ -90,6 +95,11 @@ export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]):
   return (gas + baseRate) * 1100
 }
 /** @private */
+/**
+ * Return a Gas object for use in a masterBroadcaster()-like call.
+ * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @returns {IGasRate} - Gas object with best estimate based on input.
+ */
 export function finalizeGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): IGasRate {
   const totalGas = estimateGas(msgArray)
   return {
@@ -99,6 +109,11 @@ export function finalizeGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]):
   }
 }
 
+/**
+ * Check if an input is a wrapped or raw EncodeObject.
+ * @param {EncodeObject | IWrappedEncodeObject} toCheck - Source value.
+ * @returns {toCheck is IWrappedEncodeObject} - Boolean indicating if source is a IWrappedEncodeObject.
+ */
 function isIWrappedEncodeObject(toCheck: EncodeObject | IWrappedEncodeObject): toCheck is IWrappedEncodeObject {
   return Object.keys(toCheck).includes('encodedObject')
 }
