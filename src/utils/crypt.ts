@@ -44,12 +44,13 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
   }
 }
 export async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
+  console.log(pubKey)
   const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
   const theKey = wallet.asymmetricEncrypt(await exportJackalKey(aes.key), pubKey)
   return `${theIv}|${theKey}`
 }
 export async function stringToAes (wallet: IWalletHandler, source: string): Promise<IAesBundle> {
-  if (source.indexOf('|') < 0) {
+  if (!source || source.indexOf('|') < 0) {
     throw new Error('stringToAes() : Invalid source string')
   }
 
