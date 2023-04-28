@@ -94,11 +94,12 @@ export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]):
   }, 0)
   return (gas + baseRate) * 1100
 }
-/** @private */
+
 /**
  * Return a Gas object for use in a masterBroadcaster()-like call.
  * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
  * @returns {IGasRate} - Gas object with best estimate based on input.
+ * @private
  */
 export function finalizeGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): IGasRate {
   const totalGas = estimateGas(msgArray)

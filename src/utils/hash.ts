@@ -17,32 +17,34 @@ const hashMap: string[] = [
   'f0','f1','f2','f3','f4','f5','f6','f7','f8','f9','fa','fb','fc','fd','fe','ff'
 ]
 
-/** @private */
 /**
  * Hash input using SHA-256, then convert to hex string.
  * @param {string} input - Source string for hashing.
  * @returns {Promise<string>} - Resulting Hex string.
+ * @private
  */
 export async function hashAndHex (input: string): Promise<string> {
   const algo = 'SHA-256'
   const raw = await crypto.subtle.digest(algo, (new TextEncoder()).encode(input))
   return bufferToHex(new Uint8Array(raw))
 }
-/** @private */
+
 /**
  * Create a Merkle Hex string.
  * @param {string} path - Hex string to use as base.
  * @param {string} fileName - Raw string that will use hashAndHex() before combining with path.
  * @returns {Promise<string>} - Resulting Merkle Hex string.
+ * @private
  */
 export async function hexFullPath (path: string, fileName: string): Promise<string> {
   return await hashAndHex(`${path}${await hashAndHex(fileName)}`)
 }
-/** @private */
+
 /**
  * Create a Merkle Hex string from a directory path.
  * @param {string} path - Directory path as delimited by slashes "/".
  * @returns {Promise<string>} - Resulting Merkle Hex string.
+ * @private
  */
 export async function merkleMeBro (path: string): Promise<string> {
   const pathArray = path.split('/')
@@ -52,11 +54,12 @@ export async function merkleMeBro (path: string): Promise<string> {
   }
   return merkle
 }
-/** @private */
+
 /**
  * Converts hashed values into strings.
  * @param {Uint8Array} buf - ArrayBuffy view contained hash results.
  * @returns {string} - Hex string converted from source.
+ * @private
  */
 export function bufferToHex (buf: Uint8Array): string {
   return buf.reduce((acc: string, curr: number) => {
