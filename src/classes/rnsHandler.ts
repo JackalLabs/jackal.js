@@ -14,19 +14,38 @@ import {
 import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
 import { handlePagination } from '@/utils/misc'
 
+/**
+ * Class encompassing basic and advanced methods needed for interaction with RNS addresses on the chain.
+ */
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
   private readonly pH: IProtoHandler
 
+  /**
+   * Create an RNS instance.
+   * @param {IWalletHandler} wallet - Instance of WalletHandler from WalletHandler.trackWallet().
+   * @private
+   */
   private constructor (wallet: IWalletHandler) {
     this.walletRef = wallet
     this.pH = wallet.getProtoHandler()
   }
 
+  /**
+   * Async wrapper to create an RNS instance.
+   * @param {IWalletHandler} wallet - Instance of WalletHandler from WalletHandler.trackWallet().
+   * @returns {Promise<IRnsHandler>} - Instance of RnsHandler.
+   */
   static async trackRns (wallet: IWalletHandler): Promise<IRnsHandler> {
     return new RnsHandler(wallet)
   }
 
+  /**
+   * Create Msg for accepting a bid on the user's RNS.
+   * @param {string} rns -  The RNS to accept the bid for.
+   * @param {string} from - The Jackal address to accept the bid from.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeAcceptBidMsg (rns: string, from: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgAcceptBid({
@@ -35,6 +54,12 @@ export default class RnsHandler implements IRnsHandler {
       from
     })
   }
+
+  /**
+   * Create Msg for adding a subdomain entry on the user's RNS.
+   * @param {IRnsRecordItem} recordValues - New subdomain's values.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeAddRecordMsg (recordValues: IRnsRecordItem): EncodeObject {
     const trueRns = sanitizeRns(recordValues.name)
     return this.pH.rnsTx.msgAddRecord({
@@ -45,6 +70,13 @@ export default class RnsHandler implements IRnsHandler {
       record: recordValues.record
     });
   }
+
+  /**
+   * Create Msg for submitting an offer on another user's RNS.
+   * @param {string} rns - RNS to submit offer on.
+   * @param {string} bid - Value of offer in ujkl. Example: "1000000ujkl" (1 $JKL).
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeBidMsg (rns: string, bid: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgBid({
@@ -53,6 +85,12 @@ export default class RnsHandler implements IRnsHandler {
       bid
     })
   }
+
+  /**
+   * Create Msg for purchasing RNS listed on market.
+   * @param {string} rns - RNS to purchase.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeBuyMsg (rns: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgBuy({
@@ -60,6 +98,12 @@ export default class RnsHandler implements IRnsHandler {
       name: trueRns
     })
   }
+
+  /**
+   * Create Msg to retract offer on another user's RNS.
+   * @param {string} rns - RNS to retract offer from.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeCancelBidMsg (rns: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgCancelBid({
@@ -67,12 +111,24 @@ export default class RnsHandler implements IRnsHandler {
       name: trueRns
     })
   }
+
+  /**
+   * Create Msg to remove user's RNS from the market.
+   * @param {string} rns - RNS to remove.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeDelistMsg (rns: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgDelist({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns })
   }
+
+  /**
+   * Create Msg to delete user's RNS.
+   * @param {string} rns - RNS to delete.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeDelRecordMsg (rns: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgDelRecord({
@@ -80,11 +136,23 @@ export default class RnsHandler implements IRnsHandler {
       name: trueRns
     })
   }
+
+  /**
+   * Create Msg to activate user in the RNS system and to generate free account RNS.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeRnsInitMsg (): EncodeObject {
     return this.pH.rnsTx.msgInit({
       creator: this.walletRef.getJackalAddress()
     })
   }
+
+  /**
+   * Create Msg to add user's RNS to the market.
+   * @param {string} rns - RNS to list on market.
+   * @param {string} price - Price of offer in ujkl. Example: "1000000ujkl" (1 $JKL).
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeListMsg (rns: string, price: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgList({
@@ -93,6 +161,12 @@ export default class RnsHandler implements IRnsHandler {
       price
     })
   }
+
+  /**
+   * Create Msg to register new RNS.
+   * @param {IRnsRegistrationItem} registrationValues - Bundle containing RNS name, duration in years, and JSON.stringified metadata.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeNewRegistrationMsg (registrationValues: IRnsRegistrationItem): EncodeObject {
     const trueRns = sanitizeRns(registrationValues.nameToRegister)
     return this.pH.rnsTx.msgRegister({
@@ -102,6 +176,13 @@ export default class RnsHandler implements IRnsHandler {
       data: sanitizeRnsData(registrationValues.data, 'makeNewRegistrationMsg')
     })
   }
+
+  /**
+   * Create Msg to transfer user's RNS to another user.
+   * @param {string} rns - RNS to transfer.
+   * @param {string} receiver - Jackal address to transfer to.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeTransferMsg (rns: string, receiver: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgTransfer({
@@ -110,6 +191,13 @@ export default class RnsHandler implements IRnsHandler {
       receiver
     })
   }
+
+  /**
+   * Create Msg to update RNS metadata.
+   * @param {string} rns - User's RNS to update.
+   * @param {string} data - JSON.stringified new metadata to replace existing data.
+   * @returns {EncodeObject} - The Msg for processing by the chain.
+   */
   makeUpdateMsg (rns: string, data: string): EncodeObject {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgUpdate({
@@ -119,10 +207,20 @@ export default class RnsHandler implements IRnsHandler {
     })
   }
 
+  /**
+   * Find a specific RNS bid by global index.
+   * @param {string} index - Index to find.
+   * @returns {Promise<IRnsBidItem>} - Bid if found, defaults to bid item with empty values if no match found.
+   */
   async findSingleBid (index: string): Promise<IRnsBidItem> {
     const trueIndex = sanitizeRns(index)
     return (await this.pH.rnsQuery.queryBids({ index: trueIndex })).value.bids as IRnsBidItem
   }
+
+  /**
+   * List all outstanding bids for all users.
+   * @returns {Promise<IRnsBidHashMap>} - Object map of bid arrays by RNS name.
+   */
   async findAllBids (): Promise<IRnsBidHashMap> {
     const data: IRnsBidItem[] = (await handlePagination(
       this.pH.rnsQuery,
@@ -143,6 +241,12 @@ export default class RnsHandler implements IRnsHandler {
       return acc
     }, {})
   }
+
+  /**
+   * Get RNS market details for a single listed RNS.
+   * @param {string} rns - RNS address to find.
+   * @returns {Promise<IRnsForSaleItem>} - Listing if found, defaults to list item with empty values if no match found.
+   */
   async findSingleForSaleName (rns: string): Promise<IRnsForSaleItem> {
     const trueRns = sanitizeRns(rns)
     return (await this.pH.rnsQuery.queryForsale({ name: trueRns })).value.forsale as IRnsForSaleItem
@@ -163,6 +267,11 @@ export default class RnsHandler implements IRnsHandler {
       return acc
     }, {})
   }
+
+  /**
+   * Finds all RNS listed on market and flags "mine" boolean if the user owns the RNS.
+   * @returns {Promise<IRnsExpandedForSaleHashMap>} - Object map of list items by RNS name.
+   */
   async findExpandedForSaleNames (): Promise<IRnsExpandedForSaleHashMap> {
     const rawOwned = await this.findExistingNames()
 
@@ -184,6 +293,11 @@ export default class RnsHandler implements IRnsHandler {
       return acc
     }, {})
   }
+
+  /**
+   * Finds all RNS the user owns.
+   * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
+   */
   async findExistingNames (): Promise<IRnsOwnedHashMap> {
     const address = this.walletRef.getJackalAddress()
 
@@ -206,23 +320,53 @@ export default class RnsHandler implements IRnsHandler {
       return acc
     }, {})
   }
+
+  /**
+   * Find RNS details using RNS address.
+   * @param {string} rns - RNS address to search.
+   * @returns {Promise<IRnsOwnedItem>} - Data if found, defaults to item with empty values if no match found.
+   */
   async findSingleRns (rns: string): Promise<IRnsOwnedItem> {
     const trueRns = sanitizeRns(rns)
     return (await this.pH.rnsQuery.queryNames({ index: trueRns })).value.names as IRnsOwnedItem
   }
+
+  /**
+   * Find owner's address using RNS address.
+   * @param {string} rns - RNS address to search.
+   * @returns {Promise<string>} - Owner's address if found, defaults to empty string if no match found.
+   */
   async findMatchingAddress (rns: string): Promise<string> {
     return (await this.findSingleRns(rns)).value || ''
   }
 }
 
+/**
+ * Ensures RNS address ends with ".jkl".
+ * @param {string} rns - RNS address to process.
+ * @returns {string} - Source RNS address with ".jkl" included.
+ */
 function sanitizeRns (rns: string): string {
   const allowedExtensions = /\.(jkl|ibc)$/
   return (rns.match(allowedExtensions)) ? rns : `${rns}.jkl`
 }
+
+/**
+ * Strip ".jkl" and ".ibc" endings from RNS address.
+ * @param {string} rns - RNS address to process.
+ * @returns {string} - Source RNS address with ".jkl" and ".ibc" excluded.
+ */
 function reverseSanitizeRns (rns: string): string {
   const strippedExtensions = /\.(jkl|ibc)$/
   return rns.replace(strippedExtensions, '')
 }
+
+/**
+ * Enforces JSON.stringify on data. Used by: makeUpdateMsg(), makeNewRegistrationMsg(), and makeAddRecordMsg().
+ * @param {string} data - Data to force to JSON.stringify compliant string.
+ * @param {string} caller - Function calling sanitizeRnsData() in case error is logged.
+ * @returns {string} - JSON.stringify safe string.
+ */
 function sanitizeRnsData (data: string, caller: string) {
   try {
     return (typeof data === 'string') ? JSON.stringify(JSON.parse(data)) : JSON.stringify(data)
