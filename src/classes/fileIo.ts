@@ -331,11 +331,16 @@ export default class FileIo implements IFileIo {
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
     const readyToBroadcast = await this.rawGenerateInitialDirs(initMsg, startingDirs)
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
       .catch(err => {
         console.error(err)
       })
+    const hexAddress = await merkleMeBro('s')
+    const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
+    const result = await this.walletRef.getProtoHandler().fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: hexedOwner })
+    console.log('s')
+    console.log(result)
   }
   async rawGenerateInitialDirs (
     initMsg: EncodeObject | null,

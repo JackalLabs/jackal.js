@@ -31,6 +31,7 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
         return new Blob([res])
       })
       .catch(err => {
+        console.error(`aesCrypt(encrypt) - ${err}`)
         throw err
       })
   } else {
@@ -39,6 +40,7 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
         return new Blob([res])
       })
       .catch(err => {
+        console.error(`aesCrypt(decrypt) - ${err}`)
         throw err
       })
   }
@@ -53,7 +55,6 @@ export async function stringToAes (wallet: IWalletHandler, source: string): Prom
   if (!source || source.indexOf('|') < 0) {
     throw new Error('stringToAes() : Invalid source string')
   }
-
   const parts = source.split('|')
   return {
     iv: new Uint8Array(wallet.asymmetricDecrypt(parts[0])),
@@ -117,6 +118,8 @@ export async function compressEncryptString (input: string, key: CryptoKey, iv: 
   return await cryptBlob.text()
 }
 export async function decryptDecompressString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+  console.log('decryptDecompressString()')
+  console.log(input)
   const decryptBlob = await aesCrypt(new Blob([input]), key, iv, 'decrypt')
   return decompressData(await decryptBlob.text())
 }

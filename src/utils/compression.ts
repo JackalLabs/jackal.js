@@ -4,7 +4,6 @@ import { EncodeObject } from '@cosmjs/proto-signing'
 import { aesToString, compressEncryptString, decryptDecompressString, genIv, genKey, stringToAes } from '@/utils/crypt'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
-import { MsgMakeRoot } from 'jackal.js-protos/src/postgen/canine_chain/filetree/tx'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 
 const Plzsu = new PLZSU()
@@ -40,14 +39,11 @@ export async function saveCompressedFileTree (
     editors: '',
     viewers: ''
   }
-  msg.account = await hashAndHex(msg.creator)
   const basePerms: any = {
     num: msg.trackingNumber,
     aes
   }
   const selfPubKey = walletRef.getPubkey()
-
-
   const me = {
     ...basePerms,
     pubKey: selfPubKey,
@@ -87,7 +83,7 @@ export async function readCompressedFileTree (
       const parsedVA = JSON.parse(viewingAccess)
       console.log('parsedVA')
       console.log(parsedVA)
-      const viewName = await hashAndHex(`s${trackingNumber}${walletRef.getJackalAddress()}`)
+      const viewName = await hashAndHex(`v${trackingNumber}${walletRef.getJackalAddress()}`)
       console.log(parsedVA[viewName])
       const keys = await stringToAes(walletRef, parsedVA[viewName])
       const final = await decryptDecompressString(contents, keys.key, keys.iv)
@@ -111,17 +107,6 @@ export async function removeCompressedFileTree (
 }
 
 /** Helpers */
-function makeSharedBlock (msg: MsgMakeRoot, pH: IProtoHandler): EncodeObject {
-  return pH.fileTreeTx.msgMakeRoot({
-    creator: msg.creator,
-    account: msg.account,
-    rootHashPath: msg.rootHashPath,
-    contents: msg.contents,
-    editors: msg.editors,
-    viewers: msg.viewers,
-    trackingNumber: msg.trackingNumber
-  })
-}
 export async function makePermsBlock (parts: IPermsParts, walletRef: IWalletHandler): Promise<IEditorsViewers> {
   const perms: IEditorsViewers = {}
   const user = await hashAndHex(`${parts.base}${parts.num}${parts.usr}`)
