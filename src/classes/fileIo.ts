@@ -331,14 +331,12 @@ export default class FileIo implements IFileIo {
   async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
     const readyToBroadcast = await this.rawGenerateInitialDirs(initMsg, startingDirs)
     const memo = ``
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
+    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
       .catch(err => {
         console.error(err)
       })
-    const hexAddress = await merkleMeBro('s')
-    const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
-    const result = await this.walletRef.getProtoHandler().fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: hexedOwner })
+    const result = await readCompressedFileTree(this.walletRef.getJackalAddress(), 's/Home', this.walletRef)
     console.log('s')
     console.log(result)
   }
@@ -400,6 +398,8 @@ export default class FileIo implements IFileIo {
 
     const baseLocation = `${base.getWhereAmI()}/${base.getWhoAmI()}`
     const existingDirs = base.getChildDirs()
+    console.log('existingDirs')
+    console.log(existingDirs)
     for (let dir of existingDirs) {
       encoded.push(...await this.rawConvertFolderType(`${baseLocation}/${dir}`))
     }
@@ -466,7 +466,7 @@ export default class FileIo implements IFileIo {
       creator: this.walletRef.getJackalAddress(),
       editors: JSON.stringify(await makePermsBlock({ base: 'e', ...common }, this.walletRef)),
       viewers: JSON.stringify(await makePermsBlock({ base: 'v', ...common }, this.walletRef)),
-      trackingNumber: self.crypto.randomUUID()
+      trackingNumber: common.num
     })
   }
 

@@ -5,6 +5,7 @@ import FileUploadHandler from '@/classes/fileUploadHandler'
 import FileIo from '@/classes/fileIo'
 import FolderHandler from '@/classes/folderHandler'
 import GovHandler from '@/classes/govHandler'
+import NotificationHandler from '@/classes/notificationHandler'
 import OracleHandler from '@/classes/oracleHandler'
 import RnsHandler from '@/classes/rnsHandler'
 import StorageHandler from '@/classes/storageHandler'
@@ -18,6 +19,7 @@ import {
   IFileIo,
   IFolderHandler,
   IGovHandler,
+  INotificationHandler,
   IStorageHandler,
   IOracleHandler,
   IRnsHandler,
@@ -53,6 +55,8 @@ export {
   IFolderHandler,
   GovHandler,
   IGovHandler,
+  NotificationHandler,
+  INotificationHandler,
   OracleHandler,
   IOracleHandler,
   RnsHandler,

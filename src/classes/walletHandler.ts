@@ -118,7 +118,21 @@ export default class WalletHandler implements IWalletHandler {
     return this.keyPair.publicKey.toHex()
   }
   asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string {
-    return encrypt(pubKey, Buffer.from(toEncrypt)).toString('hex')
+    const buf = Buffer.from(toEncrypt)
+    const result = encrypt(pubKey, buf)
+    // console.log('result')
+    // console.log(result)
+    // const result2 = encrypt(pubKey, buf)
+    // console.log('result2')
+    // console.log(result2)
+    // const result3 = encrypt(pubKey, buf)
+    // console.log('result3')
+    // console.log(result3)
+    // const result4 = encrypt(pubKey, buf)
+    // console.log('result4')
+    // console.log(result4)
+
+    return result.toString('hex')
   }
   asymmetricDecrypt (toDecrypt: string): ArrayBuffer {
     return new Uint8Array(decrypt(this.keyPair.toHex(), Buffer.from(toDecrypt, 'hex')))

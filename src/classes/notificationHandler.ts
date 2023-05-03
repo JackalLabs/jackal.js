@@ -13,7 +13,7 @@ import { NotiCounter } from 'jackal.js-protos/dist/postgen/canine_chain/notifica
 import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
 import { IReadableNoti } from '@/interfaces'
 
-export default class OracleHandler implements INotificationHandler {
+export default class NotificationHandler implements INotificationHandler {
   private readonly walletRef: IWalletHandler
   private readonly pH: IProtoHandler
 
@@ -22,8 +22,8 @@ export default class OracleHandler implements INotificationHandler {
     this.pH = wallet.getProtoHandler()
   }
 
-  static async trackOracle (wallet: IWalletHandler): Promise<INotificationHandler> {
-    return new OracleHandler(wallet)
+  static async trackNotification (wallet: IWalletHandler): Promise<INotificationHandler> {
+    return new NotificationHandler(wallet)
   }
 
   makeNotification (notification: string, address: string): EncodeObject {
@@ -75,7 +75,7 @@ export default class OracleHandler implements INotificationHandler {
         return acc
       }, [])
   }
-  async getSingleAddressNotifications (forAddress: string): Promise<QueryAllNotificationsByAddressResponse> {
+  async getSingleAddressNotifications (forAddress: string): Promise<Notifications[]> {
     return (await handlePagination(
       this.pH.notificationsQuery,
       'queryNotificationsByAddress',
@@ -123,12 +123,14 @@ export default class OracleHandler implements INotificationHandler {
 
   /** Read Encrypted Notifications */
   async readMyShareNoti (index: number): Promise<IReadableNoti> {
-    const { notifications } = await this.getNotification (this.walletRef.getJackalAddress(), index)
+    const { notifications } = await this.getNotification(this.walletRef.getJackalAddress(), index)
     return processNotiRead(notifications as Notifications, this.walletRef)
   }
   async readAllMyShareNotis (): Promise<IReadableNoti[]> {
     const data = await this.getSingleAddressNotifications(this.walletRef.getJackalAddress())
-    return data.notifications.map((noti: Notifications) => processNotiRead(noti, this.walletRef))
+    console.log('readAllMyShareNotis()')
+    console.log(data)
+    return data.map((noti: Notifications) => processNotiRead(noti, this.walletRef))
   }
 
   /** Private Methods */

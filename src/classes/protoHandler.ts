@@ -26,7 +26,11 @@ export default class ProtoHandler implements IProtoHandler {
 
   /** General */
   broadcaster (msgs: EncodeObject[], memo = ''): Promise<DeliverTxResponse> {
-    return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo })
+    // return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo })
+    return this.masterBroadcaster(msgs, { fee: {
+        amount: [],
+        gas: '2500000'
+      }, memo })
       .catch(err => {
         throw err
       })

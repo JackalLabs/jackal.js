@@ -3,6 +3,7 @@ import { hashAndHex } from '@/utils/hash'
 import { compressData, decompressData } from '@/utils/compression'
 import { IWalletHandler } from '@/interfaces/classes'
 import { IAesBundle } from '@/interfaces'
+import { stringToUint16, stringToUint8, uint16ToString, uint8ToString } from '@/utils/misc'
 
 export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
@@ -22,12 +23,16 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
     name: 'AES-GCM',
     iv
   }
+  console.log('crypt data')
+  console.log(data)
   const workingData = await data.arrayBuffer()
+  console.log(workingData)
   if (workingData.byteLength < 1) {
     return new Blob([])
   } else if (mode?.toLowerCase() === 'encrypt') {
     return await crypto.subtle.encrypt(algo, key, workingData)
       .then(res => {
+        console.log(res)
         return new Blob([res])
       })
       .catch(err => {
@@ -37,6 +42,7 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
   } else {
     return await crypto.subtle.decrypt(algo, key, workingData)
       .then(res => {
+        console.log(res)
         return new Blob([res])
       })
       .catch(err => {
@@ -45,10 +51,55 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
       })
   }
 }
+export async function aesCrypt2 (data: Uint16Array, key: CryptoKey, iv: Uint8Array, mode: 'encrypt' | 'decrypt'): Promise<Uint16Array> {
+  const algo = {
+    name: 'AES-GCM',
+    iv
+  }
+  console.log('crypt data')
+  console.log(data)
+  // const workingData = await data.arrayBuffer()
+  // console.log(workingData)
+  if (data.byteLength < 1) {
+    return new Uint16Array(0)
+  } else if (mode?.toLowerCase() === 'encrypt') {
+    return await crypto.subtle.encrypt(algo, key, data)
+      .then(res => {
+        console.log(res)
+        // const b = new Blob([res])
+        // console.log(b)
+        return new Uint16Array(res)
+      })
+      .catch(err => {
+        console.error(`aesCrypt(encrypt) - ${err}`)
+        throw err
+      })
+  } else {
+    return await crypto.subtle.decrypt(algo, key, data)
+      .then(res => {
+        console.log(res)
+        return new Uint16Array(res)
+      })
+      .catch(err => {
+        console.error(`aesCrypt(decrypt) - ${err}`)
+        throw err
+      })
+  }
+}
 export async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
-  console.log(pubKey)
+  console.log('iv')
+  console.log(aes.iv)
   const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
-  const theKey = wallet.asymmetricEncrypt(await exportJackalKey(aes.key), pubKey)
+  console.log('theIvD')
+  const theIvD = wallet.asymmetricDecrypt(theIv)
+  console.log(theIvD)
+  const key = await exportJackalKey(aes.key)
+  console.log('key')
+  console.log(key)
+  const theKey = wallet.asymmetricEncrypt(key, pubKey)
+  const theKeyD = wallet.asymmetricDecrypt(theKey)
+  console.log('theKeyD')
+  console.log(theKeyD)
   return `${theIv}|${theKey}`
 }
 export async function stringToAes (wallet: IWalletHandler, source: string): Promise<IAesBundle> {
@@ -114,18 +165,14 @@ export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv
 
 export async function compressEncryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
   const compString = compressData(input)
-  const cryptBlob = await aesCrypt(new Blob([compString]), key, iv, 'encrypt')
-  return await cryptBlob.text()
+  return await cryptString(compString, key, iv, 'encrypt')
 }
 export async function decryptDecompressString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
-  console.log('decryptDecompressString()')
-  console.log(input)
-  const decryptBlob = await aesCrypt(new Blob([input]), key, iv, 'decrypt')
-  return decompressData(await decryptBlob.text())
+  const workStr = await cryptString(input, key, iv, 'decrypt')
+  return decompressData(workStr)
 }
-export async function encryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
-  return await (await aesCrypt(new Blob([input]), key, iv, 'encrypt')).text()
-}
-export async function decryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
-  return await (await aesCrypt(new Blob([input]), key, iv, 'decrypt')).text()
+export async function cryptString (input: string, key: CryptoKey, iv: Uint8Array, mode: 'encrypt' | 'decrypt'): Promise<string> {
+  const uint16 = stringToUint16(input)
+  const result = await aesCrypt(new Blob([uint16]), key, iv, mode)
+  return uint16ToString(new Uint16Array(await result.arrayBuffer()))
 }

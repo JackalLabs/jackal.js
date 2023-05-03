@@ -75,3 +75,26 @@ export async function handlePagination (handler: any, queryTag: string, addition
 export async function setDelay (amt: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, Number(amt)))
 }
+
+export function uint8ToString (buf: Uint8Array): string {
+  return String.fromCharCode.apply(null, [...buf])
+}
+
+export function stringToUint8 (str: string): Uint8Array {
+  const uintView = new Uint8Array(str.length)
+  for (let i = 0; i < str.length; i++) {
+    uintView[i] = str.charCodeAt(i)
+  }
+  return uintView
+}
+export function uint16ToString (buf: Uint16Array): string {
+  return String.fromCharCode.apply(null, [...buf])
+}
+
+export function stringToUint16 (str: string): Uint16Array {
+  const uintView = new Uint16Array(str.length)
+  for (let i = 0; i < str.length; i++) {
+    uintView[i] = str.charCodeAt(i)
+  }
+  return uintView
+}

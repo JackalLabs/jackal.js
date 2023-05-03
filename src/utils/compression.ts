@@ -1,7 +1,12 @@
 import PLZSU from '@karnthis/plzsu'
 import { IEditorsViewers, IMsgPartialPostFileBundle, IPermsParts } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { aesToString, compressEncryptString, decryptDecompressString, genIv, genKey, stringToAes } from '@/utils/crypt'
+import {
+  aesToString, cryptString,
+  genIv,
+  genKey,
+  stringToAes
+} from '@/utils/crypt'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
@@ -13,6 +18,8 @@ export function compressData (input: string): string {
 }
 export function decompressData (input: string): string {
   if (!input.startsWith('jklpc1')) throw new Error('Invalid Decompression String')
+  console.log('decompressData()')
+  console.log(input)
   return Plzsu.decompress(input.substring(6))
 }
 
@@ -29,10 +36,11 @@ export async function saveCompressedFileTree (
   }
   const creator = walletRef.getJackalAddress()
   const account = await hashAndHex(creator)
+  console.log(`${rawTarget} : `, JSON.stringify(rawContents))
   const msg: IMsgPartialPostFileBundle = {
     account,
     creator,
-    contents: await compressEncryptString(JSON.stringify(rawContents), aes.key, aes.iv),
+    contents: await cryptString(JSON.stringify(rawContents), aes.key, aes.iv, 'encrypt'),
     hashParent: await merkleMeBro(rawPath),
     hashChild: await hashAndHex(rawTarget),
     trackingNumber: self.crypto.randomUUID(),
@@ -49,21 +57,25 @@ export async function saveCompressedFileTree (
     pubKey: selfPubKey,
     usr: creator
   }
+  console.log(basePerms.aes)
+  console.log('start')
   msg.editors = JSON.stringify(await makePermsBlock({ base: 'e', ...me }, walletRef))
   if (toAddress === creator) {
     msg.viewers = JSON.stringify(await makePermsBlock({ base: 'v', ...me }, walletRef))
   } else {
-    const destPubKey = await walletRef.findPubKey(toAddress)
-    const them = {
-      ...basePerms,
-      pubKey: destPubKey,
-      usr: toAddress
-    }
-    msg.viewers = JSON.stringify({
-      ...await makePermsBlock({ base: 'v', ...me }, walletRef),
-      ...await makePermsBlock({ base: 'v', ...them }, walletRef)
-    })
+    console.log('bad')
+    // const destPubKey = await walletRef.findPubKey(toAddress)
+    // const them = {
+    //   ...basePerms,
+    //   pubKey: destPubKey,
+    //   usr: toAddress
+    // }
+    // msg.viewers = JSON.stringify({
+    //   ...await makePermsBlock({ base: 'v', ...me }, walletRef),
+    //   ...await makePermsBlock({ base: 'v', ...them }, walletRef)
+    // })
   }
+  console.log('end')
   return buildPostFile(msg, walletRef.getProtoHandler())
 }
 export async function readCompressedFileTree (
@@ -79,14 +91,22 @@ export async function readCompressedFileTree (
     throw new Error('Share Data Not Found')
   } else {
     try {
-      const { contents, viewingAccess, trackingNumber } = result.value.files as Files
+      const { contents, editAccess, viewingAccess, trackingNumber } = result.value.files as Files
+      console.log('For... ', rawPath)
+      const parsedEA = JSON.parse(editAccess)
+      console.log('parsedEA')
+      console.log(parsedEA)
+      const editName = await hashAndHex(`e${trackingNumber}${walletRef.getJackalAddress()}`)
+      console.log(parsedEA[editName])
       const parsedVA = JSON.parse(viewingAccess)
       console.log('parsedVA')
       console.log(parsedVA)
       const viewName = await hashAndHex(`v${trackingNumber}${walletRef.getJackalAddress()}`)
       console.log(parsedVA[viewName])
-      const keys = await stringToAes(walletRef, parsedVA[viewName])
-      const final = await decryptDecompressString(contents, keys.key, keys.iv)
+      const keys = await stringToAes(walletRef, parsedEA[editName])
+      // const keys = await stringToAes(walletRef, parsedVA[viewName])
+      console.log(keys)
+      const final = await cryptString(contents, keys.key, keys.iv, 'decrypt')
       console.log(final)
       return JSON.parse(final)
     } catch (err: any) {
@@ -108,6 +128,7 @@ export async function removeCompressedFileTree (
 
 /** Helpers */
 export async function makePermsBlock (parts: IPermsParts, walletRef: IWalletHandler): Promise<IEditorsViewers> {
+  console.log(parts.aes)
   const perms: IEditorsViewers = {}
   const user = await hashAndHex(`${parts.base}${parts.num}${parts.usr}`)
   const value = await aesToString(
@@ -115,6 +136,8 @@ export async function makePermsBlock (parts: IPermsParts, walletRef: IWalletHand
     parts.pubKey,
     parts.aes
   )
+  console.log(parts.aes)
+  console.log(`${user} = ${value}`)
   perms[user] = value
   return perms
 }

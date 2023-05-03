@@ -3,7 +3,7 @@ import { IGasHashMap, IGasRate } from '@/interfaces'
 
 const hashMap: IGasHashMap = {
   /** Filetree */
-  '/canine_chain.filetree.MsgPostFile': 70,
+  '/canine_chain.filetree.MsgPostFile': 75,
   '/canine_chain.filetree.MsgAddViewers': 142,
   '/canine_chain.filetree.MsgPostkey': 12,
   '/canine_chain.filetree.MsgDeleteFile': 9,
