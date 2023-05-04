@@ -2,7 +2,7 @@ import { IProtoHandler } from '@/interfaces/classes'
 
 import ProtoBuilder, { IAllQuery, IAllTx, TMasterBroadcaster } from 'jackal.js-protos'
 import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
-import { finalizeGas } from '@/utils/gas'
+import { estimateGas, finalizeGas } from '@/utils/gas'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default class ProtoHandler implements IProtoHandler {
@@ -25,24 +25,20 @@ export default class ProtoHandler implements IProtoHandler {
   }
 
   /** General */
-  broadcaster (msgs: EncodeObject[], memo = ''): Promise<DeliverTxResponse> {
-    // return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs), memo })
-    return this.masterBroadcaster(msgs, { fee: {
-        amount: [],
-        gas: '2500000'
-      }, memo })
+  async broadcaster (msgs: EncodeObject[], memo: string = '', gasOverride?: number | string): Promise<DeliverTxResponse> {
+    return this.masterBroadcaster(msgs, { fee: finalizeGas(msgs, gasOverride), memo })
       .catch(err => {
         throw err
       })
   }
   async debugBroadcaster (
     msgs: EncodeObject[],
-    extra: { memo?: string, step?: boolean } = { memo: '', step: false }
+    extra: { gas?: number | string, memo?: string, step?: boolean } = { memo: '', step: false }
   ): Promise<DeliverTxResponse | null> {
     if (extra.step) {
       for (let i = 0; i < msgs.length; i++) {
         console.log(msgs[i].typeUrl)
-        const resp = await this.broadcaster([msgs[i]], extra.memo)
+        const resp = await this.broadcaster([msgs[i]], extra.memo, extra.gas)
           .catch(err => {
             throw err
           })
@@ -50,7 +46,7 @@ export default class ProtoHandler implements IProtoHandler {
       }
       return null
     } else {
-      const resp = await this.broadcaster(msgs, extra.memo)
+      const resp = await this.broadcaster(msgs, extra.memo, extra.gas)
         .catch(err => {
           throw err
         })
