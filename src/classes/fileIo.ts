@@ -113,7 +113,7 @@ export default class FileIo implements IFileIo {
       }
     }
     if (toCreate.length) {
-      console.dir(toCreate)
+      console.log('Creating: ', toCreate)
       await this.generateInitialDirs(null, toCreate)
     }
     return toCreate.length
@@ -343,9 +343,6 @@ export default class FileIo implements IFileIo {
       .catch(err => {
         console.error(err)
       })
-    const result = await readCompressedFileTree(this.walletRef.getJackalAddress(), 's/Home', this.walletRef)
-    console.log('s')
-    console.log(result)
   }
   async rawGenerateInitialDirs (
     initMsg: EncodeObject | null,
@@ -353,22 +350,15 @@ export default class FileIo implements IFileIo {
   ): Promise<EncodeObject[]> {
     const toGenerate = startingDirs || ['Config', 'Home', 'WWW']
     const creator = this.walletRef.getJackalAddress()
-    const dirMsgs: EncodeObject[][] = await Promise.all(
+    const dirMsgs: EncodeObject[] = await Promise.all(
       toGenerate.map(async (pathName: string) => {
-        try {
-          const tmp = await this.rawConvertFolderType(`s/${stripper(pathName)}`)
-          console.dir(tmp)
-          return tmp
-        } catch (err) {
-          console.error(err)
-          const folderDetails: IChildDirInfo = {
-            myName: stripper(pathName),
-            myParent: 's',
-            myOwner: creator
-          }
-          const handler = await FolderHandler.trackNewFolder(folderDetails)
-          return [await handler.getForFiletree(this.walletRef)]
+        const folderDetails: IChildDirInfo = {
+          myName: stripper(pathName),
+          myParent: 's',
+          myOwner: creator
         }
+        const handler = await FolderHandler.trackNewFolder(folderDetails)
+        return await handler.getForFiletree(this.walletRef)
       })
     )
     const readyToBroadcast: EncodeObject[] = []
@@ -377,7 +367,7 @@ export default class FileIo implements IFileIo {
     }
     readyToBroadcast.push(
       await this.createRoot(),
-      ...dirMsgs.flat()
+      ...dirMsgs
     )
     return readyToBroadcast
   }
@@ -415,11 +405,11 @@ export default class FileIo implements IFileIo {
   async checkFolderIsFileTree (rawPath: string): Promise<boolean> {
     const owner = this.walletRef.getJackalAddress()
     try {
-      // intentionally ignored
+      // return value intentionally ignored
       const data = await readCompressedFileTree(owner, rawPath, this.walletRef)
       return true
     } catch (err) {
-      console.log(err)
+      console.warn('checkFolderIsFileTree()', err)
       return false
     }
   }
