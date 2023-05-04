@@ -4,6 +4,7 @@ import { IFolderHandler, IWalletHandler } from '@/interfaces/classes'
 import { stripper } from '@/utils/misc'
 import { merkleMeBro } from '@/utils/hash'
 import { saveCompressedFileTree } from '@/utils/compression'
+import { convertFromEncryptedFile } from '@/utils/crypt'
 
 export default class FolderHandler implements IFolderHandler {
   private readonly folderDetails: IFolderFrame
@@ -14,8 +15,12 @@ export default class FolderHandler implements IFolderHandler {
     this.isFolder = true
   }
 
-  static async trackFolder (dirInfo:  IFolderFrame): Promise<IFolderHandler> {
+  static async trackFolder (dirInfo: IFolderFrame): Promise<IFolderHandler> {
     return new FolderHandler(dirInfo)
+  }
+  static async trackLegacyFolder (data: Blob, key: CryptoKey, iv: Uint8Array): Promise<IFolderHandler> {
+    const folderDetails = JSON.parse(await (await convertFromEncryptedFile(data, key, iv)).text())
+    return new FolderHandler(folderDetails)
   }
   static async trackNewFolder (dirInfo: IChildDirInfo): Promise<IFolderHandler> {
     const folderDetails: IFolderFrame = {
@@ -36,6 +41,9 @@ export default class FolderHandler implements IFolderHandler {
   }
   getWhoOwnsMe (): string {
     return this.folderDetails.whoOwnsMe
+  }
+  getMyPath (): string {
+    return `${this.getWhereAmI()}/${this.getWhoAmI()}}`
   }
   getFolderDetails (): IFolderFrame {
     return this.folderDetails
@@ -59,34 +67,41 @@ export default class FolderHandler implements IFolderHandler {
     return await merkleMeBro(`${this.getWhereAmI()}/${this.getWhoAmI()}/${child}`)
   }
 
-  async addChildDirs (childNames: string[], walletRef: IWalletHandler): Promise<EncodeObject[]> {
+  async addChildDirs (
+    childNames: string[],
+    walletRef: IWalletHandler
+  ): Promise<{ encoded: EncodeObject[], existing: string[] }> {
+    const existing = childNames.filter(name => this.folderDetails.dirChildren.includes(name))
+    const more = childNames.filter(name => !this.folderDetails.dirChildren.includes(name))
     const handlers: IFolderHandler[] = await Promise.all(
-      childNames
+      more
         .map(async (name) => await FolderHandler.trackNewFolder(this.makeChildDirInfo(name)))
     )
     const encoded: EncodeObject[] = await Promise.all(
       handlers
         .map(async (handler: IFolderHandler) => await handler.getForFiletree(walletRef))
     )
-    this.folderDetails.dirChildren = [...new Set([...this.folderDetails.dirChildren, ...childNames])]
-    encoded.push(await this.getForFiletree(walletRef))
-    return encoded
+    if (more.length > 0) {
+      this.folderDetails.dirChildren = [...new Set([...this.folderDetails.dirChildren, ...more])]
+      encoded.push(await this.getForFiletree(walletRef))
+    }
+    return { encoded: encoded || [], existing }
   }
-  async addChildFiles (newFiles: IFileMetaHashMap, walletRef: IWalletHandler): Promise<EncodeObject> {
+  async addChildFileReferences (newFiles: IFileMetaHashMap, walletRef: IWalletHandler): Promise<EncodeObject> {
     this.folderDetails.fileChildren = {...this.folderDetails.fileChildren, ...newFiles}
     return await this.getForFiletree(walletRef)
   }
-  async removeChildDirs (toRemove: string[], walletRef: IWalletHandler): Promise<EncodeObject> {
+  async removeChildDirReferences (toRemove: string[], walletRef: IWalletHandler): Promise<EncodeObject> {
     this.folderDetails.dirChildren = this.folderDetails.dirChildren.filter((saved: string) => !toRemove.includes(saved))
     return await this.getForFiletree(walletRef)
   }
-  async removeChildFiles (toRemove: string[], walletRef: IWalletHandler): Promise<EncodeObject> {
+  async removeChildFileReferences (toRemove: string[], walletRef: IWalletHandler): Promise<EncodeObject> {
     for (let i = 0; i < toRemove.length; i++) {
       delete this.folderDetails.fileChildren[toRemove[i]]
     }
     return await this.getForFiletree(walletRef)
   }
-  async removeChildDirsAndFiles (dirs: string[], files: string[], walletRef: IWalletHandler): Promise<EncodeObject> {
+  async removeChildDirAndFileReferences (dirs: string[], files: string[], walletRef: IWalletHandler): Promise<EncodeObject> {
     this.folderDetails.dirChildren = this.folderDetails.dirChildren.filter((saved: string) => !dirs.includes(saved))
     for (let i = 0; i < files.length; i++) {
       delete this.folderDetails.fileChildren[files[i]]
