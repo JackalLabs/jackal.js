@@ -1,10 +1,10 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-// import { randomUUID, random } from 'make-random'
-import { IQueryFileTree, IQueryStorage } from 'jackal.js-protos'
+import { random } from 'make-random'
+import { IQueryFileTree } from 'jackal.js-protos'
 
 import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import { aesToString, convertFromEncryptedFile, genIv, genKey, stringToAes } from '@/utils/crypt'
-import { bruteForceString, setDelay, stripper } from '@/utils/misc'
+import { bruteForceString, handlePagination, setDelay, stripper } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
 import {
@@ -27,7 +27,7 @@ import {
   IMiner,
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
-  IProviderResponse,
+  IProviderResponse, IProviderVersionResponse,
   IQueueItemPostUpload,
   IStaggeredTracker,
   IUploadList,
@@ -52,23 +52,26 @@ export default class FileIo implements IFileIo {
     this.currentProvider = currentProvider
   }
 
-  static async trackIo (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<FileIo> {
-    const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery), versionFilter)
+  static async trackIo (wallet: IWalletHandler, chainId: string, versionFilter?: string | string[]): Promise<FileIo> {
+    const providers = await verifyProviders(await getProviders(wallet.getProtoHandler()), wallet.chainId, versionFilter)
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
-  static async checkProviders (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<IProviderChecks> {
-    const raw = await fetchProviders(wallet.getProtoHandler().storageQuery)
+  static async checkProviders (wallet: IWalletHandler, chainId: string, versionFilter?: string | string[]): Promise<IProviderChecks> {
+    const raw = await fetchProviders(wallet.getProtoHandler())
     const filtered = await filterProviders(raw)
     return {
       filtered,
       raw,
-      verified: (versionFilter) ? await verifyProviders(filtered, versionFilter) : filtered
+      verified: (versionFilter) ? await verifyProviders(filtered, wallet.chainId, versionFilter) : filtered
     }
   }
 
   getCurrentProvider (): IMiner {
     return this.currentProvider
+  }
+  getAvailableProviders (): IMiner[] {
+    return this.availableProviders
   }
   forceProvider (toSet: IMiner): void {
     this.currentProvider = toSet
@@ -81,7 +84,7 @@ export default class FileIo implements IFileIo {
     this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
   }
   async refresh (): Promise<void> {
-    this.availableProviders = await verifyProviders(await getProviders(this.pH.storageQuery))
+    this.availableProviders = await verifyProviders(await getProviders(this.pH), this.walletRef.chainId)
     this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
   }
 
@@ -92,7 +95,11 @@ export default class FileIo implements IFileIo {
     await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
   async rawCreateFolders (parentDir: IFolderHandler, newDirs: string[]): Promise<EncodeObject[]> {
-    return parentDir.addChildDirs(newDirs, this.walletRef)
+    const result = await parentDir.addChildDirs(newDirs, this.walletRef)
+    if (result.existing.length > 0) {
+      console.log('The following duplicate folder names were ignored: ', result.existing)
+    }
+    return result.encoded
   }
   async verifyFoldersExist (toCheck: string[]): Promise<number> {
     const toCreate = []
@@ -153,7 +160,7 @@ export default class FileIo implements IFileIo {
           return acc
         }, {} as IFileMetaHashMap)
         const readyToBroadcast = await this.rawAfterUpload(processValues)
-        readyToBroadcast.push(await parent.addChildFiles(fileNames, this.walletRef))
+        readyToBroadcast.push(await parent.addChildFileReferences(fileNames, this.walletRef))
         const memo = `Processing batch of ${processValues.length} uploads`
         // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
         await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
@@ -292,7 +299,7 @@ export default class FileIo implements IFileIo {
     const existingDirs = parent.getChildDirs()
     const dirs = targets.filter(target => existingDirs.includes(target))
     const files = targets.filter(target => !existingDirs.includes(target))
-    readyToBroadcast.push(await parent.removeChildDirsAndFiles(dirs, files, this.walletRef))
+    readyToBroadcast.push(await parent.removeChildDirAndFileReferences(dirs, files, this.walletRef))
     const memo = ``
     // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
     await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
@@ -518,17 +525,23 @@ async function doUpload (url: string, sender: string, file: File): Promise<IProv
     })
 }
 
-async function getProviders (queryClient: IQueryStorage, max?: number): Promise<IMiner[]> {
-  const rawProviderList = await fetchProviders(queryClient)
+async function getProviders (pH: IProtoHandler, max?: number): Promise<IMiner[]> {
+  const rawProviderList = await fetchProviders(pH)
   console.info('Raw Providers')
   console.dir(rawProviderList)
   return filterProviders(rawProviderList, max)
 }
-async function fetchProviders (queryClient: IQueryStorage): Promise<IMiner[]> {
-  const rawProviderReturn = await queryClient.queryProvidersAll({})
-  if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
-  return rawProviderReturn.value.providers as IMiner[]
-}
+async function fetchProviders (pH: IProtoHandler): Promise<IMiner[]> {
+  return (await handlePagination(
+    pH.storageQuery,
+    'queryProvidersAll',
+    {}
+  ))
+    .reduce((acc: IMiner[], curr: any) => {
+      acc.push(...curr.providers)
+      return acc
+    }, [])
+ }
 async function filterProviders (rawProviderList: IMiner[], max?: number) {
   const disallowList = [
     /example/,
@@ -546,9 +559,9 @@ async function filterProviders (rawProviderList: IMiner[], max?: number) {
       return one.startsWith('https') && !disallowList.some(rx => rx.test(one))
     }
   })
-  return filteredProviders.slice(0, Number(max) || 100)
+  return filteredProviders.slice(0, Number(max) || 1000)
 }
-async function verifyProviders (providers: IMiner[], versionFilter?: string | string[]): Promise<IMiner[]> {
+async function verifyProviders (providers: IMiner[], chainId: string, versionFilter?: string | string[]): Promise<IMiner[]> {
   const versionArray: string[] = []
   if (versionFilter) {
     console.log(`Checking for provider version(s) : ${versionFilter}`);
@@ -558,7 +571,7 @@ async function verifyProviders (providers: IMiner[], versionFilter?: string | st
     .map(s => {
       return s.split('.').slice(0, 2).join('.')
     })
-  const regEx = new RegExp(`(${preRegExArray.join('|')})\\..+$`)
+  const verRegEx = new RegExp(`(${preRegExArray.join('|')})\\..+$`)
   const staged: boolean[] = await Promise.all(
     providers.map(async (provider) => {
       const result: boolean = await fetch(
@@ -567,14 +580,19 @@ async function verifyProviders (providers: IMiner[], versionFilter?: string | st
           signal: AbortSignal.timeout(1500)
         })
         .then(async (res): Promise<boolean> => {
-          if (res.ok && versionFilter) {
-            const verResp = (await res.json()).version as string
-            return regEx.test(verResp)
-          } else {
-            return true
-          }
+          const parsed: IProviderVersionResponse = await res.json()
+          const chainCheck = (chainId === undefined || chainId === parsed['chain-id'])
+          const verCheck = (versionFilter === undefined || verRegEx.test(parsed.version))
+          return res.ok && chainCheck && verCheck
         })
-        .catch(() => false)
+        .catch((err: Error) => {
+          console.warn('verifyProviders() Error')
+          console.error(err)
+          if (err.message.includes('AbortSignal')) {
+            alert('AbortSignal.timeout() error! Chromium family version 103+ required!')
+          }
+          return false
+        })
       return result
   }))
   const verified = providers.filter((provider, index) => staged[index])
@@ -630,9 +648,9 @@ async function matchOwnerToCid (pH: IProtoHandler, cid: string, owner: string): 
      return false
    }
 }
-async function random (max: number) {
-   return Math.floor(Math.random() * max)
-}
+// async function random (max: number) {
+//    return Math.floor(Math.random() * max)
+// }
 async function statusCheck (target: number, tracker: IStaggeredTracker): Promise<void> {
   await new Promise<void>(async (resolve) => {
     for (tracker.timer = 120; tracker.timer > 0; tracker.timer--) {
