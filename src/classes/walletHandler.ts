@@ -23,10 +23,12 @@ export default class WalletHandler implements IWalletHandler {
   private fileTreeInitComplete: boolean
   private readonly jackalAccount: AccountData
   private readonly pH: IProtoHandler
+  readonly chainId: string
   readonly isDirect: boolean
 
-  private constructor (signer: OfflineSigner, keyPair: PrivateKey, rnsInitComplete: boolean, fileTreeInitComplete: boolean, acct: AccountData, pH: IProtoHandler) {
+  private constructor (signer: OfflineSigner, chainId: string, keyPair: PrivateKey, rnsInitComplete: boolean, fileTreeInitComplete: boolean, acct: AccountData, pH: IProtoHandler) {
     this.signer = signer
+    this.chainId = chainId
     this.keyPair = keyPair
     this.rnsInitComplete = rnsInitComplete
     this.fileTreeInitComplete = fileTreeInitComplete
@@ -45,26 +47,27 @@ export default class WalletHandler implements IWalletHandler {
 
       const qAddr = queryAddr || defaultQueryAddr9091
       const tAddr = txAddr || defaultTxAddr26657
+      const workingChain = signerChain || jackalMainnetChainId
 
       await window.keplr.enable(enabledChains || defaultChains)
         .catch(err => {
           throw err
         })
-      const signer = await window.keplr.getOfflineSignerAuto(signerChain || jackalMainnetChainId)
+      const signer = await window.keplr.getOfflineSignerAuto(workingChain)
       const acct = (await signer.getAccounts())[0]
 
       const pH = await ProtoHandler.trackProto(signer, tAddr, qAddr)
 
       const rnsInitComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).value.init
       const { value: { pubkey }, success} = (await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
-      const secret = await makeSecret(signerChain || jackalMainnetChainId, acct.address)
+      const secret = await makeSecret(workingChain, acct.address)
         .catch(err => {
           throw err
         })
       const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
-      return new WalletHandler(signer, keyPair, rnsInitComplete, (success && !!pubkey?.key), acct, pH)
+      return new WalletHandler(signer, workingChain, keyPair, rnsInitComplete, (success && !!pubkey?.key), acct, pH)
     }
   }
   static async getAbitraryMerkle (path: string, item: string): Promise<string> {

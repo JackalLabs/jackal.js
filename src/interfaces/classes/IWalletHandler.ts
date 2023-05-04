@@ -5,7 +5,8 @@ import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
 import { QueryPubkeyResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
 
 export default interface IWalletHandler {
-
+  readonly chainId: string
+  readonly isDirect: boolean
 
   getRnsInitStatus (): boolean
   setRnsInitStatus (status: boolean): void
