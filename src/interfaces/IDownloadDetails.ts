@@ -1,5 +1,5 @@
 export default interface IDownloadDetails {
-  hexAddress: string,
+  rawPath: string,
   owner: string,
   isFolder: boolean
 }

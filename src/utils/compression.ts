@@ -10,6 +10,7 @@ import {
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
+import { getFileTreeData } from '@/utils/misc'
 
 const Plzsu = new PLZSU()
 
@@ -83,9 +84,7 @@ export async function readCompressedFileTree (
   rawPath: string,
   walletRef: IWalletHandler
 ): Promise<{ [key: string]: any }> {
-  const hexAddress = await merkleMeBro(rawPath)
-  const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
-  const result = await walletRef.getProtoHandler().fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: hexedOwner })
+  const result = await getFileTreeData(rawPath, owner, walletRef.getProtoHandler())
   console.log(result)
   if (!result.success) {
     throw new Error('Share Data Not Found')

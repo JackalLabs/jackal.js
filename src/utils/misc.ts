@@ -1,4 +1,8 @@
 import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
+import { IProtoHandler } from '@/interfaces/classes'
+import { QueryFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
+import { hashAndHex, merkleMeBro } from '@/utils/hash'
+import SuccessNoUndefined from 'jackal.js-protos/dist/types/TSuccessNoUndefined'
 
 export function deprecated (thing: string, version: string, opts?: { aggressive?: boolean, replacement?: string }) {
   let notice = `${thing} is deprecated as of: ${version}`
@@ -97,4 +101,14 @@ export function stringToUint16 (str: string): Uint16Array {
     uintView[i] = str.charCodeAt(i)
   }
   return uintView
+}
+
+export async function getFileTreeData (
+  rawPath: string,
+  owner: string,
+  pH: IProtoHandler
+): Promise<SuccessNoUndefined<QueryFileResponse>> {
+  const hexAddress = await merkleMeBro(rawPath)
+  const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
+  return await pH.fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: hexedOwner })
 }
