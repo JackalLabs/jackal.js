@@ -9,6 +9,7 @@ export default interface IFolderHandler {
   getWhereAmI (): string
   getWhoOwnsMe (): string
   getMyPath (): string
+  getMyChildPath (child: string): string
   getFolderDetails (): IFolderFrame
   getChildDirs (): string[]
   getChildFiles (): { [name: string]: IFileMeta }

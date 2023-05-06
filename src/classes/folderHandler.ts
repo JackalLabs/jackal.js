@@ -45,6 +45,9 @@ export default class FolderHandler implements IFolderHandler {
   getMyPath (): string {
     return `${this.getWhereAmI()}/${this.getWhoAmI()}}`
   }
+  getMyChildPath (child: string): string {
+    return `${this.getMyPath()}/${child}}`
+  }
   getFolderDetails (): IFolderFrame {
     return this.folderDetails
   }
