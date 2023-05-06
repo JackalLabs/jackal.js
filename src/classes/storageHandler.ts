@@ -1,7 +1,7 @@
 import { IProtoHandler, IStorageHandler, IWalletHandler } from '@/interfaces/classes'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IPayData, ISharedTracker, IStoragePaymentInfo } from '@/interfaces'
-import { numTo3xTB } from '@/utils/misc'
+import { IPayData, IRnsOwnedHashMap, IRnsOwnedItem, ISharedTracker, IStoragePaymentInfo, IStray } from '@/interfaces'
+import { handlePagination, numTo3xTB } from '@/utils/misc'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 import { readCompressedFileTree, removeCompressedFileTree, saveCompressedFileTree } from '@/utils/compression'
 
@@ -47,6 +47,17 @@ export default class StorageHandler implements IStorageHandler {
     })
   }
 
+  async getAllStrays (): Promise<IStray[]> {
+    return (await handlePagination(
+      this.pH.storageQuery,
+      'queryStraysAll',
+      {}
+    ))
+      .reduce((acc: IStray[], curr: any) => {
+        acc.push(...curr.strays)
+        return acc
+      }, [])
+  }
   async getClientFreeSpace (address: string): Promise<number> {
     return (await this.pH.storageQuery.queryGetClientFreeSpace({ address })).value.bytesfree
   }
