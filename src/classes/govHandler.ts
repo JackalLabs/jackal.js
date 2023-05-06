@@ -57,7 +57,7 @@ export default class GovHandler implements IGovHandler {
       validatorAddress
     })
     return ret.value.rewards.reduce((acc: number, coin: ICoin) => {
-      acc += Number(coin.amount)
+      acc += fixRewardsOffset(coin.amount)
       return acc
     }, 0)
   }
@@ -66,7 +66,7 @@ export default class GovHandler implements IGovHandler {
         delegatorAddr: this.walletRef.getJackalAddress()
       })).value.delegationResponses as IDelegationSummary[]
     return delegations.reduce((acc: number, del: IDelegationSummary) => {
-      acc += Number(del.balance.amount)
+      acc += Math.round(Number(del.balance.amount))
       return acc
     }, 0)
   }
@@ -297,4 +297,9 @@ async function includeStaked (stakedMap: IDelegationSummaryMap, flagged: IStakin
     }
   }
   return final
+}
+function fixRewardsOffset (reward: string | number) {
+  const num = Number(reward) || 0
+  const shifted = num / 10000000000000000 /** 1e+16 */
+  return Math.round(shifted) / 100 /** Total Shift 1e+18 */
 }

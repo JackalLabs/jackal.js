@@ -3,7 +3,7 @@ import {
   IRnsBidHashMap,
   IRnsBidItem, IRnsExpandedForSaleHashMap, IRnsForSaleHashMap,
   IRnsForSaleItem,
-  IRnsOwnedHashMap,
+  IRnsOwnedHashMap, IRnsOwnedItem,
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
@@ -28,5 +28,6 @@ export default interface IRnsHandler {
   findAllForSaleNames (): Promise<IRnsForSaleHashMap>
   findExpandedForSaleNames (): Promise<IRnsExpandedForSaleHashMap>
   findExistingNames (): Promise<IRnsOwnedHashMap>
+  findSingleRns (rns: string): Promise<IRnsOwnedItem>
   findMatchingAddress (rns: string): Promise<string>
 }

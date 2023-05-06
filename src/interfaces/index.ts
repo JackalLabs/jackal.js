@@ -1,3 +1,5 @@
+import IWrappedEncodeObject from '@/interfaces/IWrappedEncodeObject'
+
 export { default as IAesBundle }  from '@/interfaces/IAesBundle'
 export { default as IChildDirInfo }  from '@/interfaces/IChildDirInfo'
 export { default as ICoin }  from '@/interfaces/ICoin'
@@ -29,6 +31,7 @@ export { default as IStorageClientFree }  from '@/interfaces/IStorageClientFree'
 export { default as IStoragePaymentInfo }  from '@/interfaces/IStoragePaymentInfo'
 export { default as IStray }  from '@/interfaces/IStray'
 export { default as IWalletConfig }  from '@/interfaces/IWalletConfig'
+export { default as IWrappedEncodeObject }  from '@/interfaces/IWrappedEncodeObject'
 
 export * from '@/interfaces/file'
 export * from '@/interfaces/gov'
