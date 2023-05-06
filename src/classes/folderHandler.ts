@@ -112,7 +112,7 @@ export default class FolderHandler implements IFolderHandler {
     return await this.getForFiletree(walletRef)
   }
 
-  private makeChildDirInfo (childName: string): IChildDirInfo {
+  makeChildDirInfo (childName: string): IChildDirInfo {
     const myName = stripper(childName)
     const myParent = `${this.folderDetails.whereAmI}/${this.folderDetails.whoAmI}`
     const myOwner = this.folderDetails.whoOwnsMe

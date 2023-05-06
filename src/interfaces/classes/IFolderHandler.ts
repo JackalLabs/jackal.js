@@ -1,4 +1,4 @@
-import { IFileMeta, IFileMetaHashMap, IFolderFrame } from '@/interfaces'
+import { IChildDirInfo, IFileMeta, IFileMetaHashMap, IFolderFrame } from '@/interfaces'
 import { IWalletHandler } from '@/interfaces/classes/index'
 import { EncodeObject } from '@cosmjs/proto-signing'
 
@@ -21,4 +21,6 @@ export default interface IFolderHandler {
   removeChildDirReferences (toRemove: string[], walletRef: IWalletHandler): Promise<EncodeObject>
   removeChildFileReferences (toRemove: string[], walletRef: IWalletHandler): Promise<EncodeObject>
   removeChildDirAndFileReferences (dirs: string[], files: string[], walletRef: IWalletHandler): Promise<EncodeObject>
+
+  makeChildDirInfo (childName: string): IChildDirInfo
 }

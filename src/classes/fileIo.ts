@@ -1,8 +1,8 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { random } from 'make-random'
 
-import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
-import { aesToString, genIv, genKey, stringToAes } from '@/utils/crypt'
+import { hashAndHex, merkleMeBro } from '@/utils/hash'
+import { genIv, genKey, stringToAes } from '@/utils/crypt'
 import { bruteForceString, getFileTreeData, handlePagination, setDelay, stripper } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
@@ -16,11 +16,9 @@ import {
 } from '@/interfaces/classes'
 import {
   IChildDirInfo,
-  IDeleteItem,
   IDownloadDetails,
-  IEditorsViewers,
-  IFileConfigFull,
-  IFileConfigRaw, IFiletreeParsedContents,
+  IFileConfigRaw,
+  IFiletreeParsedContents,
   IFolderFrame,
   IMiner,
   IMsgPartialPostFileBundle,
@@ -55,12 +53,12 @@ export default class FileIo implements IFileIo {
     this.currentProvider = currentProvider
   }
 
-  static async trackIo (wallet: IWalletHandler, chainId: string, versionFilter?: string | string[]): Promise<FileIo> {
+  static async trackIo (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<FileIo> {
     const providers = await verifyProviders(await getProviders(wallet.getProtoHandler()), wallet.chainId, versionFilter)
     const provider = providers[await random(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
-  static async checkProviders (wallet: IWalletHandler, chainId: string, versionFilter?: string | string[]): Promise<IProviderChecks> {
+  static async checkProviders (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<IProviderChecks> {
     const raw = await fetchProviders(wallet.getProtoHandler())
     const filtered = await filterProviders(raw)
     return {

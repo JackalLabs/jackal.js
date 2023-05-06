@@ -6,8 +6,6 @@ import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import { ICoin, IWalletConfig } from '@/interfaces'
 import ProtoHandler from '@/classes/protoHandler'
-import { QueryPubkeyResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
-import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
 import { Pubkey } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/pubkey'
 
 declare global {

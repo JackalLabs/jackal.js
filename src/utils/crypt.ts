@@ -3,7 +3,7 @@ import { hashAndHex } from '@/utils/hash'
 import { compressData, decompressData } from '@/utils/compression'
 import { IWalletHandler } from '@/interfaces/classes'
 import { IAesBundle } from '@/interfaces'
-import { stringToUint16, stringToUint8, uint16ToString, uint8ToString } from '@/utils/misc'
+import { stringToUint16, uint16ToString } from '@/utils/misc'
 
 export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
