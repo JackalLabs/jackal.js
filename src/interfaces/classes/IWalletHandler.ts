@@ -7,6 +7,7 @@ import { QueryPubkeyResponse } from 'jackal.js-protos/dist/postgen/canine_chain/
 export default interface IWalletHandler {
   readonly chainId: string
   readonly isDirect: boolean
+  readonly walletProvider: string
 
   getRnsInitStatus(): boolean
   setRnsInitStatus(status: boolean): void

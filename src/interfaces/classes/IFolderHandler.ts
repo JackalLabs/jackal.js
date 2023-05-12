@@ -42,6 +42,5 @@ export default interface IFolderHandler {
     files: string[],
     walletRef: IWalletHandler
   ): Promise<EncodeObject>
-
   makeChildDirInfo(childName: string): IChildDirInfo
 }

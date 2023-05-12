@@ -124,19 +124,6 @@ export async function getAvgBlockTime(
       return { result: { block: { header: { time: 0 } } } }
     })
   return 0
-  // const blockTime = fetch(`${rpc}/block?height=${info.result.block.header.height - blocks}`)
-  //   .then(res => res.text())
-  //   .catch(err => {
-  //     console.warn('getAvgBlockTime() block/height fetch error:')
-  //     console.error(err)
-  //     return { result: { block: { header: { time: 0 }}}}
-  //   })
-  //
-  // return blockTime.then(data => {
-  //     const old = Date.parse(data.result.block.header.time);
-  //     const now = Date.parse(info.result.block.header.time);
-  //     return Math.round((now-old)/blocks);
-  // });
 }
 
 export function uint8ToString(buf: Uint8Array): string {

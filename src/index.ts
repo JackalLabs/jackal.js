@@ -23,8 +23,8 @@ import {
   IStorageHandler,
   IOracleHandler,
   IRnsHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
+  IWalletHandler,
+} from "@/interfaces/classes";
 
 /** Misc Interfaces */
 import {
@@ -32,17 +32,17 @@ import {
   IPayData,
   IStakingValidator,
   IStoragePaymentInfo,
-  IWalletConfig
-} from '@/interfaces'
+  IWalletConfig,
+} from "@/interfaces";
 
 /** Types */
-import { TFileOrFFile } from '@/types/TFoldersAndFiles'
+import { TFileOrFFile } from "@/types/TFoldersAndFiles";
 
 /** External */
-import { OfflineSigner } from '@cosmjs/proto-signing'
+import { OfflineSigner } from "@cosmjs/proto-signing";
 
 /** Functions */
-export { blockToDate } from '@/utils/misc'
+export { blockToDate } from "@/utils/misc";
 
 /** Exports */
 export {
@@ -77,5 +77,5 @@ export {
   // Types
   TFileOrFFile,
   // External
-  OfflineSigner
-}
+  OfflineSigner,
+};

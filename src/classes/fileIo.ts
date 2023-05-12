@@ -1,8 +1,14 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { random } from 'make-random'
 
-import { hashAndHex, merkleMeBro } from '@/utils/hash'
-import { genIv, genKey, stringToAes } from '@/utils/crypt'
+import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
+import {
+  aesToString,
+  convertFromEncryptedFile,
+  genIv,
+  genKey,
+  stringToAes
+} from '@/utils/crypt'
 import {
   bruteForceString,
   getFileTreeData,
@@ -25,6 +31,8 @@ import {
   IDownloadDetails,
   IFileConfigRaw,
   IFiletreeParsedContents,
+  IFolderAdd,
+  IFolderChildFiles,
   IFolderFrame,
   IMiner,
   IMsgPartialPostFileBundle,
@@ -44,6 +52,7 @@ import {
   makePermsBlock,
   readCompressedFileTree,
   removeCompressedFileTree
+  saveCompressedFileTree
 } from '@/utils/compression'
 import IFileMetaHashMap from '../interfaces/file/IFileMetaHashMap'
 import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
