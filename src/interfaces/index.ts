@@ -1,11 +1,10 @@
-import IWrappedEncodeObject from '@/interfaces/IWrappedEncodeObject'
-
 export { default as IAesBundle }  from '@/interfaces/IAesBundle'
 export { default as IChildDirInfo }  from '@/interfaces/IChildDirInfo'
 export { default as ICoin }  from '@/interfaces/ICoin'
 export { default as IDeleteItem }  from '@/interfaces/IDeleteItem'
 export { default as IDownloadDetails }  from '@/interfaces/IDownloadDetails'
 export { default as IEditorsViewers }  from '@/interfaces/IEditorsViewers'
+export { default as IEnableSecrets }  from '@/interfaces/IEnabledSecrets'
 export { default as IFiletreeParsedContents }  from '@/interfaces/IFiletreeParsedContents'
 export { default as IFolderAdd }  from '@/interfaces/IFolderAdd'
 export { default as IFolderChildFiles }  from '@/interfaces/IFolderChildFiles'

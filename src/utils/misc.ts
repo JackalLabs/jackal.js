@@ -85,7 +85,11 @@ export async function setDelay (amt: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, Number(amt)))
 }
 
-export async function blockToDate (rpcUrl: string, currentBlockHeight: number, targetBlockHeight: number | string) {
+export async function blockToDate (
+  rpcUrl: string,
+  currentBlockHeight: number,
+  targetBlockHeight: number | string
+): Promise<Date> {
   const targetHeight = Number(targetBlockHeight) || 0
   /** Block time in milliseconds */
   const blockTime = await getAvgBlockTime(rpcUrl, 20)
@@ -96,14 +100,32 @@ export async function blockToDate (rpcUrl: string, currentBlockHeight: number, t
 }
 
 export async function getAvgBlockTime (rpc: string, blocks: number): Promise<number> {
-    const info = await fetch(rpc+"/block").then(res => res.json());
-    const blockTime = fetch(rpc+`/block?height=${info.result.block.header.height-blocks}`).then(res => res.json());
-
-    return blockTime.then(data => {
-        const old = Date.parse(data.result.block.header.time);
-        const now = Date.parse(info.result.block.header.time);
-        return Math.round((now-old)/blocks);
-    });
+  console.log(rpc)
+    const info = await fetch(`${rpc}/block`)
+      .then(res => res.text())
+      .then(res => {
+        console.log(res)
+        return res
+      })
+      .catch(err => {
+        console.warn('getAvgBlockTime() block fetch error:')
+        console.error(err)
+        return { result: { block: { header: { time: 0 }}}}
+      })
+  return 0
+    // const blockTime = fetch(`${rpc}/block?height=${info.result.block.header.height - blocks}`)
+    //   .then(res => res.text())
+    //   .catch(err => {
+    //     console.warn('getAvgBlockTime() block/height fetch error:')
+    //     console.error(err)
+    //     return { result: { block: { header: { time: 0 }}}}
+    //   })
+    //
+    // return blockTime.then(data => {
+    //     const old = Date.parse(data.result.block.header.time);
+    //     const now = Date.parse(info.result.block.header.time);
+    //     return Math.round((now-old)/blocks);
+    // });
 }
 
 export function uint8ToString (buf: Uint8Array): string {
