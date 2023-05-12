@@ -27,7 +27,7 @@ export { default as ISharedTracker }  from '@/interfaces/ISharedTracker'
 export { default as IStaggeredTracker }  from '@/interfaces/IStaggeredTracker'
 export { default as IStorageClientFree }  from '@/interfaces/IStorageClientFree'
 export { default as IStoragePaymentInfo }  from '@/interfaces/IStoragePaymentInfo'
-export { default as IStray }  from '@/interfaces/IStray'
+export { default as ISupportedWallets }  from '@/interfaces/ISupportedWallets'
 export { default as IWalletConfig }  from '@/interfaces/IWalletConfig'
 export { default as IWrappedEncodeObject }  from '@/interfaces/IWrappedEncodeObject'
 
