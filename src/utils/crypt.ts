@@ -3,6 +3,7 @@ import { hashAndHex } from '@/utils/hash'
 import { compressData, decompressData } from '@/utils/compression'
 import { IWalletHandler } from '@/interfaces/classes'
 import { IAesBundle } from '@/interfaces'
+import { stringToUint16, uint16ToString } from '@/utils/misc'
 
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
@@ -55,19 +56,23 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
   if (workingData.byteLength < 1) {
     return new Blob([])
   } else if (mode?.toLowerCase() === 'encrypt') {
-    return await crypto.subtle.encrypt(algo, key, workingData)
-      .then(res => {
+    return await crypto.subtle
+      .encrypt(algo, key, workingData)
+      .then((res) => {
         return new Blob([res])
       })
-      .catch(err => {
+      .catch((err) => {
+        console.error(`aesCrypt(encrypt) - ${err}`)
         throw err
       })
   } else {
-    return await crypto.subtle.decrypt(algo, key, workingData)
-      .then(res => {
+    return await crypto.subtle
+      .decrypt(algo, key, workingData)
+      .then((res) => {
         return new Blob([res])
       })
-      .catch(err => {
+      .catch((err) => {
+        console.error(`aesCrypt(decrypt) - ${err}`)
         throw err
       })
   }
@@ -82,7 +87,8 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
  */
 export async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
   const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
-  const theKey = wallet.asymmetricEncrypt(await exportJackalKey(aes.key), pubKey)
+  const key = await exportJackalKey(aes.key)
+  const theKey = wallet.asymmetricEncrypt(key, pubKey)
   return `${theIv}|${theKey}`
 }
 
@@ -96,11 +102,12 @@ export async function stringToAes (wallet: IWalletHandler, source: string): Prom
   if (source.indexOf('|') < 0) {
     throw new Error('stringToAes() : Invalid source string')
   }
-
   const parts = source.split('|')
   return {
     iv: new Uint8Array(wallet.asymmetricDecrypt(parts[0])),
-    key: await importJackalKey(new Uint8Array(wallet.asymmetricDecrypt(parts[1])))
+    key: await importJackalKey(
+      new Uint8Array(wallet.asymmetricDecrypt(parts[1]))
+    )
   }
 }
 
@@ -114,30 +121,26 @@ export async function stringToAes (wallet: IWalletHandler, source: string): Prom
 export async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Uint8Array): Promise<File> {
   const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
   const details = {
-      name: workingFile.name,
-      lastModified: workingFile.lastModified,
-      type: workingFile.type,
-      size: workingFile.size,
-    }
+    name: workingFile.name,
+    lastModified: workingFile.lastModified,
+    type: workingFile.type,
+    size: workingFile.size
+  }
   const detailsBlob = new Blob([JSON.stringify(details)])
-  console.log('detailsBlob.size')
-  console.log(detailsBlob.size)
   const encryptedArray: Blob[] = [
-    new Blob([
-      (detailsBlob.size + 16).toString().padStart(8, '0')
-    ]),
+    new Blob([(detailsBlob.size + 16).toString().padStart(8, '0')]),
     await aesCrypt(detailsBlob, key, iv, 'encrypt')
   ]
   for (let i = 0; i < workingFile.size; i += chunkSize) {
     const blobChunk = workingFile.slice(i, i + chunkSize)
     encryptedArray.push(
-      new Blob([
-        (blobChunk.size + 16).toString().padStart(8, '0')
-      ]),
+      new Blob([(blobChunk.size + 16).toString().padStart(8, '0')]),
       await aesCrypt(blobChunk, key, iv, 'encrypt')
     )
   }
-  const finalName = `${await hashAndHex(details.name + Date.now().toString())}.jkl`
+  const finalName = `${await hashAndHex(
+    details.name + Date.now().toString()
+  )}.jkl`
   return new File(encryptedArray, finalName, { type: 'text/plain' })
 }
 
@@ -151,7 +154,7 @@ export async function convertToEncryptedFile (workingFile: File, key: CryptoKey,
 export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv: Uint8Array): Promise<File> {
   let detailsBlob = new Blob([])
   const blobParts: Blob[] = []
-  for (let i = 0; i < source.size;) {
+  for (let i = 0; i < source.size; ) {
     const offset = i + 8
     const segSize = Number(await source.slice(i, offset).text())
     const last = offset + segSize
@@ -178,8 +181,7 @@ export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv
  */
 export async function compressEncryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
   const compString = compressData(input)
-  const cryptBlob = await aesCrypt(new Blob([compString]), key, iv, 'encrypt')
-  return await cryptBlob.text()
+  return await cryptString(compString, key, iv, 'encrypt')
 }
 
 /**
@@ -203,6 +205,15 @@ export async function decryptDecompressString (input: string, key: CryptoKey, iv
  */
 export async function encryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
   return await (await aesCrypt(new Blob([input]), key, iv, 'encrypt')).text()
+export async function cryptString(
+  input: string,
+  key: CryptoKey,
+  iv: Uint8Array,
+  mode: 'encrypt' | 'decrypt'
+): Promise<string> {
+  const uint16 = stringToUint16(input)
+  const result = await aesCrypt(new Blob([uint16]), key, iv, mode)
+  return uint16ToString(new Uint16Array(await result.arrayBuffer()))
 }
 
 /**

@@ -1,5 +1,9 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IProtoHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
+import {
+  IProtoHandler,
+  IRnsHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import {
   IRnsBidHashMap,
   IRnsBidItem,
@@ -11,7 +15,6 @@ import {
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
-import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
 import { handlePagination } from '@/utils/misc'
 
 /**
@@ -68,7 +71,7 @@ export default class RnsHandler implements IRnsHandler {
       value: recordValues.value,
       data: sanitizeRnsData(recordValues.data, 'makeAddRecordMsg'),
       record: recordValues.record
-    });
+    })
   }
 
   /**
@@ -121,7 +124,8 @@ export default class RnsHandler implements IRnsHandler {
     const trueRns = sanitizeRns(rns)
     return this.pH.rnsTx.msgDelist({
       creator: this.walletRef.getJackalAddress(),
-      name: trueRns })
+      name: trueRns
+    })
   }
 
   /**
@@ -214,7 +218,8 @@ export default class RnsHandler implements IRnsHandler {
    */
   async findSingleBid (index: string): Promise<IRnsBidItem> {
     const trueIndex = sanitizeRns(index)
-    return (await this.pH.rnsQuery.queryBids({ index: trueIndex })).value.bids as IRnsBidItem
+    return (await this.pH.rnsQuery.queryBids({ index: trueIndex })).value
+      .bids as IRnsBidItem
   }
 
   /**
@@ -249,18 +254,16 @@ export default class RnsHandler implements IRnsHandler {
    */
   async findSingleForSaleName (rns: string): Promise<IRnsForSaleItem> {
     const trueRns = sanitizeRns(rns)
-    return (await this.pH.rnsQuery.queryForsale({ name: trueRns })).value.forsale as IRnsForSaleItem
+    return (await this.pH.rnsQuery.queryForsale({ name: trueRns })).value
+      .forsale as IRnsForSaleItem
   }
-  async findAllForSaleNames (): Promise<IRnsForSaleHashMap> {
-    const data: IRnsForSaleItem[] = (await handlePagination(
-      this.pH.rnsQuery,
-      'queryForsaleAll',
-      {}
-    ))
-      .reduce((acc: IRnsForSaleItem[], curr: any) => {
-        acc.push(...curr.forsale)
-        return acc
-      }, [])
+  async findAllForSaleNames(): Promise<IRnsForSaleHashMap> {
+    const data: IRnsForSaleItem[] = (
+      await handlePagination(this.pH.rnsQuery, 'queryForsaleAll', {})
+    ).reduce((acc: IRnsForSaleItem[], curr: any) => {
+      acc.push(...curr.forsale)
+      return acc
+    }, [])
 
     return data.reduce((acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
       acc[curr.name] = curr
@@ -275,23 +278,23 @@ export default class RnsHandler implements IRnsHandler {
   async findExpandedForSaleNames (): Promise<IRnsExpandedForSaleHashMap> {
     const rawOwned = await this.findExistingNames()
 
-    const data: IRnsForSaleItem[] = (await handlePagination(
-      this.pH.rnsQuery,
-      'queryForsaleAll',
-      {}
-    ))
-      .reduce((acc: IRnsForSaleItem[], curr: any) => {
-        acc.push(...curr.forsale)
-        return acc
-      }, [])
-
-    return data.reduce((acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
-      acc[curr.name] = {
-        ...curr,
-        mine: !!rawOwned[reverseSanitizeRns(curr.name)]
-      }
+    const data: IRnsForSaleItem[] = (
+      await handlePagination(this.pH.rnsQuery, 'queryForsaleAll', {})
+    ).reduce((acc: IRnsForSaleItem[], curr: any) => {
+      acc.push(...curr.forsale)
       return acc
-    }, {})
+    }, [])
+
+    return data.reduce(
+      (acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
+        acc[curr.name] = {
+          ...curr,
+          mine: !!rawOwned[reverseSanitizeRns(curr.name)]
+        }
+        return acc
+      },
+      {}
+    )
   }
 
   /**
@@ -301,12 +304,11 @@ export default class RnsHandler implements IRnsHandler {
   async findExistingNames (): Promise<IRnsOwnedHashMap> {
     const address = this.walletRef.getJackalAddress()
 
-    const data: IRnsOwnedItem[] = (await handlePagination(
-      this.pH.rnsQuery,
-      'queryListOwnedNames',
-      { address }
-      ))
-      .reduce((acc: IRnsOwnedItem[], curr: any) => {
+    const data: IRnsOwnedItem[] = (
+      await handlePagination(this.pH.rnsQuery, 'queryListOwnedNames', {
+        address
+      })
+    ).reduce((acc: IRnsOwnedItem[], curr: any) => {
       acc.push(...curr.names)
       return acc
     }, [])
@@ -328,7 +330,8 @@ export default class RnsHandler implements IRnsHandler {
    */
   async findSingleRns (rns: string): Promise<IRnsOwnedItem> {
     const trueRns = sanitizeRns(rns)
-    return (await this.pH.rnsQuery.queryNames({ index: trueRns })).value.names as IRnsOwnedItem
+    return (await this.pH.rnsQuery.queryNames({ index: trueRns })).value
+      .names as IRnsOwnedItem
   }
 
   /**
@@ -348,7 +351,7 @@ export default class RnsHandler implements IRnsHandler {
  */
 function sanitizeRns (rns: string): string {
   const allowedExtensions = /\.(jkl|ibc)$/
-  return (rns.match(allowedExtensions)) ? rns : `${rns}.jkl`
+  return rns.match(allowedExtensions) ? rns : `${rns}.jkl`
 }
 
 /**
@@ -369,12 +372,12 @@ function reverseSanitizeRns (rns: string): string {
  */
 function sanitizeRnsData (data: string, caller: string) {
   try {
-    return (typeof data === 'string') ? JSON.stringify(JSON.parse(data)) : JSON.stringify(data)
-  }
-  catch (err) {
+    return typeof data === 'string'
+      ? JSON.stringify(JSON.parse(data))
+      : JSON.stringify(data)
+  } catch (err) {
     console.error(`sanitizeRnsData() failed for ${caller}`)
     console.error(err)
     return '{}'
   }
 }
-

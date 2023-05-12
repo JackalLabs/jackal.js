@@ -1,6 +1,7 @@
 export default interface IWalletConfig {
-  signerChain?: string,
-  enabledChains?: string | string[],
-  queryAddr?: string,
+  selectedWallet: string
+  signerChain?: string
+  enabledChains?: string | string[]
+  queryAddr?: string
   txAddr?: string
 }

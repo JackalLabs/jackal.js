@@ -1,3 +1,3 @@
 export default interface IStorageClientFree {
-  bytesfree: string;
+  bytesfree: string
 }

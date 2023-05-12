@@ -3,12 +3,13 @@ import { IGasHashMap, IGasRate, IWrappedEncodeObject } from '@/interfaces'
 
 const hashMap: IGasHashMap = {
   /** Filetree */
-  '/canine_chain.filetree.MsgPostFile': 70,
+  '/canine_chain.filetree.MsgPostFile': 75,
   '/canine_chain.filetree.MsgAddViewers': 142,
   '/canine_chain.filetree.MsgPostkey': 12,
   '/canine_chain.filetree.MsgDeleteFile': 9,
   '/canine_chain.filetree.MsgRemoveViewers': 142,
   '/canine_chain.filetree.MsgMakeRoot': 46,
+  '/canine_chain.filetree.MsgMakeRootV2': 48,
   '/canine_chain.filetree.MsgAddEditors': 142,
   '/canine_chain.filetree.MsgRemoveEditors': 142,
   '/canine_chain.filetree.MsgResetEditors': 142,
@@ -83,7 +84,7 @@ export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]):
       switch (true) {
         case curr.encodedObject.typeUrl.includes('MsgMakeRoot'):
           const baseValue = 15
-          const modified = .04 * Number(curr.modifier) || 0
+          const modified = 0.04 * Number(curr.modifier) || 0
           return acc + (baseValue + modified)
         default:
           return acc + (hashMap[curr.encodedObject.typeUrl] || 142)
@@ -105,7 +106,6 @@ export function finalizeGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]):
   const totalGas = estimateGas(msgArray)
   return {
     amount: [],
-    // gas: '2000000'
     gas: totalGas.toString()
   }
 }
