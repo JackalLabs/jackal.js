@@ -1,6 +1,6 @@
 import IFileDetails from '@/interfaces/file/IFileDetails'
 
 export default interface IFileBuffer {
-  content: ArrayBuffer,
+  content: ArrayBuffer
   details: IFileDetails
 }

@@ -5,20 +5,28 @@ import { IWalletHandler } from '@/interfaces/classes'
 import { IAesBundle } from '@/interfaces'
 import { stringToUint16, uint16ToString } from '@/utils/misc'
 
-export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
+export async function exportJackalKey(key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
 }
-export function importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, ['encrypt', 'decrypt'])
+export function importJackalKey(rawExport: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, [
+    'encrypt',
+    'decrypt'
+  ])
 }
-export function genKey (): Promise<CryptoKey> {
+export function genKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])
 }
-export function genIv (): Uint8Array {
+export function genIv(): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(16))
 }
 
-export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode: 'encrypt' | 'decrypt'): Promise<Blob> {
+export async function aesCrypt(
+  data: Blob,
+  key: CryptoKey,
+  iv: Uint8Array,
+  mode: 'encrypt' | 'decrypt'
+): Promise<Blob> {
   const algo = {
     name: 'AES-GCM',
     iv
@@ -30,28 +38,35 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
   if (workingData.byteLength < 1) {
     return new Blob([])
   } else if (mode?.toLowerCase() === 'encrypt') {
-    return await crypto.subtle.encrypt(algo, key, workingData)
-      .then(res => {
+    return await crypto.subtle
+      .encrypt(algo, key, workingData)
+      .then((res) => {
         console.log(res)
         return new Blob([res])
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(`aesCrypt(encrypt) - ${err}`)
         throw err
       })
   } else {
-    return await crypto.subtle.decrypt(algo, key, workingData)
-      .then(res => {
+    return await crypto.subtle
+      .decrypt(algo, key, workingData)
+      .then((res) => {
         console.log(res)
         return new Blob([res])
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(`aesCrypt(decrypt) - ${err}`)
         throw err
       })
   }
 }
-export async function aesCrypt2 (data: Uint16Array, key: CryptoKey, iv: Uint8Array, mode: 'encrypt' | 'decrypt'): Promise<Uint16Array> {
+export async function aesCrypt2(
+  data: Uint16Array,
+  key: CryptoKey,
+  iv: Uint8Array,
+  mode: 'encrypt' | 'decrypt'
+): Promise<Uint16Array> {
   const algo = {
     name: 'AES-GCM',
     iv
@@ -63,30 +78,36 @@ export async function aesCrypt2 (data: Uint16Array, key: CryptoKey, iv: Uint8Arr
   if (data.byteLength < 1) {
     return new Uint16Array(0)
   } else if (mode?.toLowerCase() === 'encrypt') {
-    return await crypto.subtle.encrypt(algo, key, data)
-      .then(res => {
+    return await crypto.subtle
+      .encrypt(algo, key, data)
+      .then((res) => {
         console.log(res)
         // const b = new Blob([res])
         // console.log(b)
         return new Uint16Array(res)
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(`aesCrypt(encrypt) - ${err}`)
         throw err
       })
   } else {
-    return await crypto.subtle.decrypt(algo, key, data)
-      .then(res => {
+    return await crypto.subtle
+      .decrypt(algo, key, data)
+      .then((res) => {
         console.log(res)
         return new Uint16Array(res)
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(`aesCrypt(decrypt) - ${err}`)
         throw err
       })
   }
 }
-export async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
+export async function aesToString(
+  wallet: IWalletHandler,
+  pubKey: string,
+  aes: IAesBundle
+): Promise<string> {
   console.log('iv')
   console.log(aes.iv)
   const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
@@ -102,50 +123,61 @@ export async function aesToString (wallet: IWalletHandler, pubKey: string, aes: 
   console.log(theKeyD)
   return `${theIv}|${theKey}`
 }
-export async function stringToAes (wallet: IWalletHandler, source: string): Promise<IAesBundle> {
+export async function stringToAes(
+  wallet: IWalletHandler,
+  source: string
+): Promise<IAesBundle> {
   if (!source || source.indexOf('|') < 0) {
     throw new Error('stringToAes() : Invalid source string')
   }
   const parts = source.split('|')
   return {
     iv: new Uint8Array(wallet.asymmetricDecrypt(parts[0])),
-    key: await importJackalKey(new Uint8Array(wallet.asymmetricDecrypt(parts[1])))
+    key: await importJackalKey(
+      new Uint8Array(wallet.asymmetricDecrypt(parts[1]))
+    )
   }
 }
 
-export async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Uint8Array): Promise<File> {
+export async function convertToEncryptedFile(
+  workingFile: File,
+  key: CryptoKey,
+  iv: Uint8Array
+): Promise<File> {
   const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
   const details = {
-      name: workingFile.name,
-      lastModified: workingFile.lastModified,
-      type: workingFile.type,
-      size: workingFile.size,
-    }
+    name: workingFile.name,
+    lastModified: workingFile.lastModified,
+    type: workingFile.type,
+    size: workingFile.size
+  }
   const detailsBlob = new Blob([JSON.stringify(details)])
   console.log('detailsBlob.size')
   console.log(detailsBlob.size)
   const encryptedArray: Blob[] = [
-    new Blob([
-      (detailsBlob.size + 16).toString().padStart(8, '0')
-    ]),
+    new Blob([(detailsBlob.size + 16).toString().padStart(8, '0')]),
     await aesCrypt(detailsBlob, key, iv, 'encrypt')
   ]
   for (let i = 0; i < workingFile.size; i += chunkSize) {
     const blobChunk = workingFile.slice(i, i + chunkSize)
     encryptedArray.push(
-      new Blob([
-        (blobChunk.size + 16).toString().padStart(8, '0')
-      ]),
+      new Blob([(blobChunk.size + 16).toString().padStart(8, '0')]),
       await aesCrypt(blobChunk, key, iv, 'encrypt')
     )
   }
-  const finalName = `${await hashAndHex(details.name + Date.now().toString())}.jkl`
+  const finalName = `${await hashAndHex(
+    details.name + Date.now().toString()
+  )}.jkl`
   return new File(encryptedArray, finalName, { type: 'text/plain' })
 }
-export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv: Uint8Array): Promise<File> {
+export async function convertFromEncryptedFile(
+  source: Blob,
+  key: CryptoKey,
+  iv: Uint8Array
+): Promise<File> {
   let detailsBlob = new Blob([])
   const blobParts: Blob[] = []
-  for (let i = 0; i < source.size;) {
+  for (let i = 0; i < source.size; ) {
     const offset = i + 8
     const segSize = Number(await source.slice(i, offset).text())
     const last = offset + segSize
@@ -163,15 +195,28 @@ export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv
   return new File(blobParts, details.name, details)
 }
 
-export async function compressEncryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+export async function compressEncryptString(
+  input: string,
+  key: CryptoKey,
+  iv: Uint8Array
+): Promise<string> {
   const compString = compressData(input)
   return await cryptString(compString, key, iv, 'encrypt')
 }
-export async function decryptDecompressString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+export async function decryptDecompressString(
+  input: string,
+  key: CryptoKey,
+  iv: Uint8Array
+): Promise<string> {
   const workStr = await cryptString(input, key, iv, 'decrypt')
   return decompressData(workStr)
 }
-export async function cryptString (input: string, key: CryptoKey, iv: Uint8Array, mode: 'encrypt' | 'decrypt'): Promise<string> {
+export async function cryptString(
+  input: string,
+  key: CryptoKey,
+  iv: Uint8Array,
+  mode: 'encrypt' | 'decrypt'
+): Promise<string> {
   const uint16 = stringToUint16(input)
   const result = await aesCrypt(new Blob([uint16]), key, iv, mode)
   return uint16ToString(new Uint16Array(await result.arrayBuffer()))

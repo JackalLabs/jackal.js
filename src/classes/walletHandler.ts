@@ -1,7 +1,16 @@
-import { AccountData, EncodeObject, isOfflineDirectSigner, OfflineSigner } from '@cosmjs/proto-signing'
+import {
+  AccountData,
+  EncodeObject,
+  isOfflineDirectSigner,
+  OfflineSigner
+} from '@cosmjs/proto-signing'
 import { encrypt, decrypt, PrivateKey } from 'eciesjs'
 import { Window as KeplrWindow } from '@keplr-wallet/types'
-import { defaultQueryAddr9091, defaultTxAddr26657, jackalMainnetChainId } from '@/utils/globals'
+import {
+  defaultQueryAddr9091,
+  defaultTxAddr26657,
+  jackalMainnetChainId
+} from '@/utils/globals'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import { ICoin, IWalletConfig } from '@/interfaces'
@@ -24,7 +33,15 @@ export default class WalletHandler implements IWalletHandler {
   readonly chainId: string
   readonly isDirect: boolean
 
-  private constructor (signer: OfflineSigner, chainId: string, keyPair: PrivateKey, rnsInitComplete: boolean, fileTreeInitComplete: boolean, acct: AccountData, pH: IProtoHandler) {
+  private constructor(
+    signer: OfflineSigner,
+    chainId: string,
+    keyPair: PrivateKey,
+    rnsInitComplete: boolean,
+    fileTreeInitComplete: boolean,
+    acct: AccountData,
+    pH: IProtoHandler
+  ) {
     this.signer = signer
     this.chainId = chainId
     this.keyPair = keyPair
@@ -35,9 +52,11 @@ export default class WalletHandler implements IWalletHandler {
     this.isDirect = isOfflineDirectSigner(signer)
   }
 
-  static async trackWallet (config: IWalletConfig): Promise<IWalletHandler> {
+  static async trackWallet(config: IWalletConfig): Promise<IWalletHandler> {
     if (!window) {
-      throw new Error('Jackal.js is only supported in the browser at this time!')
+      throw new Error(
+        'Jackal.js is only supported in the browser at this time!'
+      )
     } else if (!window.keplr) {
       throw new Error('Jackal.js requires Keplr to be installed!')
     } else {
@@ -47,31 +66,49 @@ export default class WalletHandler implements IWalletHandler {
       const tAddr = txAddr || defaultTxAddr26657
       const workingChain = signerChain || jackalMainnetChainId
 
-      await window.keplr.enable(enabledChains || defaultChains)
-        .catch(err => {
-          throw err
-        })
+      await window.keplr.enable(enabledChains || defaultChains).catch((err) => {
+        throw err
+      })
       const signer = await window.keplr.getOfflineSignerAuto(workingChain)
       const acct = (await signer.getAccounts())[0]
 
       const pH = await ProtoHandler.trackProto(signer, tAddr, qAddr)
 
-      const rnsInitComplete = (await pH.rnsQuery.queryInit({ address: acct.address })).value.init
-      const { value: { pubkey }, success} = (await pH.fileTreeQuery.queryPubkey({ address: acct.address }))
-      const secret = await makeSecret(workingChain, acct.address)
-        .catch(err => {
+      const rnsInitComplete = (
+        await pH.rnsQuery.queryInit({ address: acct.address })
+      ).value.init
+      const {
+        value: { pubkey },
+        success
+      } = await pH.fileTreeQuery.queryPubkey({ address: acct.address })
+      const secret = await makeSecret(workingChain, acct.address).catch(
+        (err) => {
           throw err
-        })
-      const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
+        }
+      )
+      const secretAsHex = bufferToHex(
+        Buffer.from(secret, 'base64').subarray(0, 32)
+      )
       const keyPair = PrivateKey.fromHex(secretAsHex)
 
-      return new WalletHandler(signer, workingChain, keyPair, rnsInitComplete, (success && !!pubkey?.key), acct, pH)
+      return new WalletHandler(
+        signer,
+        workingChain,
+        keyPair,
+        rnsInitComplete,
+        success && !!pubkey?.key,
+        acct,
+        pH
+      )
     }
   }
-  static async getAbitraryMerkle (path: string, item: string): Promise<string> {
+  static async getAbitraryMerkle(path: string, item: string): Promise<string> {
     return await hexFullPath(await merkleMeBro(path), item)
   }
-  static async initAccount (wallet: IWalletHandler, filetreeTxClient: any): Promise<EncodeObject> {
+  static async initAccount(
+    wallet: IWalletHandler,
+    filetreeTxClient: any
+  ): Promise<EncodeObject> {
     const { msgInitAll } = await filetreeTxClient
     const initCall = msgInitAll({
       creator: wallet.getJackalAddress(),
@@ -80,45 +117,50 @@ export default class WalletHandler implements IWalletHandler {
     return initCall
   }
 
-  getRnsInitStatus (): boolean {
+  getRnsInitStatus(): boolean {
     return this.rnsInitComplete
   }
-  setRnsInitStatus (status: boolean): void {
+  setRnsInitStatus(status: boolean): void {
     this.rnsInitComplete = status
   }
-  getStorageInitStatus (): boolean {
+  getStorageInitStatus(): boolean {
     return this.fileTreeInitComplete
   }
-  setStorageInitStatus (status: boolean): void {
+  setStorageInitStatus(status: boolean): void {
     this.fileTreeInitComplete = status
   }
-  getProtoHandler (): IProtoHandler {
+  getProtoHandler(): IProtoHandler {
     return this.pH
   }
-  getAccounts (): Promise<readonly AccountData[]> {
+  getAccounts(): Promise<readonly AccountData[]> {
     return this.signer.getAccounts()
   }
-  getSigner (): OfflineSigner {
+  getSigner(): OfflineSigner {
     return this.signer
   }
-  getJackalAddress (): string {
+  getJackalAddress(): string {
     return this.jackalAccount.address
   }
-  async getHexJackalAddress (): Promise<string> {
+  async getHexJackalAddress(): Promise<string> {
     return await hashAndHex(this.jackalAccount.address)
   }
-  async getAllBalances (): Promise<ICoin[]> {
-    const res = await this.pH.bankQuery.queryAllBalances({ address: this.jackalAccount.address })
+  async getAllBalances(): Promise<ICoin[]> {
+    const res = await this.pH.bankQuery.queryAllBalances({
+      address: this.jackalAccount.address
+    })
     return res.value.balances as ICoin[]
   }
-  async getJackalBalance (): Promise<ICoin> {
-    const res = await this.pH.bankQuery.queryBalance({ address: this.jackalAccount.address, denom: 'ujkl' })
+  async getJackalBalance(): Promise<ICoin> {
+    const res = await this.pH.bankQuery.queryBalance({
+      address: this.jackalAccount.address,
+      denom: 'ujkl'
+    })
     return res.value.balance as ICoin
   }
-  getPubkey (): string {
+  getPubkey(): string {
     return this.keyPair.publicKey.toHex()
   }
-  asymmetricEncrypt (toEncrypt: ArrayBuffer, pubKey: string): string {
+  asymmetricEncrypt(toEncrypt: ArrayBuffer, pubKey: string): string {
     const buf = Buffer.from(toEncrypt)
     const result = encrypt(pubKey, buf)
     // console.log('result')
@@ -135,10 +177,12 @@ export default class WalletHandler implements IWalletHandler {
 
     return result.toString('hex')
   }
-  asymmetricDecrypt (toDecrypt: string): ArrayBuffer {
-    return new Uint8Array(decrypt(this.keyPair.toHex(), Buffer.from(toDecrypt, 'hex')))
+  asymmetricDecrypt(toDecrypt: string): ArrayBuffer {
+    return new Uint8Array(
+      decrypt(this.keyPair.toHex(), Buffer.from(toDecrypt, 'hex'))
+    )
   }
-  async findPubKey (address: string): Promise<string> {
+  async findPubKey(address: string): Promise<string> {
     const result = await this.pH.fileTreeQuery.queryPubkey({ address })
     if (!result.success) {
       throw new Error(`${address} does not have a pubkey registered`)
@@ -148,13 +192,14 @@ export default class WalletHandler implements IWalletHandler {
   }
 }
 
-async function makeSecret (chainId: string, acct: string): Promise<string> {
+async function makeSecret(chainId: string, acct: string): Promise<string> {
   const memo = 'Initiate Jackal Session'
   if (!window.keplr) {
     throw new Error('Jackal.js requires Keplr to be installed!')
   } else {
-    const signed = await window.keplr.signArbitrary(chainId, acct, memo)
-      .catch(err => {
+    const signed = await window.keplr
+      .signArbitrary(chainId, acct, memo)
+      .catch((err) => {
         throw err
       })
     return signed.signature

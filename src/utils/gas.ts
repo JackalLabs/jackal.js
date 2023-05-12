@@ -73,13 +73,15 @@ const hashMap: IGasHashMap = {
 }
 const baseRate = 56
 
-export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): number {
+export function estimateGas(
+  msgArray: (EncodeObject | IWrappedEncodeObject)[]
+): number {
   const gas = msgArray.reduce((acc, curr) => {
     if (isIWrappedEncodeObject(curr)) {
       switch (true) {
         case curr.encodedObject.typeUrl.includes('MsgMakeRoot'):
           const baseValue = 15
-          const modified = .04 * Number(curr.modifier) || 0
+          const modified = 0.04 * Number(curr.modifier) || 0
           return acc + (baseValue + modified)
         default:
           return acc + (hashMap[curr.encodedObject.typeUrl] || 142)
@@ -91,7 +93,7 @@ export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]):
   return (gas + baseRate) * 1100
 }
 /** @private */
-export function finalizeGas (
+export function finalizeGas(
   msgArray: (EncodeObject | IWrappedEncodeObject)[],
   gasOverride?: number | string
 ): IGasRate {
@@ -102,6 +104,8 @@ export function finalizeGas (
   }
 }
 
-function isIWrappedEncodeObject(toCheck: EncodeObject | IWrappedEncodeObject): toCheck is IWrappedEncodeObject {
+function isIWrappedEncodeObject(
+  toCheck: EncodeObject | IWrappedEncodeObject
+): toCheck is IWrappedEncodeObject {
   return Object.keys(toCheck).includes('encodedObject')
 }

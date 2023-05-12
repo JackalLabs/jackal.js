@@ -1,5 +1,5 @@
 export default interface IChildDirInfo {
-  myName: string,
-  myParent: string,
+  myName: string
+  myParent: string
   myOwner: string
 }

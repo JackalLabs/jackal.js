@@ -1,4 +1,4 @@
 export default interface IProviderVersionResponse {
-  'chain-id': string,
+  'chain-id': string
   version: string
 }

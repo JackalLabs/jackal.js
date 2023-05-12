@@ -1,3 +1,1 @@
-export default interface ISecretsHandler {
-
-}
+export default interface ISecretsHandler {}

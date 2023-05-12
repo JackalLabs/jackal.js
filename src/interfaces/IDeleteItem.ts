@@ -1,4 +1,4 @@
 export default interface IDeleteItem {
-  location: string,
+  location: string
   name: string
 }
