@@ -1,4 +1,4 @@
 export default interface IProviderResponse {
-  cid: string,
+  cid: string
   fid: string
 }

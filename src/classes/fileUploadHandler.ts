@@ -1,10 +1,6 @@
 import { IAesBundle } from '@/interfaces'
 import { IFileUploadHandler } from '@/interfaces/classes'
-import {
-  genIv,
-  genKey,
-  convertToEncryptedFile
-} from '@/utils/crypt'
+import { genIv, genKey, convertToEncryptedFile } from '@/utils/crypt'
 import { hexFullPath, merkleMeBro } from '@/utils/hash'
 import { IFileMeta } from '@/interfaces'
 
@@ -18,7 +14,13 @@ export default class FileUploadHandler implements IFileUploadHandler {
   private fid: string[]
   readonly isFolder: boolean
 
-  private constructor (file: File, parentPath: string, uuid: string, key: CryptoKey, iv: Uint8Array) {
+  private constructor(
+    file: File,
+    parentPath: string,
+    uuid: string,
+    key: CryptoKey,
+    iv: Uint8Array
+  ) {
     this.file = file
     this.key = key
     this.iv = iv
@@ -28,50 +30,53 @@ export default class FileUploadHandler implements IFileUploadHandler {
     this.fid = []
     this.isFolder = false
   }
-  static async trackFile (file: File, parentPath: string): Promise<IFileUploadHandler> {
+  static async trackFile(
+    file: File,
+    parentPath: string
+  ): Promise<IFileUploadHandler> {
     const savedKey = await genKey()
     const savedIv = genIv()
     const uuid = self.crypto.randomUUID()
     return new FileUploadHandler(file, parentPath, uuid, savedKey, savedIv)
   }
 
-  setIds (idObj: { cid: string, fid: string[] }): void {
+  setIds(idObj: { cid: string; fid: string[] }): void {
     this.cid = idObj.cid
     this.fid = idObj.fid
   }
-  setUUID (uuid: string): void {
+  setUUID(uuid: string): void {
     this.uuid = uuid
   }
-  getIds () {
+  getIds() {
     return { fid: this.fid, cid: this.cid }
   }
-  getUUID (): string {
+  getUUID(): string {
     return this.uuid
   }
-  getWhoAmI (): string {
+  getWhoAmI(): string {
     return this.file.name
   }
-  getWhereAmI (): string {
+  getWhereAmI(): string {
     return this.parentPath
   }
-  getForUpload (aes?: IAesBundle): Promise<File> {
+  getForUpload(aes?: IAesBundle): Promise<File> {
     this.key = aes?.key || this.key
     this.iv = aes?.iv || this.iv
     return convertToEncryptedFile(this.file, this.key, this.iv)
   }
-  async getEnc (): Promise<IAesBundle> {
+  async getEnc(): Promise<IAesBundle> {
     return {
       iv: this.iv,
       key: this.key
     }
   }
-  async getFullMerkle (): Promise<string> {
+  async getFullMerkle(): Promise<string> {
     return await hexFullPath(await this.getMerklePath(), this.getWhoAmI())
   }
-  getMerklePath (): Promise<string> {
+  getMerklePath(): Promise<string> {
     return merkleMeBro(this.parentPath)
   }
-  getMeta (): IFileMeta {
+  getMeta(): IFileMeta {
     return {
       name: this.file.name,
       lastModified: this.file.lastModified,

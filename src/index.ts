@@ -1,14 +1,14 @@
 /** Classes */
-import AbciHandler from '@/classes/abciHandler'
-import FileDownloadHandler from '@/classes/fileDownloadHandler'
-import FileUploadHandler from '@/classes/fileUploadHandler'
-import FileIo from '@/classes/fileIo'
-import FolderHandler from '@/classes/folderHandler'
-import GovHandler from '@/classes/govHandler'
-import OracleHandler from '@/classes/oracleHandler'
-import RnsHandler from '@/classes/rnsHandler'
-import StorageHandler from '@/classes/storageHandler'
-import WalletHandler from '@/classes/walletHandler'
+import AbciHandler from "@/classes/abciHandler";
+import FileDownloadHandler from "@/classes/fileDownloadHandler";
+import FileUploadHandler from "@/classes/fileUploadHandler";
+import FileIo from "@/classes/fileIo";
+import FolderHandler from "@/classes/folderHandler";
+import GovHandler from "@/classes/govHandler";
+import OracleHandler from "@/classes/oracleHandler";
+import RnsHandler from "@/classes/rnsHandler";
+import StorageHandler from "@/classes/storageHandler";
+import WalletHandler from "@/classes/walletHandler";
 
 /** Class Interfaces */
 import {
@@ -21,8 +21,8 @@ import {
   IStorageHandler,
   IOracleHandler,
   IRnsHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
+  IWalletHandler,
+} from "@/interfaces/classes";
 
 /** Misc Interfaces */
 import {
@@ -30,17 +30,17 @@ import {
   IPayData,
   IStakingValidator,
   IStoragePaymentInfo,
-  IWalletConfig
-} from '@/interfaces'
+  IWalletConfig,
+} from "@/interfaces";
 
 /** Types */
-import { TFileOrFFile } from '@/types/TFoldersAndFiles'
+import { TFileOrFFile } from "@/types/TFoldersAndFiles";
 
 /** External */
-import { OfflineSigner } from '@cosmjs/proto-signing'
+import { OfflineSigner } from "@cosmjs/proto-signing";
 
 /** Functions */
-export { blockToDate } from '@/utils/misc'
+export { blockToDate } from "@/utils/misc";
 
 /** Exports */
 export {
@@ -73,5 +73,5 @@ export {
   // Types
   TFileOrFFile,
   // External
-  OfflineSigner
-}
+  OfflineSigner,
+};

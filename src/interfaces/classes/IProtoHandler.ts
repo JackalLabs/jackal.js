@@ -17,16 +17,20 @@ import {
   ITxGov,
   IQueryStaking,
   ITxStaking,
-  TMasterBroadcaster, IQueryNotifications, ITxNotifications
+  TMasterBroadcaster,
+  IQueryNotifications,
+  ITxNotifications
 } from 'jackal.js-protos'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default interface IProtoHandler {
-
   /** General */
-  broadcaster (msgs: EncodeObject[], msg?: string): Promise<DeliverTxResponse>
-  debugBroadcaster (msgs: EncodeObject[], extra: { gas?: string, memo?: string, step?: boolean }): Promise<DeliverTxResponse | null>
+  broadcaster(msgs: EncodeObject[], msg?: string): Promise<DeliverTxResponse>
+  debugBroadcaster(
+    msgs: EncodeObject[],
+    extra: { gas?: string; memo?: string; step?: boolean }
+  ): Promise<DeliverTxResponse | null>
   rawBroadcaster: TMasterBroadcaster
 
   /** Custom */
@@ -42,8 +46,6 @@ export default interface IProtoHandler {
   storageQuery: IQueryStorage
   storageTx: ITxStorage
 
-
-
   /** Static */
   ABCIQuery: IQueryABCI
   bankQuery: IQueryBank
@@ -54,5 +56,4 @@ export default interface IProtoHandler {
   govTx: ITxGov
   stakingQuery: IQueryStaking
   stakingTx: ITxStaking
-
 }

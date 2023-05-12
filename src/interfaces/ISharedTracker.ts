@@ -1,4 +1,4 @@
 export default interface ISharedTracker {
-  files: string[],
+  files: string[]
   folders: { [name: string]: ISharedTracker }
 }

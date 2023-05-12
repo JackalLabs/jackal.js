@@ -1,4 +1,4 @@
 export default interface IStaggeredTracker {
-  complete: number,
+  complete: number
   timer: number
 }
