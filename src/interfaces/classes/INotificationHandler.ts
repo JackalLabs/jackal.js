@@ -7,6 +7,7 @@ import {
   QueryGetNotificationsResponse
 } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/query'
 import { IReadableNoti } from '@/interfaces'
+import { Notifications } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/notifications'
 
 export default interface INotificationHandler {
   makeNotification(notification: string, address: string): EncodeObject
@@ -24,9 +25,7 @@ export default interface INotificationHandler {
     index: number
   ): Promise<QueryGetNotificationsResponse>
   getAllNotifications(): Promise<QueryAllNotificationsResponse>
-  getSingleAddressNotifications(
-    forAddress: string
-  ): Promise<QueryAllNotificationsByAddressResponse>
+  getSingleAddressNotifications(forAddress: string): Promise<Notifications[]>
   checkNotificationInit(forAddress: string): Promise<boolean>
   getNotificationCounter(
     forAddress: string

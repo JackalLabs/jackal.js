@@ -6,7 +6,7 @@ import ProtoBuilder, {
   TMasterBroadcaster
 } from 'jackal.js-protos'
 import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
-import { finalizeGas } from '@/utils/gas'
+import { estimateGas, finalizeGas } from '@/utils/gas'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default class ProtoHandler implements IProtoHandler {
@@ -37,13 +37,13 @@ export default class ProtoHandler implements IProtoHandler {
   }
 
   /** General */
-  broadcaster(
+  async broadcaster(
     msgs: EncodeObject[],
-    memo = '',
-    gas?: string
+    memo: string = '',
+    gasOverride?: number | string
   ): Promise<DeliverTxResponse> {
     return this.masterBroadcaster(msgs, {
-      fee: gas ? { amount: [], gas } : finalizeGas(msgs),
+      fee: finalizeGas(msgs, gasOverride),
       memo
     }).catch((err) => {
       throw err
@@ -51,8 +51,7 @@ export default class ProtoHandler implements IProtoHandler {
   }
   async debugBroadcaster(
     msgs: EncodeObject[],
-    extra: { gas?: string; memo?: string; step?: boolean } = {
-      gas: '',
+    extra: { gas?: number | string; memo?: string; step?: boolean } = {
       memo: '',
       step: false
     }

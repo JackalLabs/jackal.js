@@ -1,4 +1,8 @@
 import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
+import { IProtoHandler } from '@/interfaces/classes'
+import { QueryFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
+import { hashAndHex, merkleMeBro } from '@/utils/hash'
+import SuccessNoUndefined from 'jackal.js-protos/dist/types/TSuccessNoUndefined'
 
 export function deprecated(
   thing: string,
@@ -93,7 +97,7 @@ export async function blockToDate(
   rpcUrl: string,
   currentBlockHeight: number,
   targetBlockHeight: number | string
-) {
+): Promise<Date> {
   const targetHeight = Number(targetBlockHeight) || 0
   /** Block time in milliseconds */
   const blockTime = await getAvgBlockTime(rpcUrl, 20)
@@ -107,14 +111,55 @@ export async function getAvgBlockTime(
   rpc: string,
   blocks: number
 ): Promise<number> {
-  const info = await fetch(rpc + '/block').then((res) => res.json())
-  const blockTime = fetch(
-    rpc + `/block?height=${info.result.block.header.height - blocks}`
-  ).then((res) => res.json())
+  console.log(rpc)
+  const info = await fetch(`${rpc}/block`)
+    .then((res) => res.text())
+    .then((res) => {
+      console.log(res)
+      return res
+    })
+    .catch((err) => {
+      console.warn('getAvgBlockTime() block fetch error:')
+      console.error(err)
+      return { result: { block: { header: { time: 0 } } } }
+    })
+  return 0
+}
 
-  return blockTime.then((data) => {
-    const old = Date.parse(data.result.block.header.time)
-    const now = Date.parse(info.result.block.header.time)
-    return Math.round((now - old) / blocks)
+export function uint8ToString(buf: Uint8Array): string {
+  return String.fromCharCode.apply(null, [...buf])
+}
+
+export function stringToUint8(str: string): Uint8Array {
+  const uintView = new Uint8Array(str.length)
+  for (let i = 0; i < str.length; i++) {
+    uintView[i] = str.charCodeAt(i)
+  }
+  return uintView
+}
+export function uint16ToString(buf: Uint16Array): string {
+  return String.fromCharCode.apply(null, [...buf])
+}
+
+export function stringToUint16(str: string): Uint16Array {
+  const uintView = new Uint16Array(str.length)
+  for (let i = 0; i < str.length; i++) {
+    uintView[i] = str.charCodeAt(i)
+  }
+  return uintView
+}
+
+export async function getFileTreeData(
+  rawPath: string,
+  owner: string,
+  pH: IProtoHandler
+): Promise<SuccessNoUndefined<QueryFileResponse>> {
+  const hexAddress = await merkleMeBro(rawPath)
+  const hexedOwner = await hashAndHex(
+    `o${hexAddress}${await hashAndHex(owner)}`
+  )
+  return await pH.fileTreeQuery.queryFiles({
+    address: hexAddress,
+    ownerAddress: hexedOwner
   })
 }

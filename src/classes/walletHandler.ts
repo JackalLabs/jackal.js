@@ -31,11 +31,13 @@ export default class WalletHandler implements IWalletHandler {
   private fileTreeInitComplete: boolean
   private readonly jackalAccount: AccountData
   private readonly pH: IProtoHandler
+  readonly chainId: string
   readonly isDirect: boolean
   readonly walletProvider: string
 
   private constructor(
     signer: OfflineSigner,
+    chainId: string,
     keyPair: PrivateKey,
     rnsInitComplete: boolean,
     fileTreeInitComplete: boolean,
@@ -44,6 +46,7 @@ export default class WalletHandler implements IWalletHandler {
     selectedWallet: string
   ) {
     this.signer = signer
+    this.chainId = chainId
     this.keyPair = keyPair
     this.rnsInitComplete = rnsInitComplete
     this.fileTreeInitComplete = fileTreeInitComplete

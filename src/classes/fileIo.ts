@@ -1,6 +1,5 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-// import { randomUUID, random } from 'make-random'
-import { IQueryFileTree, IQueryStorage, ITxFileTree } from 'jackal.js-protos'
+import { random } from 'make-random'
 
 import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import {
@@ -10,10 +9,15 @@ import {
   genKey,
   stringToAes
 } from '@/utils/crypt'
-import { bruteForceString, setDelay, stripper } from '@/utils/misc'
+import {
+  bruteForceString,
+  getFileTreeData,
+  handlePagination,
+  setDelay,
+  stripper
+} from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
-import WalletHandler from '@/classes/walletHandler'
 import {
   IFileDownloadHandler,
   IFileIo,
@@ -24,10 +28,7 @@ import {
 } from '@/interfaces/classes'
 import {
   IChildDirInfo,
-  IDeleteItem,
   IDownloadDetails,
-  IEditorsViewers,
-  IFileConfigFull,
   IFileConfigRaw,
   IFiletreeParsedContents,
   IFolderAdd,
@@ -37,21 +38,27 @@ import {
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
+  IProviderVersionResponse,
   IQueueItemPostUpload,
   IStaggeredTracker,
   IUploadList,
   IUploadListItem
 } from '@/interfaces'
-import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IProviderChecks from '@/interfaces/IProviderChecks'
-import { QueryFindFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/storage/query'
-import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
+import { QueryFindFileResponse } from 'jackal.js-protos/src/postgen/canine_chain/storage/query'
+import SuccessIncluded from 'jackal.js-protos/src/types/TSuccessIncluded'
 import {
+  buildPostFile,
+  makePermsBlock,
   readCompressedFileTree,
-  removeCompressedFileTree,
+  removeCompressedFileTree
   saveCompressedFileTree
 } from '@/utils/compression'
 import IFileMetaHashMap from '../interfaces/file/IFileMetaHashMap'
+import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
+import { FidCid } from 'jackal.js-protos/dist/postgen/canine_chain/storage/fid_cid'
+import { Contracts } from 'jackal.js-protos/dist/postgen/canine_chain/storage/contracts'
+import { Strays } from 'jackal.js-protos/dist/postgen/canine_chain/storage/strays'
 
 export default class FileIo implements IFileIo {
   private readonly walletRef: IWalletHandler
@@ -75,7 +82,8 @@ export default class FileIo implements IFileIo {
     versionFilter?: string | string[]
   ): Promise<FileIo> {
     const providers = await verifyProviders(
-      await getProviders(wallet.getProtoHandler().storageQuery),
+      await getProviders(wallet.getProtoHandler()),
+      wallet.chainId,
       versionFilter
     )
     const provider = providers[await random(providers.length)]
@@ -85,19 +93,22 @@ export default class FileIo implements IFileIo {
     wallet: IWalletHandler,
     versionFilter?: string | string[]
   ): Promise<IProviderChecks> {
-    const raw = await fetchProviders(wallet.getProtoHandler().storageQuery)
+    const raw = await fetchProviders(wallet.getProtoHandler())
     const filtered = await filterProviders(raw)
     return {
       filtered,
       raw,
       verified: versionFilter
-        ? await verifyProviders(filtered, versionFilter)
+        ? await verifyProviders(filtered, wallet.chainId, versionFilter)
         : filtered
     }
   }
 
   getCurrentProvider(): IMiner {
     return this.currentProvider
+  }
+  getAvailableProviders(): IMiner[] {
+    return this.availableProviders
   }
   forceProvider(toSet: IMiner): void {
     this.currentProvider = toSet
@@ -114,7 +125,8 @@ export default class FileIo implements IFileIo {
   }
   async refresh(): Promise<void> {
     this.availableProviders = await verifyProviders(
-      await getProviders(this.pH.storageQuery)
+      await getProviders(this.pH),
+      this.walletRef.chainId
     )
     this.currentProvider =
       this.availableProviders[await random(this.availableProviders.length)]
@@ -133,27 +145,28 @@ export default class FileIo implements IFileIo {
     parentDir: IFolderHandler,
     newDirs: string[]
   ): Promise<EncodeObject[]> {
-    return parentDir.addChildDirs(newDirs, this.walletRef)
+    const result = await parentDir.addChildDirs(newDirs, this.walletRef)
+    if (result.existing.length > 0) {
+      console.log(
+        'The following duplicate folder names were ignored: ',
+        result.existing
+      )
+    }
+    return result.encoded
   }
   async verifyFoldersExist(toCheck: string[]): Promise<number> {
     const toCreate = []
     for (let i = 0; i < toCheck.length; i++) {
-      const data = await readCompressedFileTree(
-        this.walletRef.getJackalAddress(),
-        `s/${toCheck[i]}`,
-        this.walletRef
-      ).catch((err) => {
-        throw err
-      })
-      if (!data) {
+      const check = await this.checkFolderIsFileTree(`s/${toCheck[i]}`)
+      if (check) {
+        console.info(`${toCheck[i]} exists`)
+      } else {
         console.warn(`${toCheck[i]} does not exist`)
         toCreate.push(toCheck[i])
-      } else {
-        console.info(`${toCheck[i]} exists`)
       }
     }
     if (toCreate.length) {
-      console.dir(toCreate)
+      console.log('Creating: ', toCreate)
       await this.generateInitialDirs(null, toCreate)
     }
     return toCreate.length
@@ -211,7 +224,7 @@ export default class FileIo implements IFileIo {
         }, {} as IFileMetaHashMap)
         const readyToBroadcast = await this.rawAfterUpload(processValues)
         readyToBroadcast.push(
-          await parent.addChildFiles(fileNames, this.walletRef)
+          await parent.addChildFileReferences(fileNames, this.walletRef)
         )
         const memo = `Processing batch of ${processValues.length} uploads`
         // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
@@ -244,42 +257,39 @@ export default class FileIo implements IFileIo {
     const ready = await Promise.all(
       ids.flatMap(async (item: IQueueItemPostUpload) => {
         const { cid, fid } = item.handler.getIds()
-        const pubKey = this.walletRef.getPubkey()
-        const perms = await aesToString(
-          this.walletRef,
-          pubKey,
-          await item.handler.getEnc()
-        )
-        const workingUUID = self.crypto.randomUUID()
-        const folderView: IEditorsViewers = {}
-        folderView[await hashAndHex(`v${workingUUID}${creator}`)] = perms
-        const folderEdit: IEditorsViewers = {}
-        folderEdit[await hashAndHex(`e${workingUUID}${creator}`)] = perms
+        const common = {
+          aes: await item.handler.getEnc(),
+          num: self.crypto.randomUUID(),
+          pubKey: this.walletRef.getPubkey(),
+          usr: this.walletRef.getJackalAddress()
+        }
+
         const msgPostFileBundle: IMsgPartialPostFileBundle = {
           creator,
           account: await hashAndHex(creator),
           hashParent: await item.handler.getMerklePath(),
           hashChild: await hashAndHex(item.handler.getWhoAmI()),
           contents: JSON.stringify({ fids: fid }),
-          viewers: JSON.stringify(folderView),
-          editors: JSON.stringify(folderEdit),
-          trackingNumber: workingUUID
+          viewers: JSON.stringify(
+            await makePermsBlock({ base: 'v', ...common }, this.walletRef)
+          ),
+          editors: JSON.stringify(
+            await makePermsBlock({ base: 'e', ...common }, this.walletRef)
+          ),
+          trackingNumber: common.num
         }
         if (item.data) {
-          msgPostFileBundle.viewers = JSON.stringify(item.data.viewingAccess)
-          msgPostFileBundle.editors = JSON.stringify(item.data.editAccess)
+          msgPostFileBundle.viewers = item.data.viewingAccess
+          msgPostFileBundle.editors = item.data.editAccess
           msgPostFileBundle.trackingNumber = item.data.trackingNumber
           const delItem = await this.makeDelete(creator, [
-            {
-              location: item.handler.getWhereAmI(),
-              name: item.handler.getWhoAmI()
-            }
+            `${item.handler.getWhereAmI()}/${item.handler.getWhoAmI()}`
           ])
           needingReset.push(...delItem)
         }
         const msgPost: EncodeObject = await buildPostFile(
           msgPostFileBundle,
-          this.pH.fileTreeTx
+          this.pH
         )
         const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({
           creator,
@@ -299,51 +309,71 @@ export default class FileIo implements IFileIo {
         owner,
         rawPath,
         this.walletRef
-      )) as IFolderFrame
+      ).catch((err: Error) => {
+        throw err
+      })) as IFolderFrame
       return await FolderHandler.trackFolder(data)
     } catch (err) {
       console.log(err)
       const legacyBundle: IDownloadDetails = {
-        hexAddress: await merkleMeBro(rawPath),
+        rawPath,
         owner,
         isFolder: true
       }
-      return (await this.downloadFile(legacyBundle, {
+      const legacyHandler = await this.downloadFile(legacyBundle, {
         track: 0
-      })) as IFolderHandler
+      }).catch(async (err: Error) => {
+        console.error('downloadFolder() : ', err)
+        if (err.message.includes('All file fetch() attempts failed!')) {
+          console.warn('Rebuilding ', rawPath)
+          const parts = rawPath.split('/')
+          const child = parts.pop() as string
+          const folderDetails: IChildDirInfo = {
+            myName: child,
+            myParent: parts.join('/'),
+            myOwner: owner
+          }
+          return await FolderHandler.trackNewFolder(folderDetails)
+        }
+      })
+      return legacyHandler as IFolderHandler
     }
   }
   async downloadFile(
     downloadDetails: IDownloadDetails,
     completion: { track: number }
   ): Promise<IFileDownloadHandler | IFolderHandler> {
-    const { hexAddress, owner, isFolder } = downloadDetails
-    const hexedOwner = await hashAndHex(
-      `o${hexAddress}${await hashAndHex(owner)}`
-    )
-    const { version, data } = await getFileChainData(
-      hexAddress,
-      hexedOwner,
-      this.pH.fileTreeQuery
-    )
-    if (!version) throw new Error('No Existing File')
+    const { rawPath, owner, isFolder } = downloadDetails
+    const {
+      success,
+      value: { files }
+    } = await getFileTreeData(rawPath, owner, this.pH)
+    if (!success) throw new Error('No Existing File')
+    const { contents, editAccess, viewingAccess, trackingNumber } =
+      files as Files
+    let parsedContents: IFiletreeParsedContents
+    try {
+      parsedContents = JSON.parse(contents)
+    } catch (err) {
+      console.warn('downloadFile() : ', rawPath)
+      console.error(err)
+      parsedContents = { fids: [] }
+    }
+    const fid = parsedContents.fids[0]
     const fileProviders = verifyFileProviderIps(
-      await this.pH.storageQuery.queryFindFile({ fid: version })
+      await this.pH.storageQuery.queryFindFile({ fid })
     )
     if (fileProviders && fileProviders.length) {
       const config = {
-        editAccess: JSON.parse(data.editAccess),
-        viewingAccess: JSON.parse(data.viewingAccess),
-        trackingNumber: data.trackingNumber
+        editAccess: JSON.parse(editAccess),
+        viewingAccess: JSON.parse(viewingAccess),
+        trackingNumber: trackingNumber
       }
       const requester = await hashAndHex(
-        `e${config.trackingNumber}${this.walletRef.getJackalAddress()}`
+        `v${trackingNumber}${this.walletRef.getJackalAddress()}`
       )
       for (let i = 0; i < fileProviders.length; i++) {
-        const url = `${fileProviders[i].replace(
-          /\/+$/,
-          ''
-        )}/download/${version}`
+        const url = `${fileProviders[i].replace(/\/+$/, '')}/download/${fid}`
         try {
           const resp = await fetch(url)
           const contentLength = resp.headers.get('Content-Length')
@@ -364,21 +394,18 @@ export default class FileIo implements IFileIo {
           const rawFile = new Blob(chunks)
           const { key, iv } = await stringToAes(
             this.walletRef,
-            config.editAccess[requester]
+            config.viewingAccess[requester]
           )
           if (isFolder) {
-            const folderDetails = JSON.parse(
-              await (await convertFromEncryptedFile(rawFile, key, iv)).text()
-            )
-            return await FolderHandler.trackFolder(folderDetails)
+            return await FolderHandler.trackLegacyFolder(rawFile, key, iv)
           } else {
             return await FileDownloadHandler.trackFile(rawFile, config, key, iv)
           }
         } catch (err) {
+          const attempt = i + 1
+          const remaining = fileProviders.length - attempt
           console.warn(
-            `File fetch() failed. Attempt #${i + 1}. ${
-              2 - i
-            } attempts remaining`
+            `File fetch() failed. Attempt #${attempt}. ${remaining} attempts remaining`
           )
           console.error(err)
           console.warn(`Bad file provider url: ${url}`)
@@ -395,10 +422,13 @@ export default class FileIo implements IFileIo {
   ): Promise<void> {
     const readyToBroadcast = await this.rawDeleteTargets(targets, parent)
     const existingDirs = parent.getChildDirs()
+    const existingFiles = parent.getChildFiles()
     const dirs = targets.filter((target) => existingDirs.includes(target))
-    const files = targets.filter((target) => !existingDirs.includes(target))
+    const files = targets.filter((target) =>
+      Object.keys(existingFiles).includes(target)
+    )
     readyToBroadcast.push(
-      await parent.removeChildDirsAndFiles(dirs, files, this.walletRef)
+      await parent.removeChildDirAndFileReferences(dirs, files, this.walletRef)
     )
     const memo = ``
     // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
@@ -409,8 +439,11 @@ export default class FileIo implements IFileIo {
     parent: IFolderHandler
   ): Promise<EncodeObject[]> {
     const existingDirs = parent.getChildDirs()
+    const existingFiles = parent.getChildFiles()
     const dirs = targets.filter((target) => existingDirs.includes(target))
-    const files = targets.filter((target) => !existingDirs.includes(target))
+    const files = targets.filter((target) =>
+      Object.keys(existingFiles).includes(target)
+    )
     const location = `${parent.getWhereAmI()}/${parent.getWhoAmI()}`
     const encoded: EncodeObject[] = []
     await Promise.all(
@@ -421,7 +454,7 @@ export default class FileIo implements IFileIo {
         } else {
           encoded.push(
             ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
-              { location, name }
+              path
             ]))
           )
         }
@@ -431,7 +464,7 @@ export default class FileIo implements IFileIo {
       files.map(async (name) => {
         encoded.push(
           ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
-            { location, name }
+            `${location}/${name}`
           ]))
         )
       })
@@ -439,8 +472,10 @@ export default class FileIo implements IFileIo {
     for (let dir of dirs) {
       const folder = await this.downloadFolder(`${location}/${dir}`)
       const moreTargets = [
-        ...folder.getChildDirs(),
-        ...Object.keys(folder.getChildFiles())
+        ...new Set([
+          ...folder.getChildDirs(),
+          ...Object.keys(folder.getChildFiles())
+        ])
       ]
       encoded.push(...(await this.rawDeleteTargets(moreTargets, folder)))
     }
@@ -470,28 +505,14 @@ export default class FileIo implements IFileIo {
     const creator = this.walletRef.getJackalAddress()
     const dirMsgs: EncodeObject[] = await Promise.all(
       toGenerate.map(async (pathName: string) => {
-        const folderDetails: IChildDirInfo = {
-          myName: stripper(pathName),
-          myParent: 's/',
-          myOwner: creator
-        }
-        const handler = await FolderHandler.trackNewFolder(folderDetails)
-        return await handler.getForFiletree(this.walletRef)
+        return await this.createFileTreeFolderMsg(pathName, 's', creator)
       })
     )
     const readyToBroadcast: EncodeObject[] = []
     if (initMsg) {
       readyToBroadcast.push(initMsg)
     }
-    readyToBroadcast.push(
-      await saveCompressedFileTree(
-        this.walletRef.getJackalAddress(),
-        '/s',
-        {},
-        this.walletRef
-      ),
-      ...dirMsgs
-    )
+    readyToBroadcast.push(await this.createRoot(), ...dirMsgs)
     return readyToBroadcast
   }
   async convertFolderType(rawPath: string): Promise<void> {
@@ -512,17 +533,18 @@ export default class FileIo implements IFileIo {
     } else {
       encoded.push(
         ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
-          { location: base.getWhereAmI(), name: base.getWhoAmI() }
+          base.getMyPath()
         ]))
       )
     }
     encoded.push(await base.getForFiletree(this.walletRef))
 
-    const baseLocation = `${base.getWhereAmI()}/${base.getWhoAmI()}`
     const existingDirs = base.getChildDirs()
+    console.log('existingDirs')
+    console.log(existingDirs)
     for (let dir of existingDirs) {
       encoded.push(
-        ...(await this.rawConvertFolderType(`${baseLocation}/${dir}`))
+        ...(await this.rawConvertFolderType(base.getMyChildPath(dir)))
       )
     }
     return encoded
@@ -530,37 +552,42 @@ export default class FileIo implements IFileIo {
   async checkFolderIsFileTree(rawPath: string): Promise<boolean> {
     const owner = this.walletRef.getJackalAddress()
     try {
-      // intentionally ignored
+      // return value intentionally ignored
       const data = await readCompressedFileTree(owner, rawPath, this.walletRef)
       return true
     } catch (err) {
-      console.log(err)
+      console.warn('checkFolderIsFileTree()', err)
       return false
     }
   }
 
+  private async createFileTreeFolderMsg(
+    pathName: string,
+    parentPath: string,
+    creator: string
+  ) {
+    const folderDetails: IChildDirInfo = {
+      myName: stripper(pathName),
+      myParent: parentPath,
+      myOwner: creator
+    }
+    const handler = await FolderHandler.trackNewFolder(folderDetails)
+    return await handler.getForFiletree(this.walletRef)
+  }
   private async makeDelete(
     creator: string,
-    targets: IDeleteItem[]
+    targets: string[]
   ): Promise<EncodeObject[]> {
     const readyToDelete: EncodeObject[][] = await Promise.all(
-      targets.map(async (target: IDeleteItem) => {
-        const hexPath = await hexFullPath(
-          await merkleMeBro(target.location),
-          target.name
-        )
-        const hexOwner = await hashAndHex(
-          `o${hexPath}${await hashAndHex(creator)}`
-        )
-        const { version } = await getFileChainData(
-          hexPath,
-          hexOwner,
-          this.pH.fileTreeQuery
-        )
-        const linkedCids = JSON.parse(
-          (await this.pH.storageQuery.queryFidCid({ fid: version })).value
-            .fidCid?.cids || '[]'
-        )
+      targets.map(async (rawPath: string) => {
+        const fileTreeResult = (
+          await getFileTreeData(rawPath, creator, this.pH)
+        ).value.files as Files
+        const { fids = [] } = JSON.parse(fileTreeResult.contents)
+        const { cids } = (
+          await this.pH.storageQuery.queryFidCid({ fid: fids[0] })
+        ).value.fidCid as FidCid
+        const linkedCids = JSON.parse(cids)
         const toRemove: string[] = await Promise.all(
           linkedCids.filter(async (cid: string) => {
             return await matchOwnerToCid(this.pH, cid, creator)
@@ -571,7 +598,7 @@ export default class FileIo implements IFileIo {
         )
         const msgDelFile = this.pH.fileTreeTx.msgDeleteFile({
           creator,
-          hashPath: hexPath,
+          hashPath: await merkleMeBro(rawPath),
           account: await hashAndHex(creator)
         })
         return [...cancelContractsMsgs, msgDelFile]
@@ -598,6 +625,27 @@ export default class FileIo implements IFileIo {
     console.log('Provider Options Exhausted')
     return { fid: [''], cid: '' }
   }
+  private async createRoot() {
+    const common = {
+      aes: {
+        iv: genIv(),
+        key: await genKey()
+      },
+      num: self.crypto.randomUUID(),
+      pubKey: this.walletRef.getPubkey(),
+      usr: this.walletRef.getJackalAddress()
+    }
+    return this.pH.fileTreeTx.msgMakeRootV2({
+      creator: this.walletRef.getJackalAddress(),
+      editors: JSON.stringify(
+        await makePermsBlock({ base: 'e', ...common }, this.walletRef)
+      ),
+      viewers: JSON.stringify(
+        await makePermsBlock({ base: 'v', ...common }, this.walletRef)
+      ),
+      trackingNumber: common.num
+    })
+  }
 }
 
 /** Helpers */
@@ -605,35 +653,25 @@ async function prepExistingUpload(
   data: IFileUploadHandler,
   ownerAddr: string,
   walletRef: IWalletHandler
-): Promise<{ file: File; cfg: IFileConfigFull }> {
+): Promise<{ file: File; cfg: IFileConfigRaw }> {
   const hexedOwner = await hashAndHex(
     `o${await data.getFullMerkle()}${await hashAndHex(ownerAddr)}`
   )
-  const fileChainResult = await getFileChainData(
+  const fileChainResult = await getFileTreeData(
     await data.getFullMerkle(),
     hexedOwner,
-    walletRef.getProtoHandler().fileTreeQuery
+    walletRef.getProtoHandler()
   )
-  const typedData = fileChainResult.data as IFileConfigRaw
+  const typedData = fileChainResult.value.files as Files
 
-  const configData: IFileConfigFull = {
-    address: typedData.address,
-    contents: JSON.parse(typedData.contents),
-    owner: typedData.owner,
-    editAccess: JSON.parse(typedData.editAccess),
-    viewingAccess: JSON.parse(typedData.viewingAccess),
-    trackingNumber: typedData.trackingNumber
-  }
-
-  const editorKeys =
-    configData.editAccess[
-      await hashAndHex(
-        `e${configData.trackingNumber}${walletRef.getJackalAddress()}`
-      )
-    ]
+  const editPool = JSON.parse(typedData.editAccess)
+  const editor = await hashAndHex(
+    `e${typedData.trackingNumber}${walletRef.getJackalAddress()}`
+  )
+  const editorKeys = editPool[editor]
 
   return {
-    cfg: configData,
+    cfg: typedData,
     file: await data.getForUpload(await stringToAes(walletRef, editorKeys))
   }
 }
@@ -664,19 +702,21 @@ async function doUpload(
 }
 
 async function getProviders(
-  queryClient: IQueryStorage,
+  pH: IProtoHandler,
   max?: number
 ): Promise<IMiner[]> {
-  const rawProviderList = await fetchProviders(queryClient)
+  const rawProviderList = await fetchProviders(pH)
   console.info('Raw Providers')
   console.dir(rawProviderList)
   return filterProviders(rawProviderList, max)
 }
-async function fetchProviders(queryClient: IQueryStorage): Promise<IMiner[]> {
-  const rawProviderReturn = await queryClient.queryProvidersAll({})
-  if (!rawProviderReturn || !rawProviderReturn.value.providers)
-    throw new Error('Unable to get Storage Provider list!')
-  return rawProviderReturn.value.providers as IMiner[]
+async function fetchProviders(pH: IProtoHandler): Promise<IMiner[]> {
+  return (
+    await handlePagination(pH.storageQuery, 'queryProvidersAll', {})
+  ).reduce((acc: IMiner[], curr: any) => {
+    acc.push(...curr.providers)
+    return acc
+  }, [])
 }
 async function filterProviders(rawProviderList: IMiner[], max?: number) {
   const disallowList = [
@@ -695,10 +735,11 @@ async function filterProviders(rawProviderList: IMiner[], max?: number) {
       return one.startsWith('https') && !disallowList.some((rx) => rx.test(one))
     }
   })
-  return filteredProviders.slice(0, Number(max) || 100)
+  return filteredProviders.slice(0, Number(max) || 1000)
 }
 async function verifyProviders(
   providers: IMiner[],
+  chainId: string,
   versionFilter?: string | string[]
 ): Promise<IMiner[]> {
   const versionArray: string[] = []
@@ -711,7 +752,7 @@ async function verifyProviders(
   const preRegExArray: string[] = versionArray.map((s) => {
     return s.split('.').slice(0, 2).join('.')
   })
-  const regEx = new RegExp(`(${preRegExArray.join('|')})\\..+$`)
+  const verRegEx = new RegExp(`(${preRegExArray.join('|')})\\..+$`)
   const staged: boolean[] = await Promise.all(
     providers.map(async (provider) => {
       const result: boolean = await fetch(
@@ -721,14 +762,23 @@ async function verifyProviders(
         }
       )
         .then(async (res): Promise<boolean> => {
-          if (res.ok && versionFilter) {
-            const verResp = (await res.json()).version as string
-            return regEx.test(verResp)
-          } else {
-            return true
-          }
+          const parsed: IProviderVersionResponse = await res.json()
+          const chainCheck =
+            chainId === undefined || chainId === parsed['chain-id']
+          const verCheck =
+            versionFilter === undefined || verRegEx.test(parsed.version)
+          return res.ok && chainCheck && verCheck
         })
-        .catch(() => false)
+        .catch((err: Error) => {
+          console.warn('verifyProviders() Error')
+          console.error(err)
+          if (err.message.includes('AbortSignal')) {
+            alert(
+              'AbortSignal.timeout() error! Chromium family version 103+ required!'
+            )
+          }
+          return false
+        })
       return result
     })
   )
@@ -763,66 +813,19 @@ function verifyFileProviderIps(
     return false
   }
 }
-async function getFileChainData(
-  hexAddress: string,
-  owner: string,
-  fileTreeQuery: IQueryFileTree
-) {
-  console.log('getFileChainData')
-  console.log(hexAddress)
-  console.log(owner)
-  const fileResp = await fileTreeQuery.queryFiles({
-    address: hexAddress,
-    ownerAddress: owner
-  })
-  console.log(fileResp)
-  if (!fileResp.value || !fileResp.value.files)
-    throw new Error('No address found!')
-  const fileData = fileResp.value.files
-  if (!fileResp.success) {
-    fileData.contents = '{ "fids": [] }'
-  }
-  const parsedContents: IFiletreeParsedContents = JSON.parse(fileData.contents)
-  return {
-    version: parsedContents.fids[parsedContents.fids.length - 1],
-    data: fileData
-  }
-}
 async function matchOwnerToCid(
   pH: IProtoHandler,
   cid: string,
   owner: string
 ): Promise<boolean> {
-  if (
-    (await pH.storageQuery.queryContracts({ cid })).value.contracts?.signee ==
-    owner
-  ) {
+  const contractsResult = (await pH.storageQuery.queryContracts({ cid })).value
+    .contracts as Contracts
+  if (contractsResult.signee === owner) {
     return true
-  } else if (
-    (await pH.storageQuery.queryStrays({ cid })).value.strays?.signee == owner
-  ) {
-    return true
-  } else {
-    return false
   }
-}
-async function buildPostFile(
-  data: IMsgPartialPostFileBundle,
-  fileTreeTx: ITxFileTree
-): Promise<EncodeObject> {
-  return fileTreeTx.msgPostFile({
-    creator: data.creator,
-    account: data.account,
-    hashParent: data.hashParent,
-    hashChild: data.hashChild,
-    contents: data.contents,
-    editors: data.editors,
-    viewers: data.viewers,
-    trackingNumber: data.trackingNumber
-  })
-}
-async function random(max: number) {
-  return Math.floor(Math.random() * max)
+  const straysResult = (await pH.storageQuery.queryStrays({ cid })).value
+    .strays as Strays
+  return straysResult.signee === owner
 }
 async function statusCheck(
   target: number,

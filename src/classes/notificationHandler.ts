@@ -17,7 +17,7 @@ import { NotiCounter } from 'jackal.js-protos/dist/postgen/canine_chain/notifica
 import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
 import { IReadableNoti } from '@/interfaces'
 
-export default class OracleHandler implements INotificationHandler {
+export default class NotificationHandler implements INotificationHandler {
   private readonly walletRef: IWalletHandler
   private readonly pH: IProtoHandler
 
@@ -26,10 +26,10 @@ export default class OracleHandler implements INotificationHandler {
     this.pH = wallet.getProtoHandler()
   }
 
-  static async trackOracle(
+  static async trackNotification(
     wallet: IWalletHandler
   ): Promise<INotificationHandler> {
-    return new OracleHandler(wallet)
+    return new NotificationHandler(wallet)
   }
 
   makeNotification(notification: string, address: string): EncodeObject {
@@ -93,7 +93,7 @@ export default class OracleHandler implements INotificationHandler {
   }
   async getSingleAddressNotifications(
     forAddress: string
-  ): Promise<QueryAllNotificationsByAddressResponse> {
+  ): Promise<Notifications[]> {
     return (
       await handlePagination(
         this.pH.notificationsQuery,
@@ -164,7 +164,9 @@ export default class OracleHandler implements INotificationHandler {
     const data = await this.getSingleAddressNotifications(
       this.walletRef.getJackalAddress()
     )
-    return data.notifications.map((noti: Notifications) =>
+    console.log('readAllMyShareNotis()')
+    console.log(data)
+    return data.map((noti: Notifications) =>
       processNotiRead(noti, this.walletRef)
     )
   }

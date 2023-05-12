@@ -13,6 +13,7 @@ import type { TFileOrFFile } from '@/types/TFoldersAndFiles'
 
 export default interface IFileIo {
   getCurrentProvider(): IMiner
+  getAvailableProviders(): IMiner[]
   forceProvider(toSet: IMiner): void
   clearProblems(exclude: string): Promise<void>
   shuffle(): Promise<void>
