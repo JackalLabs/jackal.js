@@ -231,7 +231,6 @@ export default class GovHandler implements IGovHandler {
     return { ...(await allVeto), ...(await allFailed), ...(await allPassed) }
   }
   /** End Voting Queries */
-
   /** Staking Msgs */
   async claimDelegatorRewards(validatorAddresses: string[]): Promise<void> {
     const msgs = validatorAddresses.map((address: string) => {

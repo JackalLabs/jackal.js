@@ -1,10 +1,8 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { random } from 'make-random'
 
-import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
+import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import {
-  aesToString,
-  convertFromEncryptedFile,
   genIv,
   genKey,
   stringToAes
@@ -31,8 +29,6 @@ import {
   IDownloadDetails,
   IFileConfigRaw,
   IFiletreeParsedContents,
-  IFolderAdd,
-  IFolderChildFiles,
   IFolderFrame,
   IMiner,
   IMsgPartialPostFileBundle,
@@ -52,7 +48,6 @@ import {
   makePermsBlock,
   readCompressedFileTree,
   removeCompressedFileTree
-  saveCompressedFileTree
 } from '@/utils/compression'
 import IFileMetaHashMap from '../interfaces/file/IFileMetaHashMap'
 import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
@@ -197,12 +192,12 @@ export default class FileIo implements IFileIo {
         sourceHashMap[key].handler = handler
         queueHashMap[key] = true
         tracker.complete++
-        console.log('Done')
         return 'Done'
       })
     ).catch((err) => {
       console.warn('All Uploads Failed')
       console.error(err)
+      alert('All Uploads Failed')
     })
     do {
       await statusCheck(sourceKeys.length, tracker)
@@ -314,7 +309,7 @@ export default class FileIo implements IFileIo {
       })) as IFolderFrame
       return await FolderHandler.trackFolder(data)
     } catch (err) {
-      console.log(err)
+      console.error(err)
       const legacyBundle: IDownloadDetails = {
         rawPath,
         owner,
@@ -357,6 +352,7 @@ export default class FileIo implements IFileIo {
     } catch (err) {
       console.warn('downloadFile() : ', rawPath)
       console.error(err)
+      alert(err)
       parsedContents = { fids: [] }
     }
     const fid = parsedContents.fids[0]
@@ -494,7 +490,7 @@ export default class FileIo implements IFileIo {
     await this.pH
       .debugBroadcaster(readyToBroadcast, { memo, step: false })
       .catch((err) => {
-        console.error(err)
+        console.error('generateInitialDirs() -', err)
       })
   }
   async rawGenerateInitialDirs(
@@ -522,7 +518,7 @@ export default class FileIo implements IFileIo {
     await this.pH
       .debugBroadcaster(readyToBroadcast, { memo, step: false })
       .catch((err) => {
-        console.error(err)
+        console.error('convertFolderType() -', err)
       })
   }
   async rawConvertFolderType(rawPath: string): Promise<EncodeObject[]> {
@@ -540,8 +536,6 @@ export default class FileIo implements IFileIo {
     encoded.push(await base.getForFiletree(this.walletRef))
 
     const existingDirs = base.getChildDirs()
-    console.log('existingDirs')
-    console.log(existingDirs)
     for (let dir of existingDirs) {
       encoded.push(
         ...(await this.rawConvertFolderType(base.getMyChildPath(dir)))
@@ -681,8 +675,6 @@ async function doUpload(
   sender: string,
   file: File
 ): Promise<IProviderModifiedResponse> {
-  console.log('file.size')
-  console.log(file.size)
   const fileFormData = new FormData()
   fileFormData.set('file', file)
   fileFormData.set('sender', sender)
@@ -693,7 +685,6 @@ async function doUpload(
       return resp.json()
     })
     .then((resp) => {
-      console.log('resp:', resp)
       return { fid: [resp.fid], cid: resp.cid }
     })
     .catch((err) => {

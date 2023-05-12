@@ -6,8 +6,6 @@ import {
 import { EncodeObject } from '@cosmjs/proto-signing'
 import {
   IPayData,
-  IRnsOwnedHashMap,
-  IRnsOwnedItem,
   ISharedTracker,
   IStoragePaymentInfo,
   IStray

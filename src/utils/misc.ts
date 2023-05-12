@@ -53,7 +53,6 @@ export function numTo3xTB(base: number | string): string {
   final *= 1000 /** GB */
   final *= 1000 /** TB */
   final *= 3 /** Redundancy */
-  console.info(final)
   return final.toString()
 }
 
@@ -111,11 +110,9 @@ export async function getAvgBlockTime(
   rpc: string,
   blocks: number
 ): Promise<number> {
-  console.log(rpc)
   const info = await fetch(`${rpc}/block`)
     .then((res) => res.text())
     .then((res) => {
-      console.log(res)
       return res
     })
     .catch((err) => {

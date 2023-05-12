@@ -15,7 +15,6 @@ import {
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
-import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
 import { handlePagination } from '@/utils/misc'
 
 export default class RnsHandler implements IRnsHandler {

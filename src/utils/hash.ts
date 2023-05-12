@@ -1,3 +1,32 @@
+/** @private */
+export async function hashAndHex(input: string): Promise<string> {
+  const algo = 'SHA-256'
+  const raw = await crypto.subtle.digest(algo, new TextEncoder().encode(input))
+  return bufferToHex(new Uint8Array(raw))
+}
+/** @private */
+export async function hexFullPath(
+  path: string,
+  fileName: string
+): Promise<string> {
+  return await hashAndHex(`${path}${await hashAndHex(fileName)}`)
+}
+/** @private */
+export async function merkleMeBro(path: string): Promise<string> {
+  const pathArray = path.split('/')
+  let merkle = ''
+  for (let i = 0; i < pathArray.length; i++) {
+    merkle = await hexFullPath(merkle, pathArray[i])
+  }
+  return merkle
+}
+/** @private */
+export function bufferToHex(buf: Uint8Array): string {
+  return buf.reduce((acc: string, curr: number) => {
+    return acc + hashMap[curr]
+  }, '')
+}
+
 const hashMap: string[] = [
   '00',
   '01',
@@ -256,32 +285,3 @@ const hashMap: string[] = [
   'fe',
   'ff'
 ]
-
-/** @private */
-export async function hashAndHex(input: string): Promise<string> {
-  const algo = 'SHA-256'
-  const raw = await crypto.subtle.digest(algo, new TextEncoder().encode(input))
-  return bufferToHex(new Uint8Array(raw))
-}
-/** @private */
-export async function hexFullPath(
-  path: string,
-  fileName: string
-): Promise<string> {
-  return await hashAndHex(`${path}${await hashAndHex(fileName)}`)
-}
-/** @private */
-export async function merkleMeBro(path: string): Promise<string> {
-  const pathArray = path.split('/')
-  let merkle = ''
-  for (let i = 0; i < pathArray.length; i++) {
-    merkle = await hexFullPath(merkle, pathArray[i])
-  }
-  return merkle
-}
-/** @private */
-export function bufferToHex(buf: Uint8Array): string {
-  return buf.reduce((acc: string, curr: number) => {
-    return acc + hashMap[curr]
-  }, '')
-}

@@ -1,7 +1,6 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import {
   QueryAllNotiCounterResponse,
-  QueryAllNotificationsByAddressResponse,
   QueryAllNotificationsResponse,
   QueryGetNotiCounterResponse,
   QueryGetNotificationsResponse

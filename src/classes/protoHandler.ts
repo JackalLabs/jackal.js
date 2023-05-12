@@ -6,7 +6,7 @@ import ProtoBuilder, {
   TMasterBroadcaster
 } from 'jackal.js-protos'
 import { EncodeObject, OfflineSigner } from '@cosmjs/proto-signing'
-import { estimateGas, finalizeGas } from '@/utils/gas'
+import { finalizeGas } from '@/utils/gas'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 
 export default class ProtoHandler implements IProtoHandler {

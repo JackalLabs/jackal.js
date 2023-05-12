@@ -1,4 +1,3 @@
-import IWrappedEncodeObject from '@/interfaces/IWrappedEncodeObject'
 export { default as IAesBundle } from '@/interfaces/IAesBundle'
 export { default as IChildDirInfo } from '@/interfaces/IChildDirInfo'
 export { default as ICoin } from '@/interfaces/ICoin'

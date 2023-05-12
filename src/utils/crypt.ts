@@ -31,17 +31,13 @@ export async function aesCrypt(
     name: 'AES-GCM',
     iv
   }
-  console.log('crypt data')
-  console.log(data)
   const workingData = await data.arrayBuffer()
-  console.log(workingData)
   if (workingData.byteLength < 1) {
     return new Blob([])
   } else if (mode?.toLowerCase() === 'encrypt') {
     return await crypto.subtle
       .encrypt(algo, key, workingData)
       .then((res) => {
-        console.log(res)
         return new Blob([res])
       })
       .catch((err) => {
@@ -52,7 +48,6 @@ export async function aesCrypt(
     return await crypto.subtle
       .decrypt(algo, key, workingData)
       .then((res) => {
-        console.log(res)
         return new Blob([res])
       })
       .catch((err) => {
@@ -61,66 +56,15 @@ export async function aesCrypt(
       })
   }
 }
-export async function aesCrypt2(
-  data: Uint16Array,
-  key: CryptoKey,
-  iv: Uint8Array,
-  mode: 'encrypt' | 'decrypt'
-): Promise<Uint16Array> {
-  const algo = {
-    name: 'AES-GCM',
-    iv
-  }
-  console.log('crypt data')
-  console.log(data)
-  // const workingData = await data.arrayBuffer()
-  // console.log(workingData)
-  if (data.byteLength < 1) {
-    return new Uint16Array(0)
-  } else if (mode?.toLowerCase() === 'encrypt') {
-    return await crypto.subtle
-      .encrypt(algo, key, data)
-      .then((res) => {
-        console.log(res)
-        // const b = new Blob([res])
-        // console.log(b)
-        return new Uint16Array(res)
-      })
-      .catch((err) => {
-        console.error(`aesCrypt(encrypt) - ${err}`)
-        throw err
-      })
-  } else {
-    return await crypto.subtle
-      .decrypt(algo, key, data)
-      .then((res) => {
-        console.log(res)
-        return new Uint16Array(res)
-      })
-      .catch((err) => {
-        console.error(`aesCrypt(decrypt) - ${err}`)
-        throw err
-      })
-  }
-}
+
 export async function aesToString(
   wallet: IWalletHandler,
   pubKey: string,
   aes: IAesBundle
 ): Promise<string> {
-  console.log('iv')
-  console.log(aes.iv)
   const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
-  console.log('theIvD')
-  const theIvD = wallet.asymmetricDecrypt(theIv)
-  console.log(theIvD)
   const key = await exportJackalKey(aes.key)
-  console.log('key')
-  console.log(key)
   const theKey = wallet.asymmetricEncrypt(key, pubKey)
-  const theKeyD = wallet.asymmetricDecrypt(theKey)
-  console.log('theKeyD')
-  console.log(theKeyD)
   return `${theIv}|${theKey}`
 }
 export async function stringToAes(
@@ -152,8 +96,6 @@ export async function convertToEncryptedFile(
     size: workingFile.size
   }
   const detailsBlob = new Blob([JSON.stringify(details)])
-  console.log('detailsBlob.size')
-  console.log(detailsBlob.size)
   const encryptedArray: Blob[] = [
     new Blob([(detailsBlob.size + 16).toString().padStart(8, '0')]),
     await aesCrypt(detailsBlob, key, iv, 'encrypt')

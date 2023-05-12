@@ -62,8 +62,8 @@ export default class WalletHandler implements IWalletHandler {
         'Jackal.js is only supported in the browser at this time!'
       )
     } else {
-      const { selectedWallet, signerChain, enabledChains, queryAddr, txAddr } =
-        config
+      const { selectedWallet, signerChain, enabledChains, queryAddr, txAddr } = config
+      const workingChain = signerChain || jackalMainnetChainId
       let windowWallet: Keplr | Leap
       switch (selectedWallet) {
         case 'keplr':
@@ -82,10 +82,7 @@ export default class WalletHandler implements IWalletHandler {
       await windowWallet.enable(enabledChains || defaultChains).catch((err) => {
         throw err
       })
-      const signer = await windowWallet.getOfflineSignerAuto(
-        signerChain || jackalMainnetChainId,
-        {}
-      )
+      const signer = await windowWallet.getOfflineSignerAuto(workingChain, {})
       const qAddr = queryAddr || defaultQueryAddr9091
       const tAddr = txAddr || defaultTxAddr26657
       const acct = (await signer.getAccounts())[0]
@@ -98,7 +95,7 @@ export default class WalletHandler implements IWalletHandler {
         success
       } = await pH.fileTreeQuery.queryPubkey({ address: acct.address })
       const secret = await makeSecret(
-        signerChain || jackalMainnetChainId,
+        workingChain,
         acct.address,
         windowWallet
       ).catch((err) => {
@@ -110,6 +107,7 @@ export default class WalletHandler implements IWalletHandler {
       const keyPair = PrivateKey.fromHex(secretAsHex)
       return new WalletHandler(
         signer,
+        workingChain,
         keyPair,
         rnsInitComplete,
         success && !!pubkey?.key,

@@ -17,7 +17,6 @@ import {
   ResponseOfferSnapshot,
   ResponseApplySnapshotChunk
 } from 'jackal.js-protos/dist/postgen/tendermint/abci/types'
-import { IProtoHandler } from '@/interfaces/classes'
 
 export default interface IAbciHandler {
   getEcho(message: string): Promise<string>
