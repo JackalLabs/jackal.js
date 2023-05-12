@@ -1,5 +1,5 @@
 export default interface IDelegationDetails {
-  delegatorAddress: string;
-  validatorAddress: string;
-  shares: string;
+  delegatorAddress: string
+  validatorAddress: string
+  shares: string
 }

@@ -1,10 +1,10 @@
-import { IFileConfigFull } from '@/interfaces'
+import { IFileConfigRaw } from '@/interfaces'
 import { IFileUploadHandler } from '@/interfaces/classes'
 
 export default interface IUploadListItem {
-  data: null | IFileConfigFull,
-  exists: boolean,
-  handler: IFileUploadHandler,
-  key: string,
+  data: null | IFileConfigRaw
+  exists: boolean
+  handler: IFileUploadHandler
+  key: string
   uploadable: File
 }

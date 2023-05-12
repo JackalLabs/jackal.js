@@ -1,6 +1,14 @@
 import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
+import { IProtoHandler } from '@/interfaces/classes'
+import { QueryFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
+import { hashAndHex, merkleMeBro } from '@/utils/hash'
+import SuccessNoUndefined from 'jackal.js-protos/dist/types/TSuccessNoUndefined'
 
-export function deprecated (thing: string, version: string, opts?: { aggressive?: boolean, replacement?: string }) {
+export function deprecated(
+  thing: string,
+  version: string,
+  opts?: { aggressive?: boolean; replacement?: string }
+) {
   let notice = `${thing} is deprecated as of: ${version}`
   if (opts?.replacement) {
     notice += ` - Please use ${opts.replacement} instead`
@@ -8,7 +16,7 @@ export function deprecated (thing: string, version: string, opts?: { aggressive?
   console.error(notice)
   if (opts?.aggressive) alert(notice)
 }
-export function orderStrings (sortable: string[]): string[] {
+export function orderStrings(sortable: string[]): string[] {
   return sortable.sort((a: string, b: string) => {
     const lowerA = a.toLowerCase()
     const lowerB = b.toLowerCase()
@@ -22,11 +30,11 @@ export function orderStrings (sortable: string[]): string[] {
   })
 }
 
-export function stripper (value: string): string {
+export function stripper(value: string): string {
   return value.replace(/\/+/g, '')
 }
 
-export function checkResults (response: any) {
+export function checkResults(response: any) {
   console.dir(response)
   if (response.gasUsed > response.gasWanted) {
     console.log('Out Of Gas')
@@ -34,22 +42,22 @@ export function checkResults (response: any) {
   }
 }
 
-export function numToWholeTB (base: number | string): string {
+export function numToWholeTB(base: number | string): string {
   return numTo3xTB(Math.floor(Number(base)) || 0)
 }
 
-export function numTo3xTB (base: number | string): string {
+export function numTo3xTB(base: number | string): string {
   let final = Math.max(Number(base), 0)
   final *= 1000 /** KB */
   final *= 1000 /** MB */
   final *= 1000 /** GB */
   final *= 1000 /** TB */
-  final *= 3    /** Redundancy */
+  final *= 3 /** Redundancy */
   console.info(final)
   return final.toString()
 }
 
-export function bruteForceString (value: string): null | undefined | string {
+export function bruteForceString(value: string): null | undefined | string {
   switch (value.toLowerCase()) {
     case 'null':
       return null
@@ -60,7 +68,11 @@ export function bruteForceString (value: string): null | undefined | string {
   }
 }
 
-export async function handlePagination (handler: any, queryTag: string, additionalParams?: any) {
+export async function handlePagination(
+  handler: any,
+  queryTag: string,
+  additionalParams?: any
+) {
   const raw: any[] = []
   let nextPage: Uint8Array = new Uint8Array()
   do {
@@ -77,11 +89,15 @@ export async function handlePagination (handler: any, queryTag: string, addition
   return raw
 }
 
-export async function setDelay (amt: number): Promise<void> {
+export async function setDelay(amt: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, Number(amt)))
 }
 
-export async function blockToDate (rpcUrl: string, currentBlockHeight: number, targetBlockHeight: number | string) {
+export async function blockToDate(
+  rpcUrl: string,
+  currentBlockHeight: number,
+  targetBlockHeight: number | string
+): Promise<Date> {
   const targetHeight = Number(targetBlockHeight) || 0
   /** Block time in milliseconds */
   const blockTime = await getAvgBlockTime(rpcUrl, 20)
@@ -91,13 +107,72 @@ export async function blockToDate (rpcUrl: string, currentBlockHeight: number, t
   return new Date(now + diffMs)
 }
 
-export async function getAvgBlockTime (rpc: string, blocks: number): Promise<number> {
-    const info = await fetch(rpc+"/block").then(res => res.json());
-    const blockTime = fetch(rpc+`/block?height=${info.result.block.header.height-blocks}`).then(res => res.json());
+export async function getAvgBlockTime(
+  rpc: string,
+  blocks: number
+): Promise<number> {
+  console.log(rpc)
+  const info = await fetch(`${rpc}/block`)
+    .then((res) => res.text())
+    .then((res) => {
+      console.log(res)
+      return res
+    })
+    .catch((err) => {
+      console.warn('getAvgBlockTime() block fetch error:')
+      console.error(err)
+      return { result: { block: { header: { time: 0 } } } }
+    })
+  return 0
+  // const blockTime = fetch(`${rpc}/block?height=${info.result.block.header.height - blocks}`)
+  //   .then(res => res.text())
+  //   .catch(err => {
+  //     console.warn('getAvgBlockTime() block/height fetch error:')
+  //     console.error(err)
+  //     return { result: { block: { header: { time: 0 }}}}
+  //   })
+  //
+  // return blockTime.then(data => {
+  //     const old = Date.parse(data.result.block.header.time);
+  //     const now = Date.parse(info.result.block.header.time);
+  //     return Math.round((now-old)/blocks);
+  // });
+}
 
-    return blockTime.then(data => {
-        const old = Date.parse(data.result.block.header.time);
-        const now = Date.parse(info.result.block.header.time);
-        return Math.round((now-old)/blocks);
-    });
+export function uint8ToString(buf: Uint8Array): string {
+  return String.fromCharCode.apply(null, [...buf])
+}
+
+export function stringToUint8(str: string): Uint8Array {
+  const uintView = new Uint8Array(str.length)
+  for (let i = 0; i < str.length; i++) {
+    uintView[i] = str.charCodeAt(i)
+  }
+  return uintView
+}
+export function uint16ToString(buf: Uint16Array): string {
+  return String.fromCharCode.apply(null, [...buf])
+}
+
+export function stringToUint16(str: string): Uint16Array {
+  const uintView = new Uint16Array(str.length)
+  for (let i = 0; i < str.length; i++) {
+    uintView[i] = str.charCodeAt(i)
+  }
+  return uintView
+}
+
+export async function getFileTreeData(
+  rawPath: string,
+  owner: string,
+  pH: IProtoHandler
+): Promise<SuccessNoUndefined<QueryFileResponse>> {
+  const hexAddress = await merkleMeBro(rawPath)
+  const hexedOwner = await hashAndHex(
+    `o${hexAddress}${await hashAndHex(owner)}`
+  )
+  return await pH.fileTreeQuery.queryFiles({
+    address: hexAddress,
+    ownerAddress: hexedOwner
+  })
 }
