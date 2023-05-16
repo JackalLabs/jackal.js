@@ -1,17 +1,7 @@
 import PLZSU from '@karnthis/plzsu'
-import {
-  IEditorsViewers,
-  IMsgPartialPostFileBundle,
-  IPermsParts
-} from '@/interfaces'
+import { IEditorsViewers, IMsgPartialPostFileBundle, IPermsParts } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import {
-  aesToString,
-  cryptString,
-  genIv,
-  genKey,
-  stringToAes
-} from '@/utils/crypt'
+import { aesToString, cryptString, genIv, genKey, stringToAes } from '@/utils/crypt'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
@@ -95,7 +85,7 @@ export async function readCompressedFileTree(
   const result = await getFileTreeData(
     rawPath,
     owner,
-    walletRef.getProtoHandler()
+    walletRef.getQueryHandler()
   )
   if (!result.success) {
     throw new Error('Share Data Not Found')

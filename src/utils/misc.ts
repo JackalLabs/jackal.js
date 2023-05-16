@@ -1,5 +1,5 @@
 import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
-import { IProtoHandler } from '@/interfaces/classes'
+import { IQueryHandler } from '@/interfaces/classes'
 import { QueryFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import SuccessNoUndefined from 'jackal.js-protos/dist/types/TSuccessNoUndefined'
@@ -19,6 +19,18 @@ export function deprecated (thing: string, version: string, opts?: { aggressive?
   }
   console.error(notice)
   if (opts?.aggressive) alert(notice)
+}
+
+/**
+ * Notify that Signer has not been enabled.
+ * @param {string} module - Name of parent Module.
+ * @param {string} func - Name of function error occured in.
+ * @returns {string} - String containing error message.
+ */
+export function signerNotEnabled (module: string, func: string) {
+  let notice = `[${module}] ${func}() - Signer has not been enabled. Please init ProtoHandler`
+  console.error(notice)
+  return notice
 }
 
 /**
@@ -201,13 +213,15 @@ export function stringToUint16(str: string): Uint16Array {
 export async function getFileTreeData(
   rawPath: string,
   owner: string,
-  pH: IProtoHandler
+  qH: IQueryHandler
 ): Promise<SuccessNoUndefined<QueryFileResponse>> {
+  console.log('rawPath')
+  console.log(rawPath)
   const hexAddress = await merkleMeBro(rawPath)
   const hexedOwner = await hashAndHex(
     `o${hexAddress}${await hashAndHex(owner)}`
   )
-  return await pH.fileTreeQuery.queryFiles({
+  return await qH.fileTreeQuery.queryFiles({
     address: hexAddress,
     ownerAddress: hexedOwner
   })

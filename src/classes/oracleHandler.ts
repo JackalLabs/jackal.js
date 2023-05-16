@@ -1,17 +1,13 @@
-import {
-  IProtoHandler,
-  IOracleHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
+import { IOracleHandler, IQueryHandler, IWalletHandler } from '@/interfaces/classes'
 import { IOracleFeed } from '@/interfaces'
 
 export default class OracleHandler implements IOracleHandler {
   private readonly walletRef: IWalletHandler
-  private readonly pH: IProtoHandler
+  private readonly qH: IQueryHandler
 
   private constructor(wallet: IWalletHandler) {
     this.walletRef = wallet
-    this.pH = wallet.getProtoHandler()
+    this.qH = wallet.getQueryHandler()
   }
 
   static async trackOracle(wallet: IWalletHandler): Promise<IOracleHandler> {
@@ -19,10 +15,10 @@ export default class OracleHandler implements IOracleHandler {
   }
 
   async getFeed(name: string): Promise<IOracleFeed> {
-    const result = (await this.pH.oracleQuery.queryFeed({ name })).value.feed
+    const result = (await this.qH.oracleQuery.queryFeed({ name })).value.feed
     return result ? result : { owner: 'na', data: 'na', name: 'na' }
   }
   async getAllFeeds(): Promise<IOracleFeed[]> {
-    return (await this.pH.oracleQuery.queryAllFeeds({})).value.feed
+    return (await this.qH.oracleQuery.queryAllFeeds({})).value.feed
   }
 }

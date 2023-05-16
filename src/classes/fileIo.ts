@@ -2,18 +2,8 @@ import { EncodeObject } from '@cosmjs/proto-signing'
 import { random } from 'make-random'
 
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
-import {
-  genIv,
-  genKey,
-  stringToAes
-} from '@/utils/crypt'
-import {
-  bruteForceString,
-  getFileTreeData,
-  handlePagination,
-  setDelay,
-  stripper
-} from '@/utils/misc'
+import { genIv, genKey, stringToAes } from '@/utils/crypt'
+import { bruteForceString, getFileTreeData, handlePagination, setDelay, signerNotEnabled, stripper } from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
 import {
@@ -21,7 +11,7 @@ import {
   IFileIo,
   IFileUploadHandler,
   IFolderHandler,
-  IProtoHandler,
+  IQueryHandler,
   IWalletHandler
 } from '@/interfaces/classes'
 import {
@@ -43,12 +33,7 @@ import {
 import IProviderChecks from '@/interfaces/IProviderChecks'
 import { QueryFindFileResponse } from 'jackal.js-protos/src/postgen/canine_chain/storage/query'
 import SuccessIncluded from 'jackal.js-protos/src/types/TSuccessIncluded'
-import {
-  buildPostFile,
-  makePermsBlock,
-  readCompressedFileTree,
-  removeCompressedFileTree
-} from '@/utils/compression'
+import { buildPostFile, makePermsBlock, readCompressedFileTree, removeCompressedFileTree } from '@/utils/compression'
 import IFileMetaHashMap from '../interfaces/file/IFileMetaHashMap'
 import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
 import { FidCid } from 'jackal.js-protos/dist/postgen/canine_chain/storage/fid_cid'
@@ -57,7 +42,7 @@ import { Strays } from 'jackal.js-protos/dist/postgen/canine_chain/storage/stray
 
 export default class FileIo implements IFileIo {
   private readonly walletRef: IWalletHandler
-  private readonly pH: IProtoHandler
+  private readonly qH: IQueryHandler
   private availableProviders: IMiner[]
   private currentProvider: IMiner
 
@@ -67,7 +52,7 @@ export default class FileIo implements IFileIo {
     currentProvider: IMiner
   ) {
     this.walletRef = wallet
-    this.pH = wallet.getProtoHandler()
+    this.qH = wallet.getQueryHandler()
     this.availableProviders = providers
     this.currentProvider = currentProvider
   }
@@ -76,9 +61,10 @@ export default class FileIo implements IFileIo {
     wallet: IWalletHandler,
     versionFilter?: string | string[]
   ): Promise<FileIo> {
+    if (!wallet.traits) throw new Error(signerNotEnabled('FileIo', 'trackIo'))
     const providers = await verifyProviders(
       await getProviders(wallet.getProtoHandler()),
-      wallet.chainId,
+      wallet.traits.chainId,
       versionFilter
     )
     const provider = providers[await random(providers.length)]
@@ -88,13 +74,14 @@ export default class FileIo implements IFileIo {
     wallet: IWalletHandler,
     versionFilter?: string | string[]
   ): Promise<IProviderChecks> {
-    const raw = await fetchProviders(wallet.getProtoHandler())
+    if (!wallet.traits) throw new Error(signerNotEnabled('FileIo', 'checkProviders'))
+    const raw = await fetchProviders(wallet.getQueryHandler())
     const filtered = await filterProviders(raw)
     return {
       filtered,
       raw,
       verified: versionFilter
-        ? await verifyProviders(filtered, wallet.chainId, versionFilter)
+        ? await verifyProviders(filtered, wallet.traits.chainId, versionFilter)
         : filtered
     }
   }
@@ -119,9 +106,10 @@ export default class FileIo implements IFileIo {
       this.availableProviders[await random(this.availableProviders.length)]
   }
   async refresh(): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'refresh'))
     this.availableProviders = await verifyProviders(
-      await getProviders(this.pH),
-      this.walletRef.chainId
+      await getProviders(this.qH),
+      this.walletRef.traits.chainId
     )
     this.currentProvider =
       this.availableProviders[await random(this.availableProviders.length)]
@@ -131,15 +119,17 @@ export default class FileIo implements IFileIo {
     parentDir: IFolderHandler,
     newDirs: string[]
   ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'createFolders'))
+    const pH = this.walletRef.getProtoHandler()
     const readyToBroadcast = await this.rawCreateFolders(parentDir, newDirs)
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+    await pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
   async rawCreateFolders(
     parentDir: IFolderHandler,
     newDirs: string[]
   ): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawCreateFolders'))
     const result = await parentDir.addChildDirs(newDirs, this.walletRef)
     if (result.existing.length > 0) {
       console.log(
@@ -150,6 +140,7 @@ export default class FileIo implements IFileIo {
     return result.encoded
   }
   async verifyFoldersExist(toCheck: string[]): Promise<number> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'verifyFoldersExist'))
     const toCreate = []
     for (let i = 0; i < toCheck.length; i++) {
       const check = await this.checkFolderIsFileTree(`s/${toCheck[i]}`)
@@ -171,6 +162,8 @@ export default class FileIo implements IFileIo {
     parent: IFolderHandler,
     tracker: IStaggeredTracker
   ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'staggeredUploadFiles'))
+    const pH = this.walletRef.getProtoHandler()
     const sourceKeys = Object.keys(sourceHashMap)
     const jackalAddr = this.walletRef.getJackalAddress()
     let queueHashMap: { [key: string]: boolean } = {}
@@ -209,12 +202,7 @@ export default class FileIo implements IFileIo {
         // do nothing
       } else {
         const fileNames = processValues.reduce((acc, curr) => {
-          acc[curr.handler.getWhoAmI()] = {
-            name: '',
-            lastModified: 0,
-            size: 0,
-            type: ''
-          }
+          acc[curr.handler.getWhoAmI()] = curr.handler.getMeta()
           return acc
         }, {} as IFileMetaHashMap)
         const readyToBroadcast = await this.rawAfterUpload(processValues)
@@ -222,8 +210,7 @@ export default class FileIo implements IFileIo {
           await parent.addChildFileReferences(fileNames, this.walletRef)
         )
         const memo = `Processing batch of ${processValues.length} uploads`
-        // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-        await this.pH
+        await pH
           .debugBroadcaster(readyToBroadcast, { memo, step: false })
           .catch((err) => {
             throw err
@@ -235,10 +222,11 @@ export default class FileIo implements IFileIo {
     } while (Object.keys(queueHashMap).length > 0)
   }
   private async afterUpload(ids: IQueueItemPostUpload[]): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'afterUpload'))
+    const pH = this.walletRef.getProtoHandler()
     const readyToBroadcast = await this.rawAfterUpload(ids)
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH
+    await pH
       .debugBroadcaster(readyToBroadcast, { memo, step: false })
       .catch((err) => {
         throw err
@@ -247,6 +235,8 @@ export default class FileIo implements IFileIo {
   private async rawAfterUpload(
     ids: IQueueItemPostUpload[]
   ): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawAfterUpload'))
+    const pH = this.walletRef.getProtoHandler()
     const creator = this.walletRef.getJackalAddress()
     const needingReset: EncodeObject[] = []
     const ready = await Promise.all(
@@ -284,9 +274,9 @@ export default class FileIo implements IFileIo {
         }
         const msgPost: EncodeObject = await buildPostFile(
           msgPostFileBundle,
-          this.pH
+          pH
         )
-        const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({
+        const msgSign: EncodeObject = pH.storageTx.msgSignContract({
           creator,
           cid,
           payOnce: false
@@ -298,6 +288,7 @@ export default class FileIo implements IFileIo {
     return [...needingReset, ...ready.flat()]
   }
   async downloadFolder(rawPath: string): Promise<IFolderHandler> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'downloadFolder'))
     const owner = this.walletRef.getJackalAddress()
     try {
       const data = (await readCompressedFileTree(
@@ -338,11 +329,12 @@ export default class FileIo implements IFileIo {
     downloadDetails: IDownloadDetails,
     completion: { track: number }
   ): Promise<IFileDownloadHandler | IFolderHandler> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'downloadFile'))
     const { rawPath, owner, isFolder } = downloadDetails
     const {
       success,
       value: { files }
-    } = await getFileTreeData(rawPath, owner, this.pH)
+    } = await getFileTreeData(rawPath, owner, this.qH)
     if (!success) throw new Error('No Existing File')
     const { contents, editAccess, viewingAccess, trackingNumber } =
       files as Files
@@ -357,7 +349,7 @@ export default class FileIo implements IFileIo {
     }
     const fid = parsedContents.fids[0]
     const fileProviders = verifyFileProviderIps(
-      await this.pH.storageQuery.queryFindFile({ fid })
+      await this.qH.storageQuery.queryFindFile({ fid })
     )
     if (fileProviders && fileProviders.length) {
       const config = {
@@ -416,6 +408,8 @@ export default class FileIo implements IFileIo {
     targets: string[],
     parent: IFolderHandler
   ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'deleteTargets'))
+    const pH = this.walletRef.getProtoHandler()
     const readyToBroadcast = await this.rawDeleteTargets(targets, parent)
     const existingDirs = parent.getChildDirs()
     const existingFiles = parent.getChildFiles()
@@ -427,13 +421,13 @@ export default class FileIo implements IFileIo {
       await parent.removeChildDirAndFileReferences(dirs, files, this.walletRef)
     )
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+    await pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
   async rawDeleteTargets(
     targets: string[],
     parent: IFolderHandler
   ): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawDeleteTargets'))
     const existingDirs = parent.getChildDirs()
     const existingFiles = parent.getChildFiles()
     const dirs = targets.filter((target) => existingDirs.includes(target))
@@ -481,13 +475,14 @@ export default class FileIo implements IFileIo {
     initMsg: EncodeObject | null,
     startingDirs?: string[]
   ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'generateInitialDirs'))
+    const pH = this.walletRef.getProtoHandler()
     const readyToBroadcast = await this.rawGenerateInitialDirs(
       initMsg,
       startingDirs
     )
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH
+    await pH
       .debugBroadcaster(readyToBroadcast, { memo, step: false })
       .catch((err) => {
         console.error('generateInitialDirs() -', err)
@@ -497,6 +492,7 @@ export default class FileIo implements IFileIo {
     initMsg: EncodeObject | null,
     startingDirs?: string[]
   ): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawGenerateInitialDirs'))
     const toGenerate = startingDirs || ['Config', 'Home', 'WWW']
     const creator = this.walletRef.getJackalAddress()
     const dirMsgs: EncodeObject[] = await Promise.all(
@@ -512,16 +508,18 @@ export default class FileIo implements IFileIo {
     return readyToBroadcast
   }
   async convertFolderType(rawPath: string): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'convertFolderType'))
+    const pH = this.walletRef.getProtoHandler()
     const readyToBroadcast = await this.rawConvertFolderType(rawPath)
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH
+    await pH
       .debugBroadcaster(readyToBroadcast, { memo, step: false })
       .catch((err) => {
         console.error('convertFolderType() -', err)
       })
   }
   async rawConvertFolderType(rawPath: string): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawConvertFolderType'))
     const base = await this.downloadFolder(rawPath)
     const encoded: EncodeObject[] = []
     if (await this.checkFolderIsFileTree(rawPath)) {
@@ -544,6 +542,7 @@ export default class FileIo implements IFileIo {
     return encoded
   }
   async checkFolderIsFileTree(rawPath: string): Promise<boolean> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'checkFolderIsFileTree'))
     const owner = this.walletRef.getJackalAddress()
     try {
       // return value intentionally ignored
@@ -560,6 +559,7 @@ export default class FileIo implements IFileIo {
     parentPath: string,
     creator: string
   ) {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'createFileTreeFolderMsg'))
     const folderDetails: IChildDirInfo = {
       myName: stripper(pathName),
       myParent: parentPath,
@@ -572,25 +572,27 @@ export default class FileIo implements IFileIo {
     creator: string,
     targets: string[]
   ): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'makeDelete'))
+    const pH = this.walletRef.getProtoHandler()
     const readyToDelete: EncodeObject[][] = await Promise.all(
       targets.map(async (rawPath: string) => {
         const fileTreeResult = (
-          await getFileTreeData(rawPath, creator, this.pH)
+          await getFileTreeData(rawPath, creator, this.qH)
         ).value.files as Files
         const { fids = [] } = JSON.parse(fileTreeResult.contents)
         const { cids } = (
-          await this.pH.storageQuery.queryFidCid({ fid: fids[0] })
+          await this.qH.storageQuery.queryFidCid({ fid: fids[0] })
         ).value.fidCid as FidCid
         const linkedCids = JSON.parse(cids)
         const toRemove: string[] = await Promise.all(
           linkedCids.filter(async (cid: string) => {
-            return await matchOwnerToCid(this.pH, cid, creator)
+            return await matchOwnerToCid(this.qH, cid, creator)
           })
         )
         const cancelContractsMsgs: EncodeObject[] = toRemove.map(
-          (cid: string) => this.pH.storageTx.msgCancelContract({ creator, cid })
+          (cid: string) => pH.storageTx.msgCancelContract({ creator, cid })
         )
-        const msgDelFile = this.pH.fileTreeTx.msgDeleteFile({
+        const msgDelFile = pH.fileTreeTx.msgDeleteFile({
           creator,
           hashPath: await merkleMeBro(rawPath),
           account: await hashAndHex(creator)
@@ -604,6 +606,7 @@ export default class FileIo implements IFileIo {
     sender: string,
     file: File
   ): Promise<IProviderModifiedResponse> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'tumbleUpload'))
     while (this.availableProviders.length > 0) {
       const { ip } = this.currentProvider
       console.log('Current Provider:', ip)
@@ -620,6 +623,8 @@ export default class FileIo implements IFileIo {
     return { fid: [''], cid: '' }
   }
   private async createRoot() {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'createRoot'))
+    const pH = this.walletRef.getProtoHandler()
     const common = {
       aes: {
         iv: genIv(),
@@ -629,7 +634,7 @@ export default class FileIo implements IFileIo {
       pubKey: this.walletRef.getPubkey(),
       usr: this.walletRef.getJackalAddress()
     }
-    return this.pH.fileTreeTx.msgMakeRootV2({
+    return pH.fileTreeTx.msgMakeRootV2({
       creator: this.walletRef.getJackalAddress(),
       editors: JSON.stringify(
         await makePermsBlock({ base: 'e', ...common }, this.walletRef)
@@ -654,7 +659,7 @@ async function prepExistingUpload(
   const fileChainResult = await getFileTreeData(
     await data.getFullMerkle(),
     hexedOwner,
-    walletRef.getProtoHandler()
+    walletRef.getQueryHandler()
   )
   const typedData = fileChainResult.value.files as Files
 
@@ -693,17 +698,17 @@ async function doUpload(
 }
 
 async function getProviders(
-  pH: IProtoHandler,
+  qH: IQueryHandler,
   max?: number
 ): Promise<IMiner[]> {
-  const rawProviderList = await fetchProviders(pH)
+  const rawProviderList = await fetchProviders(qH)
   console.info('Raw Providers')
   console.dir(rawProviderList)
   return filterProviders(rawProviderList, max)
 }
-async function fetchProviders(pH: IProtoHandler): Promise<IMiner[]> {
+async function fetchProviders(qH: IQueryHandler): Promise<IMiner[]> {
   return (
-    await handlePagination(pH.storageQuery, 'queryProvidersAll', {})
+    await handlePagination(qH.storageQuery, 'queryProvidersAll', {})
   ).reduce((acc: IMiner[], curr: any) => {
     acc.push(...curr.providers)
     return acc
@@ -805,16 +810,16 @@ function verifyFileProviderIps(
   }
 }
 async function matchOwnerToCid(
-  pH: IProtoHandler,
+  qH: IQueryHandler,
   cid: string,
   owner: string
 ): Promise<boolean> {
-  const contractsResult = (await pH.storageQuery.queryContracts({ cid })).value
+  const contractsResult = (await qH.storageQuery.queryContracts({ cid })).value
     .contracts as Contracts
   if (contractsResult.signee === owner) {
     return true
   }
-  const straysResult = (await pH.storageQuery.queryStrays({ cid })).value
+  const straysResult = (await qH.storageQuery.queryStrays({ cid })).value
     .strays as Strays
   return straysResult.signee === owner
 }

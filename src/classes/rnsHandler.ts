@@ -1,9 +1,5 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import {
-  IProtoHandler,
-  IRnsHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
+import { IQueryHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
 import {
   IRnsBidHashMap,
   IRnsBidItem,
@@ -15,14 +11,14 @@ import {
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
-import { handlePagination } from '@/utils/misc'
+import { handlePagination, signerNotEnabled } from '@/utils/misc'
 
 /**
  * Class encompassing basic and advanced methods needed for interaction with RNS addresses on the chain.
  */
 export default class RnsHandler implements IRnsHandler {
   private readonly walletRef: IWalletHandler
-  private readonly pH: IProtoHandler
+  private readonly qH: IQueryHandler
 
   /**
    * Create an RNS instance.
@@ -31,7 +27,7 @@ export default class RnsHandler implements IRnsHandler {
    */
   private constructor (wallet: IWalletHandler) {
     this.walletRef = wallet
-    this.pH = wallet.getProtoHandler()
+    this.qH = wallet.getQueryHandler()
   }
 
   /**
@@ -50,8 +46,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeAcceptBidMsg (rns: string, from: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeAcceptBidMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgAcceptBid({
+    return pH.rnsTx.msgAcceptBid({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       from
@@ -64,8 +62,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeAddRecordMsg (recordValues: IRnsRecordItem): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeAddRecordMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(recordValues.name)
-    return this.pH.rnsTx.msgAddRecord({
+    return pH.rnsTx.msgAddRecord({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       value: recordValues.value,
@@ -81,8 +81,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeBidMsg (rns: string, bid: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeBidMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgBid({
+    return pH.rnsTx.msgBid({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       bid
@@ -95,8 +97,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeBuyMsg (rns: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeBuyMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgBuy({
+    return pH.rnsTx.msgBuy({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns
     })
@@ -108,8 +112,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeCancelBidMsg (rns: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeCancelBidMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgCancelBid({
+    return pH.rnsTx.msgCancelBid({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns
     })
@@ -121,8 +127,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeDelistMsg (rns: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeDelistMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgDelist({
+    return pH.rnsTx.msgDelist({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns
     })
@@ -134,8 +142,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeDelRecordMsg (rns: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeDelRecordMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgDelRecord({
+    return pH.rnsTx.msgDelRecord({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns
     })
@@ -146,7 +156,9 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeRnsInitMsg (): EncodeObject {
-    return this.pH.rnsTx.msgInit({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeRnsInitMsg'))
+    const pH = this.walletRef.getProtoHandler()
+    return pH.rnsTx.msgInit({
       creator: this.walletRef.getJackalAddress()
     })
   }
@@ -158,8 +170,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeListMsg (rns: string, price: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeListMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgList({
+    return pH.rnsTx.msgList({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       price
@@ -172,8 +186,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeNewRegistrationMsg (registrationValues: IRnsRegistrationItem): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeNewRegistrationMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(registrationValues.nameToRegister)
-    return this.pH.rnsTx.msgRegister({
+    return pH.rnsTx.msgRegister({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       years: (Number(registrationValues.yearsToRegister) || 1).toString(),
@@ -188,8 +204,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeTransferMsg (rns: string, receiver: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeTransferMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgTransfer({
+    return pH.rnsTx.msgTransfer({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       receiver
@@ -203,8 +221,10 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
   makeUpdateMsg (rns: string, data: string): EncodeObject {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeUpdateMsg'))
+    const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
-    return this.pH.rnsTx.msgUpdate({
+    return pH.rnsTx.msgUpdate({
       creator: this.walletRef.getJackalAddress(),
       name: trueRns,
       data: sanitizeRnsData(data, 'makeUpdateMsg')
@@ -218,7 +238,7 @@ export default class RnsHandler implements IRnsHandler {
    */
   async findSingleBid (index: string): Promise<IRnsBidItem> {
     const trueIndex = sanitizeRns(index)
-    return (await this.pH.rnsQuery.queryBids({ index: trueIndex })).value
+    return (await this.qH.rnsQuery.queryBids({ index: trueIndex })).value
       .bids as IRnsBidItem
   }
 
@@ -228,7 +248,7 @@ export default class RnsHandler implements IRnsHandler {
    */
   async findAllBids (): Promise<IRnsBidHashMap> {
     const data: IRnsBidItem[] = (await handlePagination(
-      this.pH.rnsQuery,
+      this.qH.rnsQuery,
       'queryBidsAll',
       {}
     ))
@@ -254,12 +274,12 @@ export default class RnsHandler implements IRnsHandler {
    */
   async findSingleForSaleName (rns: string): Promise<IRnsForSaleItem> {
     const trueRns = sanitizeRns(rns)
-    return (await this.pH.rnsQuery.queryForsale({ name: trueRns })).value
+    return (await this.qH.rnsQuery.queryForsale({ name: trueRns })).value
       .forsale as IRnsForSaleItem
   }
   async findAllForSaleNames(): Promise<IRnsForSaleHashMap> {
     const data: IRnsForSaleItem[] = (
-      await handlePagination(this.pH.rnsQuery, 'queryForsaleAll', {})
+      await handlePagination(this.qH.rnsQuery, 'queryForsaleAll', {})
     ).reduce((acc: IRnsForSaleItem[], curr: any) => {
       acc.push(...curr.forsale)
       return acc
@@ -279,7 +299,7 @@ export default class RnsHandler implements IRnsHandler {
     const rawOwned = await this.findExistingNames()
 
     const data: IRnsForSaleItem[] = (
-      await handlePagination(this.pH.rnsQuery, 'queryForsaleAll', {})
+      await handlePagination(this.qH.rnsQuery, 'queryForsaleAll', {})
     ).reduce((acc: IRnsForSaleItem[], curr: any) => {
       acc.push(...curr.forsale)
       return acc
@@ -305,7 +325,7 @@ export default class RnsHandler implements IRnsHandler {
     const address = this.walletRef.getJackalAddress()
 
     const data: IRnsOwnedItem[] = (
-      await handlePagination(this.pH.rnsQuery, 'queryListOwnedNames', {
+      await handlePagination(this.qH.rnsQuery, 'queryListOwnedNames', {
         address
       })
     ).reduce((acc: IRnsOwnedItem[], curr: any) => {
@@ -330,7 +350,7 @@ export default class RnsHandler implements IRnsHandler {
    */
   async findSingleRns (rns: string): Promise<IRnsOwnedItem> {
     const trueRns = sanitizeRns(rns)
-    return (await this.pH.rnsQuery.queryNames({ index: trueRns })).value
+    return (await this.qH.rnsQuery.queryNames({ index: trueRns })).value
       .names as IRnsOwnedItem
   }
 

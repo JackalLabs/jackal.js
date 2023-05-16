@@ -1,21 +1,21 @@
 import {
-  RequestInfo,
-  ResponseInfo,
-  ResponseSetOption,
-  RequestInitChain,
-  ResponseInitChain,
-  RequestQuery,
-  ResponseQuery,
   RequestBeginBlock,
+  RequestInfo,
+  RequestInitChain,
+  RequestOfferSnapshot,
+  RequestQuery,
+  ResponseApplySnapshotChunk,
   ResponseBeginBlock,
   ResponseCheckTx,
+  ResponseCommit,
   ResponseDeliverTx,
   ResponseEndBlock,
-  ResponseCommit,
+  ResponseInfo,
+  ResponseInitChain,
   ResponseListSnapshots,
-  RequestOfferSnapshot,
   ResponseOfferSnapshot,
-  ResponseApplySnapshotChunk
+  ResponseQuery,
+  ResponseSetOption
 } from 'jackal.js-protos/dist/postgen/tendermint/abci/types'
 
 export default interface IAbciHandler {

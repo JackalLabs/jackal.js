@@ -1,22 +1,44 @@
-import {
-  AccountData,
-  EncodeObject,
-  isOfflineDirectSigner,
-  OfflineSigner
-} from '@cosmjs/proto-signing'
-import { encrypt, decrypt, PrivateKey } from 'eciesjs'
+import { AccountData, EncodeObject, isOfflineDirectSigner, OfflineSigner } from '@cosmjs/proto-signing'
+import { decrypt, encrypt, PrivateKey } from 'eciesjs'
 import { Keplr, Window as KeplrWindow } from '@keplr-wallet/types'
 import { Leap, LeapWindow } from '@/types/leap'
+import { defaultQueryAddr9091, defaultTxAddr26657, jackalMainnetChainId } from '@/utils/globals'
 import {
-  defaultQueryAddr9091,
-  defaultTxAddr26657,
-  jackalMainnetChainId
-} from '@/utils/globals'
-import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
+  IAbciHandler,
+  IFileIo,
+  IGovHandler,
+  INotificationHandler,
+  IOracleHandler,
+  IProtoHandler,
+  IQueryHandler,
+  IRnsHandler,
+  ISecretsHandler,
+  IStorageHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
-import { ICoin, ISupportedWallets, IWalletConfig } from '@/interfaces'
+import {
+  ICoin,
+  IEnabledSecrets,
+  ISupportedWallets,
+  IWalletConfig,
+  IWalletHandlerPrivateProperties,
+  IWalletHandlerPublicProperties
+} from '@/interfaces'
 import ProtoHandler from '@/classes/protoHandler'
 import { Pubkey } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/pubkey'
+import {
+  AbciHandler,
+  FileIo,
+  GovHandler,
+  NotificationHandler,
+  OracleHandler,
+  RnsHandler,
+  SecretsHandler,
+  StorageHandler
+} from '@/index'
+import QueryHandler from '@/classes/queryHandler'
+import { signerNotEnabled } from '@/utils/misc'
 
 declare global {
   interface Window extends KeplrWindow, LeapWindow {}
@@ -25,35 +47,18 @@ declare global {
 const defaultChains = [jackalMainnetChainId, 'osmo-1', 'cosmoshub-4']
 
 export default class WalletHandler implements IWalletHandler {
-  private readonly signer: OfflineSigner
-  private readonly keyPair: PrivateKey
-  private rnsInitComplete: boolean
-  private fileTreeInitComplete: boolean
-  private readonly jackalAccount: AccountData
-  private readonly pH: IProtoHandler
-  readonly chainId: string
-  readonly isDirect: boolean
-  readonly walletProvider: string
+  private readonly qH: IQueryHandler
+  private properties: IWalletHandlerPrivateProperties | null
+  traits: IWalletHandlerPublicProperties | null
 
   private constructor(
-    signer: OfflineSigner,
-    chainId: string,
-    keyPair: PrivateKey,
-    rnsInitComplete: boolean,
-    fileTreeInitComplete: boolean,
-    acct: AccountData,
-    pH: IProtoHandler,
-    selectedWallet: string
+    qH: IQueryHandler,
+    properties: IWalletHandlerPrivateProperties | null,
+    traits: IWalletHandlerPublicProperties | null
   ) {
-    this.signer = signer
-    this.chainId = chainId
-    this.keyPair = keyPair
-    this.rnsInitComplete = rnsInitComplete
-    this.fileTreeInitComplete = fileTreeInitComplete
-    this.jackalAccount = acct
-    this.pH = pH
-    this.isDirect = isOfflineDirectSigner(signer)
-    this.walletProvider = selectedWallet
+    this.qH = qH
+    this.properties = properties
+    this.traits = traits
   }
 
   static async trackWallet(config: IWalletConfig): Promise<IWalletHandler> {
@@ -62,58 +67,30 @@ export default class WalletHandler implements IWalletHandler {
         'Jackal.js is only supported in the browser at this time!'
       )
     } else {
-      const { selectedWallet, signerChain, enabledChains, queryAddr, txAddr } = config
-      const workingChain = signerChain || jackalMainnetChainId
-      let windowWallet: Keplr | Leap
-      switch (selectedWallet) {
-        case 'keplr':
-          if (!window.keplr)
-            throw new Error('Keplr Wallet selected but unavailable')
-          windowWallet = window.keplr
-          break
-        case 'leap':
-          if (!window.leap)
-            throw new Error('Leap Wallet selected but unavailable')
-          windowWallet = window.leap
-          break
-        default:
-          throw new Error('A valid wallet selection must be provided')
-      }
-      await windowWallet.enable(enabledChains || defaultChains).catch((err) => {
-        throw err
-      })
-      const signer = await windowWallet.getOfflineSignerAuto(workingChain, {})
-      const qAddr = queryAddr || defaultQueryAddr9091
-      const tAddr = txAddr || defaultTxAddr26657
-      const acct = (await signer.getAccounts())[0]
-      const pH = await ProtoHandler.trackProto(signer, tAddr, qAddr)
-      const rnsInitComplete = (
-        await pH.rnsQuery.queryInit({ address: acct.address })
-      ).value.init
-      const {
-        value: { pubkey },
-        success
-      } = await pH.fileTreeQuery.queryPubkey({ address: acct.address })
-      const secret = await makeSecret(
-        workingChain,
-        acct.address,
-        windowWallet
-      ).catch((err) => {
-        throw err
-      })
-      const secretAsHex = bufferToHex(
-        Buffer.from(secret, 'base64').subarray(0, 32)
-      )
-      const keyPair = PrivateKey.fromHex(secretAsHex)
+      const qH = await QueryHandler.trackQuery(config.queryAddr)
+      const { properties, traits } = await processWallet(config)
+        .catch(err => {
+          throw err
+        })
+
       return new WalletHandler(
-        signer,
-        workingChain,
-        keyPair,
-        rnsInitComplete,
-        success && !!pubkey?.key,
-        acct,
-        pH,
-        selectedWallet
+        qH,
+        properties,
+        traits
+      )
+    }
+  }
+  static async trackQueryWallet(queryUrl?: string): Promise<IWalletHandler> {
+    if (!window) {
+      throw new Error(
+        'Jackal.js is only supported in the browser at this time!'
+      )
+    } else {
+      const qH = await QueryHandler.trackQuery(queryUrl)
+      return new WalletHandler(
+        qH,
+        null,
+        null
       )
     }
   }
@@ -138,64 +115,121 @@ export default class WalletHandler implements IWalletHandler {
     return initCall
   }
 
+  async convertToFullWallet (config: IWalletConfig): Promise<void> {
+    const { properties, traits } = await processWallet(config)
+      .catch(err => {
+        throw err
+      })
+    this.properties = properties
+    this.traits = traits
+  }
+  voidFullWallet (): void {
+    this.properties = null
+    this.traits = null
+  }
+
   getRnsInitStatus(): boolean {
-    return this.rnsInitComplete
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getRnsInitStatus'))
+    return this.properties.rnsInitComplete
   }
   setRnsInitStatus(status: boolean): void {
-    this.rnsInitComplete = status
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'setRnsInitStatus'))
+    this.properties.rnsInitComplete = status
   }
   getStorageInitStatus(): boolean {
-    return this.fileTreeInitComplete
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getStorageInitStatus'))
+    return this.properties.fileTreeInitComplete
   }
   setStorageInitStatus(status: boolean): void {
-    this.fileTreeInitComplete = status
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'setStorageInitStatus'))
+    this.properties.fileTreeInitComplete = status
   }
   getProtoHandler(): IProtoHandler {
-    return this.pH
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getProtoHandler'))
+    return this.properties.pH
+  }
+  getQueryHandler(): IQueryHandler {
+    return this.qH
   }
   getAccounts(): Promise<readonly AccountData[]> {
-    return this.signer.getAccounts()
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getAccounts'))
+    return this.properties.signer.getAccounts()
   }
   getSigner(): OfflineSigner {
-    return this.signer
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getSigner'))
+    return this.properties.signer
   }
   getJackalAddress(): string {
-    return this.jackalAccount.address
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getJackalAddress'))
+    return this.properties.jackalAccount.address
   }
   async getHexJackalAddress(): Promise<string> {
-    return await hashAndHex(this.jackalAccount.address)
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getHexJackalAddress'))
+    return await hashAndHex(this.properties.jackalAccount.address)
   }
   async getAllBalances(): Promise<ICoin[]> {
-    const res = await this.pH.bankQuery.queryAllBalances({
-      address: this.jackalAccount.address
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getAllBalances'))
+    const res = await this.qH.bankQuery.queryAllBalances({
+      address: this.properties.jackalAccount.address
     })
     return res.value.balances as ICoin[]
   }
   async getJackalBalance(): Promise<ICoin> {
-    const res = await this.pH.bankQuery.queryBalance({
-      address: this.jackalAccount.address,
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getJackalBalance'))
+    const res = await this.qH.bankQuery.queryBalance({
+      address: this.properties.jackalAccount.address,
       denom: 'ujkl'
     })
     return res.value.balance as ICoin
   }
   getPubkey(): string {
-    return this.keyPair.publicKey.toHex()
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getPubkey'))
+    return this.properties.keyPair.publicKey.toHex()
   }
   asymmetricEncrypt(toEncrypt: ArrayBuffer, pubKey: string): string {
     return encrypt(pubKey, Buffer.from(toEncrypt)).toString('hex')
   }
   asymmetricDecrypt(toDecrypt: string): ArrayBuffer {
+    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'asymmetricDecrypt'))
     return new Uint8Array(
-      decrypt(this.keyPair.toHex(), Buffer.from(toDecrypt, 'hex'))
+      decrypt(this.properties.keyPair.toHex(), Buffer.from(toDecrypt, 'hex'))
     )
   }
   async findPubKey(address: string): Promise<string> {
-    const result = await this.pH.fileTreeQuery.queryPubkey({ address })
+    const result = await this.qH.fileTreeQuery.queryPubkey({ address })
     if (!result.success) {
       throw new Error(`${address} does not have a pubkey registered`)
     } else {
       return (result.value.pubkey as Pubkey).key
     }
+  }
+
+  /**
+   * Handler Factories
+   */
+  async makeAbciHandler (): Promise<IAbciHandler> {
+    return await AbciHandler.trackAbci(this)
+  }
+  async makeFileIoHandler (versionFilter?: string | string[]): Promise<IFileIo> {
+    return await FileIo.trackIo(this, versionFilter)
+  }
+  async makeGovHandler (): Promise<IGovHandler> {
+    return await GovHandler.trackGov(this)
+  }
+  async makeNotificationHandler (): Promise<INotificationHandler> {
+    return await NotificationHandler.trackNotification(this)
+  }
+  async makeOracleHandler (): Promise<IOracleHandler> {
+    return await OracleHandler.trackOracle(this)
+  }
+  async makeRnsHandler (): Promise<IRnsHandler> {
+    return await RnsHandler.trackRns(this)
+  }
+  async makeSecretsHandler (enable: IEnabledSecrets): Promise<ISecretsHandler> {
+    return await SecretsHandler.trackSecrets(this, enable)
+  }
+  async makeStorageHandler (): Promise<IStorageHandler> {
+    return await StorageHandler.trackStorage(this)
   }
 }
 
@@ -211,4 +245,69 @@ async function makeSecret(
       throw err
     })
   return signed.signature
+}
+async function processWallet (config: IWalletConfig) {
+  const { selectedWallet, signerChain, enabledChains, queryAddr, txAddr, chainConfig } = config
+  const chainId = signerChain || jackalMainnetChainId
+  let windowWallet: Keplr | Leap
+  switch (selectedWallet) {
+    case 'keplr':
+      if (!window.keplr)
+        throw new Error('Keplr Wallet selected but unavailable')
+      windowWallet = window.keplr
+      break
+    case 'leap':
+      if (!window.leap)
+        throw new Error('Leap Wallet selected but unavailable')
+      windowWallet = window.leap
+      break
+    default:
+      throw new Error('A valid wallet selection must be provided')
+  }
+  await windowWallet.enable(enabledChains || defaultChains).catch((err) => {
+    throw err
+  })
+  await windowWallet.experimentalSuggestChain(chainConfig)
+  const signer = await windowWallet.getOfflineSignerAuto(chainId, {})
+  const queryUrl = queryAddr || defaultQueryAddr9091
+  const rpcUrl = txAddr || defaultTxAddr26657
+  const jackalAccount = (await signer.getAccounts())[0]
+
+  const pH = await ProtoHandler.trackProto({ signer, queryUrl, rpcUrl })
+  const rnsInitComplete = (
+    await pH.rnsQuery.queryInit({ address: jackalAccount.address })
+  ).value.init
+  const {
+    value: { pubkey },
+    success
+  } = await pH.fileTreeQuery.queryPubkey({ address: jackalAccount.address })
+  const secret = await makeSecret(
+    chainId,
+    jackalAccount.address,
+    windowWallet
+  ).catch((err) => {
+    throw err
+  })
+  const fileTreeInitComplete = success && !!pubkey?.key
+  const secretAsHex = bufferToHex(
+    Buffer.from(secret, 'base64').subarray(0, 32)
+  )
+  const keyPair = PrivateKey.fromHex(secretAsHex)
+  const isDirect = isOfflineDirectSigner(signer)
+
+  const properties: IWalletHandlerPrivateProperties = {
+    signer,
+    keyPair,
+    rnsInitComplete,
+    fileTreeInitComplete,
+    jackalAccount,
+    pH
+  }
+  const traits: IWalletHandlerPublicProperties = {
+    chainId,
+    isDirect,
+    walletProvider: selectedWallet
+  }
+
+  return { properties, traits }
 }
