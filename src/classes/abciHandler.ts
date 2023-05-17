@@ -17,7 +17,7 @@ import {
   ResponseOfferSnapshot,
   ResponseQuery,
   ResponseSetOption
-} from 'jackal.js-protos/dist/postgen/tendermint/abci/types'
+} from 'jackal.js-protos'
 
 export default class AbciHandler implements IAbciHandler {
   private readonly walletRef: IWalletHandler
@@ -65,7 +65,7 @@ export default class AbciHandler implements IAbciHandler {
   async getCommit(): Promise<ResponseCommit> {
     return (await this.qH.ABCIQuery.commit({})).value
   }
-  async getlistSnapshots(): Promise<ResponseListSnapshots> {
+  async getListSnapshots(): Promise<ResponseListSnapshots> {
     return (await this.qH.ABCIQuery.listSnapshots({})).value
   }
   async getOfferSnapshot(

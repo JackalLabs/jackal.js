@@ -2,15 +2,14 @@ import { INotificationHandler, IQueryHandler, IWalletHandler } from '@/interface
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { handlePagination, signerNotEnabled } from '@/utils/misc'
 import {
+  NotiCounter,
+  Notifications,
   QueryAllNotiCounterResponse,
   QueryAllNotificationsByAddressResponse,
   QueryAllNotificationsResponse,
   QueryGetNotiCounterResponse,
   QueryGetNotificationsResponse
-} from 'jackal.js-protos/dist/postgen/canine_chain/notifications/query'
-import { Notifications } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/notifications'
-import { NotiCounter } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/noti_counter'
-import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
+} from 'jackal.js-protos'
 import { IReadableNoti } from '@/interfaces'
 
 export default class NotificationHandler implements INotificationHandler {
@@ -184,7 +183,7 @@ export default class NotificationHandler implements INotificationHandler {
   /** Private Methods */
   async getBaseNotiCounter(
     forAddress: string
-  ): Promise<SuccessIncluded<QueryGetNotiCounterResponse>> {
+  ): Promise<IBaseNotiResponse> {
     return await this.qH.notificationsQuery.queryNotiCounter({
       address: forAddress
     })
@@ -197,4 +196,10 @@ function processNotiRead(noti: Notifications, walletRef: IWalletHandler) {
     walletRef.asymmetricDecrypt(noti.notification)
   )
   return { from: noti.sender, to: noti.address, contents }
+}
+
+interface IBaseNotiResponse {
+  message: string
+  success: boolean
+  value: QueryGetNotiCounterResponse
 }

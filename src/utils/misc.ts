@@ -1,8 +1,6 @@
-import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
+import { PageResponse, QueryFileResponse } from 'jackal.js-protos'
 import { IQueryHandler } from '@/interfaces/classes'
-import { QueryFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
-import SuccessNoUndefined from 'jackal.js-protos/dist/types/TSuccessNoUndefined'
 
 /**
  * Notify that function is deprecated and should no longer be used.
@@ -174,17 +172,24 @@ export async function getAvgBlockTime(
   rpc: string,
   blocks: number
 ): Promise<number> {
-  const info = await fetch(`${rpc}/block`)
-    .then((res) => res.text())
-    .then((res) => {
-      return res
-    })
+  const latestBlockInfo = await fetch(`${rpc}/block`)
+    .then((res) => res.json())
     .catch((err) => {
-      console.warn('getAvgBlockTime() block fetch error:')
+      console.warn('getAvgBlockTime() latestBlockInfo fetch error:')
+      console.error(err)
+      return { result: { block: { header: { height: 0, time: 0 } } } }
+    })
+  const blockOffset = Number(latestBlockInfo.result.block.header.height - blocks) || 0
+  const pastBlockInfo = await fetch(`${rpc}/block?height=${blockOffset}`)
+    .then((res) => res.json())
+    .catch((err) => {
+      console.warn('getAvgBlockTime() pastBlockInfo fetch error:')
       console.error(err)
       return { result: { block: { header: { time: 0 } } } }
     })
-  return 0
+  const latest = Date.parse(latestBlockInfo.result.block.header.time)
+  const past = Date.parse(pastBlockInfo.result.block.header.time)
+  return Math.round((latest - past) / blocks)
 }
 
 export function uint8ToString(buf: Uint8Array): string {
@@ -214,7 +219,7 @@ export async function getFileTreeData(
   rawPath: string,
   owner: string,
   qH: IQueryHandler
-): Promise<SuccessNoUndefined<QueryFileResponse>> {
+): Promise<IFileResponse> {
   console.log('rawPath')
   console.log(rawPath)
   const hexAddress = await merkleMeBro(rawPath)
@@ -225,4 +230,9 @@ export async function getFileTreeData(
     address: hexAddress,
     ownerAddress: hexedOwner
   })
+}
+interface IFileResponse {
+  message: string
+  success: boolean
+  value: QueryFileResponse
 }

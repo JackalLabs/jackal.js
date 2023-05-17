@@ -31,14 +31,9 @@ import {
   IUploadListItem
 } from '@/interfaces'
 import IProviderChecks from '@/interfaces/IProviderChecks'
-import { QueryFindFileResponse } from 'jackal.js-protos/src/postgen/canine_chain/storage/query'
-import SuccessIncluded from 'jackal.js-protos/src/types/TSuccessIncluded'
+import { Contracts, FidCid, Files, QueryFindFileResponse, Strays } from 'jackal.js-protos'
 import { buildPostFile, makePermsBlock, readCompressedFileTree, removeCompressedFileTree } from '@/utils/compression'
-import IFileMetaHashMap from '../interfaces/file/IFileMetaHashMap'
-import { Files } from 'jackal.js-protos/src/postgen/canine_chain/filetree/files'
-import { FidCid } from 'jackal.js-protos/dist/postgen/canine_chain/storage/fid_cid'
-import { Contracts } from 'jackal.js-protos/dist/postgen/canine_chain/storage/contracts'
-import { Strays } from 'jackal.js-protos/dist/postgen/canine_chain/storage/strays'
+import IFileMetaHashMap from '@/interfaces/file/IFileMetaHashMap'
 
 export default class FileIo implements IFileIo {
   private readonly walletRef: IWalletHandler
@@ -349,7 +344,7 @@ export default class FileIo implements IFileIo {
     }
     const fid = parsedContents.fids[0]
     const fileProviders = verifyFileProviderIps(
-      await this.qH.storageQuery.queryFindFile({ fid })
+      (await this.qH.storageQuery.queryFindFile({ fid })).value
     )
     if (fileProviders && fileProviders.length) {
       const config = {
@@ -784,17 +779,17 @@ async function verifyProviders(
   return verified
 }
 function verifyFileProviderIps(
-  resp: SuccessIncluded<QueryFindFileResponse>
+  resp: QueryFindFileResponse
 ): string[] | false {
   if (!resp) {
     console.error('Invalid resp passed to verifyFileProviderIps()')
     return false
   }
-  if (!resp.value?.providerIps) {
+  if (!resp.providerIps) {
     console.error('Incomplete resp passed to verifyFileProviderIps()')
     return false
   }
-  const brutedString = bruteForceString(resp.value.providerIps)
+  const brutedString = bruteForceString(resp.providerIps)
   if (!brutedString) {
     console.error(
       'bruteForceString() returned False in verifyFileProviderIps()'
@@ -802,7 +797,7 @@ function verifyFileProviderIps(
     return false
   }
   try {
-    return JSON.parse(resp.value.providerIps)
+    return JSON.parse(resp.providerIps)
   } catch (err) {
     console.error('JSON.parse() failed in verifyFileProviderIps()')
     console.error(err)
