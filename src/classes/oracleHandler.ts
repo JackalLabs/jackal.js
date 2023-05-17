@@ -2,11 +2,9 @@ import { IOracleHandler, IQueryHandler, IWalletHandler } from '@/interfaces/clas
 import { IOracleFeed } from '@/interfaces'
 
 export default class OracleHandler implements IOracleHandler {
-  private readonly walletRef: IWalletHandler
   private readonly qH: IQueryHandler
 
   private constructor(wallet: IWalletHandler) {
-    this.walletRef = wallet
     this.qH = wallet.getQueryHandler()
   }
 

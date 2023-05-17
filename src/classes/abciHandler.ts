@@ -20,11 +20,9 @@ import {
 } from 'jackal.js-protos'
 
 export default class AbciHandler implements IAbciHandler {
-  private readonly walletRef: IWalletHandler
   private readonly qH: IQueryHandler
 
   private constructor(wallet: IWalletHandler) {
-    this.walletRef = wallet
     this.qH = wallet.getQueryHandler()
   }
 

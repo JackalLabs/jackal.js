@@ -1,21 +1,21 @@
-import { IQueryHandler, ISecretsHandler, IWalletHandler } from '@/interfaces/classes'
-import { IEnabledSecrets, ISharedTracker } from '@/interfaces'
+import { ISecretsHandler, IWalletHandler } from '@/interfaces/classes'
+import { ISharedTracker } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { readCompressedFileTree, removeCompressedFileTree, saveCompressedFileTree } from '@/utils/compression'
 import { signerNotEnabled } from '@/utils/misc'
 
 export default class SecretsHandler implements ISecretsHandler {
   private readonly walletRef: IWalletHandler
-  private readonly qH: IQueryHandler
+  // private readonly qH: IQueryHandler
 
   private constructor(wallet: IWalletHandler) {
     this.walletRef = wallet
-    this.qH = wallet.getQueryHandler()
+    // this.qH = wallet.getQueryHandler()
   }
 
   static async trackSecrets(
     wallet: IWalletHandler,
-    enable: IEnabledSecrets
+    // enable: IEnabledSecrets
   ): Promise<ISecretsHandler> {
     return new SecretsHandler(wallet)
   }

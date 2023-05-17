@@ -19,7 +19,8 @@ import {
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import {
   ICoin,
-  IEnabledSecrets,
+  /** TODO */
+  // IEnabledSecrets,
   ISupportedWallets,
   IWalletConfig,
   IWalletHandlerPrivateProperties,
@@ -225,8 +226,12 @@ export default class WalletHandler implements IWalletHandler {
   async makeRnsHandler (): Promise<IRnsHandler> {
     return await RnsHandler.trackRns(this)
   }
-  async makeSecretsHandler (enable: IEnabledSecrets): Promise<ISecretsHandler> {
-    return await SecretsHandler.trackSecrets(this, enable)
+  /** TODO */
+  // async makeSecretsHandler (enable: IEnabledSecrets): Promise<ISecretsHandler> {
+  //   return await SecretsHandler.trackSecrets(this, enable)
+  // }
+  async makeSecretsHandler (): Promise<ISecretsHandler> {
+    return await SecretsHandler.trackSecrets(this)
   }
   async makeStorageHandler (): Promise<IStorageHandler> {
     return await StorageHandler.trackStorage(this)

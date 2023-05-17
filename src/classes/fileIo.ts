@@ -216,17 +216,17 @@ export default class FileIo implements IFileIo {
       }
     } while (Object.keys(queueHashMap).length > 0)
   }
-  private async afterUpload(ids: IQueueItemPostUpload[]): Promise<void> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'afterUpload'))
-    const pH = this.walletRef.getProtoHandler()
-    const readyToBroadcast = await this.rawAfterUpload(ids)
-    const memo = ``
-    await pH
-      .debugBroadcaster(readyToBroadcast, { memo, step: false })
-      .catch((err) => {
-        throw err
-      })
-  }
+  // private async afterUpload(ids: IQueueItemPostUpload[]): Promise<void> {
+  //   if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'afterUpload'))
+  //   const pH = this.walletRef.getProtoHandler()
+  //   const readyToBroadcast = await this.rawAfterUpload(ids)
+  //   const memo = ``
+  //   await pH
+  //     .debugBroadcaster(readyToBroadcast, { memo, step: false })
+  //     .catch((err) => {
+  //       throw err
+  //     })
+  // }
   private async rawAfterUpload(
     ids: IQueueItemPostUpload[]
   ): Promise<EncodeObject[]> {
@@ -382,7 +382,7 @@ export default class FileIo implements IFileIo {
           if (isFolder) {
             return await FolderHandler.trackLegacyFolder(rawFile, key, iv)
           } else {
-            return await FileDownloadHandler.trackFile(rawFile, config, key, iv)
+            return await FileDownloadHandler.trackFile(rawFile, key, iv)
           }
         } catch (err) {
           const attempt = i + 1
@@ -541,7 +541,7 @@ export default class FileIo implements IFileIo {
     const owner = this.walletRef.getJackalAddress()
     try {
       // return value intentionally ignored
-      const data = await readCompressedFileTree(owner, rawPath, this.walletRef)
+      await readCompressedFileTree(owner, rawPath, this.walletRef)
       return true
     } catch (err) {
       console.warn('checkFolderIsFileTree()', err)
@@ -773,7 +773,7 @@ async function verifyProviders(
       return result
     })
   )
-  const verified = providers.filter((provider, index) => staged[index])
+  const verified = providers.filter((_, index) => staged[index])
   console.info('Verified Providers')
   console.dir(verified)
   return verified
