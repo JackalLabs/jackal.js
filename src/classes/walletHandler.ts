@@ -274,8 +274,8 @@ async function processWallet (config: IWalletConfig) {
   })
   await windowWallet.experimentalSuggestChain(chainConfig)
   const signer = await windowWallet.getOfflineSignerAuto(chainId, {})
-  const queryUrl = queryAddr || defaultQueryAddr9091
-  const rpcUrl = txAddr || defaultTxAddr26657
+  const queryUrl = (queryAddr || defaultQueryAddr9091).replace(/\/+$/, '')
+  const rpcUrl = (txAddr || defaultTxAddr26657).replace(/\/+$/, '')
   const jackalAccount = (await signer.getAccounts())[0]
 
   const pH = await ProtoHandler.trackProto({ signer, queryUrl, rpcUrl })
