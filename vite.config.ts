@@ -33,7 +33,15 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
-        'jackal.js-protos'
+        /@cosmjs.*/,
+        '@karnthis/plzsu',
+        'bech32',
+        'bip32',
+        'bip39',
+        'bs58check',
+        'eciesjs',
+        'jackal.js-protos',
+        'make-random',
       ],
       plugins: [
         typescriptPaths({
