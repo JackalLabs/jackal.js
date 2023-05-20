@@ -433,13 +433,13 @@ export default class FileIo implements IFileIo {
     const encoded: EncodeObject[] = []
     await Promise.all(
       dirs.map(async (name) => {
-        const path = `${location}/${name}`
-        if (await this.checkFolderIsFileTree(path)) {
-          encoded.push(await removeCompressedFileTree(path, this.walletRef))
+        const rawPath = `${location}/${name}`
+        if (await this.checkFolderIsFileTree(rawPath)) {
+          encoded.push(await removeCompressedFileTree(rawPath, this.walletRef))
         } else {
           encoded.push(
             ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
-              path
+              rawPath
             ]))
           )
         }
@@ -502,7 +502,7 @@ export default class FileIo implements IFileIo {
     readyToBroadcast.push(await this.createRoot(), ...dirMsgs)
     return readyToBroadcast
   }
-  async convertFolderType(rawPath: string): Promise<void> {
+  async convertFolderType(rawPath: string): Promise<IFolderHandler> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'convertFolderType'))
     const pH = this.walletRef.getProtoHandler()
     const readyToBroadcast = await this.rawConvertFolderType(rawPath)
@@ -512,6 +512,7 @@ export default class FileIo implements IFileIo {
       .catch((err) => {
         console.error('convertFolderType() -', err)
       })
+    return await this.downloadFolder(rawPath)
   }
   async rawConvertFolderType(rawPath: string): Promise<EncodeObject[]> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawConvertFolderType'))
@@ -527,25 +528,25 @@ export default class FileIo implements IFileIo {
       )
     }
     encoded.push(await base.getForFiletree(this.walletRef))
-
-    const existingDirs = base.getChildDirs()
-    for (let dir of existingDirs) {
+    for (let dir of base.getChildDirs()) {
       encoded.push(
         ...(await this.rawConvertFolderType(base.getMyChildPath(dir)))
       )
     }
     return encoded
   }
-  async checkFolderIsFileTree(rawPath: string): Promise<boolean> {
+  async checkFolderIsFileTree(rawPath: string): Promise<IFolderHandler | null> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'checkFolderIsFileTree'))
     const owner = this.walletRef.getJackalAddress()
     try {
-      // return value intentionally ignored
-      await readCompressedFileTree(owner, rawPath, this.walletRef)
-      return true
+      const data = await readCompressedFileTree(owner, rawPath, this.walletRef)
+        .catch((err: Error) => {
+          throw err
+        })
+      return await FolderHandler.trackFolder(data as IFolderFrame)
     } catch (err) {
       console.warn('checkFolderIsFileTree()', err)
-      return false
+      return null
     }
   }
 

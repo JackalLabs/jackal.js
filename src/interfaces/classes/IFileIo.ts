@@ -39,7 +39,7 @@ export default interface IFileIo {
     initMsg: EncodeObject | null,
     startingDirs?: string[]
   ): Promise<EncodeObject[]>
-  convertFolderType(rawPath: string): Promise<void>
+  convertFolderType(rawPath: string): Promise<IFolderHandler>
   rawConvertFolderType(rawPath: string): Promise<EncodeObject[]>
-  checkFolderIsFileTree(rawPath: string): Promise<boolean>
+  checkFolderIsFileTree(rawPath: string): Promise<IFolderHandler | null>
 }

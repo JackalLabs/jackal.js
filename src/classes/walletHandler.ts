@@ -95,12 +95,6 @@ export default class WalletHandler implements IWalletHandler {
       )
     }
   }
-  static async detectAvailableWallets(): Promise<ISupportedWallets> {
-    return {
-      keplr: !!window.keplr,
-      leap: !!window.leap
-    }
-  }
   static async getAbitraryMerkle(path: string, item: string): Promise<string> {
     return await hexFullPath(await merkleMeBro(path), item)
   }
@@ -114,6 +108,12 @@ export default class WalletHandler implements IWalletHandler {
       pubkey: wallet.getPubkey()
     })
     return initCall
+  }
+  static detectAvailableWallets(): ISupportedWallets {
+    return {
+      keplr: !!window.keplr,
+      leap: !!window.leap
+    }
   }
 
   async convertToFullWallet (config: IWalletConfig): Promise<void> {
@@ -211,8 +211,8 @@ export default class WalletHandler implements IWalletHandler {
   async makeAbciHandler (): Promise<IAbciHandler> {
     return await AbciHandler.trackAbci(this)
   }
-  async makeFileIoHandler (versionFilter?: string | string[]): Promise<IFileIo> {
-    return await FileIo.trackIo(this, versionFilter)
+  async makeFileIoHandler (versionFilter?: string | string[]): Promise<IFileIo | null> {
+    return (this.traits) ? await FileIo.trackIo(this, versionFilter) : null
   }
   async makeGovHandler (): Promise<IGovHandler> {
     return await GovHandler.trackGov(this)

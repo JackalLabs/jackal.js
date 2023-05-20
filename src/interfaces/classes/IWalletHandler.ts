@@ -39,7 +39,7 @@ export default interface IWalletHandler {
    * Handler Factories
    */
   makeAbciHandler (): Promise<IAbciHandler>
-  makeFileIoHandler (versionFilter?: string | string[]): Promise<IFileIo>
+  makeFileIoHandler (versionFilter?: string | string[]): Promise<IFileIo | null>
   makeGovHandler (): Promise<IGovHandler>
   makeNotificationHandler (): Promise<INotificationHandler>
   makeOracleHandler (): Promise<IOracleHandler>
