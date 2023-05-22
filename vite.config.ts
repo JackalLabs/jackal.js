@@ -5,11 +5,14 @@ import { resolve } from "path"
 import { typescriptPaths } from "rollup-plugin-typescript-paths"
 import tsconfigPaths from 'vite-tsconfig-paths'
 import dts from 'vite-plugin-dts'
+// @ts-ignore
+// import nodePolyfills from 'vite-plugin-node-stdlib-browser'
 
 export default defineConfig({
   base: './',
   plugins: [
     tsconfigPaths(),
+    // nodePolyfills(),
     dts({ rollupTypes: true })
   ],
   resolve: {
