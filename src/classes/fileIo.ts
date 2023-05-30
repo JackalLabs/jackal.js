@@ -1,9 +1,17 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { random } from 'make-random'
+// import { random } from 'make-random'
 
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import { genIv, genKey, stringToAes } from '@/utils/crypt'
-import { bruteForceString, getFileTreeData, handlePagination, setDelay, signerNotEnabled, stripper } from '@/utils/misc'
+import {
+  bruteForceString,
+  getFileTreeData,
+  getRandomIndex,
+  handlePagination,
+  setDelay,
+  signerNotEnabled,
+  stripper
+} from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
 import {
@@ -62,7 +70,8 @@ export default class FileIo implements IFileIo {
       wallet.traits.chainId,
       versionFilter
     )
-    const provider = providers[await random(providers.length)]
+    // const provider = providers[await random(providers.length)]
+    const provider = providers[getRandomIndex(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
   static async checkProviders(
@@ -98,7 +107,7 @@ export default class FileIo implements IFileIo {
   }
   async shuffle(): Promise<void> {
     this.currentProvider =
-      this.availableProviders[await random(this.availableProviders.length)]
+      this.availableProviders[getRandomIndex(this.availableProviders.length)]
   }
   async refresh(): Promise<void> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'refresh'))
@@ -107,7 +116,7 @@ export default class FileIo implements IFileIo {
       this.walletRef.traits.chainId
     )
     this.currentProvider =
-      this.availableProviders[await random(this.availableProviders.length)]
+      this.availableProviders[getRandomIndex(this.availableProviders.length)]
   }
 
   async createFolders(
@@ -169,13 +178,21 @@ export default class FileIo implements IFileIo {
       Object.values(sourceHashMap).map(async (bundle: IUploadListItem) => {
         const { exists, handler, key, uploadable } = bundle
         const existing = exists
-          ? await prepExistingUpload(handler, jackalAddr, this.walletRef)
+          ? await prepExistingUpload(handler, jackalAddr, this.walletRef).catch((err) => {
+            console.warn('prepExistingUpload() Failed')
+            console.error(err)
+            throw err
+          })
           : { cfg: null, file: null }
         bundle.data = existing.cfg
         const prom = await this.tumbleUpload(
           jackalAddr,
           existing.file || uploadable
-        )
+        ).catch((err) => {
+          console.warn('tumbleUpload() Failed')
+          console.error(err)
+          throw err
+        })
         handler.setIds(prom)
         sourceHashMap[key].handler = handler
         queueHashMap[key] = true
