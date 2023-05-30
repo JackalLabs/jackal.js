@@ -277,6 +277,11 @@ export default class RnsHandler implements IRnsHandler {
     return (await this.qH.rnsQuery.queryForsale({ name: trueRns })).value
       .forsale as IRnsForSaleItem
   }
+
+  /**
+   * Finds all RNS listed on market
+   * @returns {Promise<IRnsForSaleHashMap>}
+   */
   async findAllForSaleNames(): Promise<IRnsForSaleHashMap> {
     const data: IRnsForSaleItem[] = (
       await handlePagination(this.qH.rnsQuery, 'queryForsaleAll', {})
@@ -296,6 +301,7 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {Promise<IRnsExpandedForSaleHashMap>} - Object map of list items by RNS name.
    */
   async findExpandedForSaleNames (): Promise<IRnsExpandedForSaleHashMap> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findExpandedForSaleNames'))
     const rawOwned = await this.findExistingNames()
 
     const data: IRnsForSaleItem[] = (
@@ -322,6 +328,7 @@ export default class RnsHandler implements IRnsHandler {
    * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
    */
   async findExistingNames (): Promise<IRnsOwnedHashMap> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findExistingNames'))
     const address = this.walletRef.getJackalAddress()
 
     const data: IRnsOwnedItem[] = (
