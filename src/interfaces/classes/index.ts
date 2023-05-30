@@ -1,6 +1,5 @@
 export { default as IAbciHandler } from '@/interfaces/classes/IAbciHandler'
 export { default as IFileDownloadHandler } from '@/interfaces/classes/IFileDownloadHandler'
-export { default as IFileHandlerCore } from '@/interfaces/classes/IFileHandlerCore'
 export { default as IFileIo } from '@/interfaces/classes/IFileIo'
 export { default as IFileUploadHandler } from '@/interfaces/classes/IFileUploadHandler'
 export { default as IFolderHandler } from '@/interfaces/classes/IFolderHandler'

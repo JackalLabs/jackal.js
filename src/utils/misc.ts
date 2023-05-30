@@ -19,6 +19,10 @@ export function deprecated (thing: string, version: string, opts?: { aggressive?
   if (opts?.aggressive) alert(notice)
 }
 
+export function getRandomIndex (limit: number) {
+  return Math.floor(Math.random() * Number(limit) || 0)
+}
+
 /**
  * Notify that Signer has not been enabled.
  * @param {string} module - Name of parent Module.
