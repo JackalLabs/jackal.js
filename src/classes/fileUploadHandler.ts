@@ -63,6 +63,9 @@ export default class FileUploadHandler implements IFileUploadHandler {
     this.iv = aes?.iv || this.iv
     return convertToEncryptedFile(this.file, this.key, this.iv)
   }
+  getForPublicUpload(): File {
+    return this.file
+  }
   async getEnc(): Promise<IAesBundle> {
     return {
       iv: this.iv,
