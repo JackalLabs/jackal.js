@@ -96,7 +96,7 @@ export default class GovHandler implements IGovHandler {
   async getStakedValidatorDetailsMap(): Promise<IStakingValidatorStakedMap> {
     const allVals = await this.getCompleteMergedValidatorDetailsMap()
     const staked = await this.getStakedMap()
-    return await includeStaked(staked, allVals, true)
+    return await includeStaked(allVals, staked, true)
   }
   async getDelegatorValidatorDetails(
     validatorAddress: string
@@ -175,14 +175,14 @@ export default class GovHandler implements IGovHandler {
     const allOfStatus = await this.getAllValidatorDetailsMap(status)
     const flagged = flagStaked(allOfStatus, staked)
     const stakedMap = await this.getStakedMap()
-    return await includeStaked(stakedMap, flagged)
+    return await includeStaked(flagged, stakedMap)
   }
   async getInactiveMergedValidatorDetailsStakedMap(): Promise<IStakingValidatorExtendedMap> {
     const staked = await this.getAllDelegatorValidatorDetailsMap()
     const allInactive = await this.getInactiveMergedValidatorDetailsMap()
     const flagged = flagStaked(allInactive, staked)
     const stakedMap = await this.getStakedMap()
-    return await includeStaked(stakedMap, flagged)
+    return await includeStaked(flagged, stakedMap)
   }
   async getInactiveMergedValidatorDetailsMap(): Promise<IStakingValidatorExtendedMap> {
     const staked = this.getAllDelegatorValidatorDetailsMap()
@@ -202,6 +202,18 @@ export default class GovHandler implements IGovHandler {
       ...(await allActive)
     }
     return flagStaked(merged, await staked)
+  }
+  async getPublicMergedValidatorDetailsMap(
+    status: TValidatorStatus
+  ): Promise<IStakingValidatorStakedMap> {
+    const allOfStatus = await this.getAllValidatorDetailsMap(status)
+    return await includeStaked(flagStaked(allOfStatus, {}), {})
+  }
+  async getPublicInactiveMergedValidatorDetailsStakedMap(): Promise<IStakingValidatorExtendedMap> {
+    const allUnbonding = this.getAllValidatorDetailsMap('UNBONDING')
+    const allUnbonded = this.getAllValidatorDetailsMap('UNBONDED')
+    const merged = { ...(await allUnbonding), ...(await allUnbonded) }
+    return flagStaked(merged, {})
   }
   /** End Staking Queries */
   /** Voting Queries */
@@ -361,8 +373,8 @@ function flagStaked(
   return final
 }
 async function includeStaked(
-  stakedMap: IDelegationSummaryMap,
   flagged: IStakingValidatorExtendedMap,
+  stakedMap: IDelegationSummaryMap,
   ignore?: boolean
 ): Promise<IStakingValidatorStakedMap> {
   const final: IStakingValidatorStakedMap = {}

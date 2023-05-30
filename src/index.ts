@@ -23,4 +23,4 @@ export { TFileOrFFile } from "@/types/TFoldersAndFiles";
 export { OfflineSigner } from "@cosmjs/proto-signing";
 
 /** Functions */
-export { blockToDate } from "@/utils/misc";
+export * from "@/utils/misc";

@@ -1,12 +1,14 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import {
+  IPaginatedMap,
+  IPagination,
   IRnsBidHashMap,
   IRnsBidItem,
   IRnsExpandedForSaleHashMap,
   IRnsForSaleHashMap,
   IRnsForSaleItem,
   IRnsOwnedHashMap,
-  IRnsOwnedItem,
+  IRnsItem,
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
@@ -28,9 +30,10 @@ export default interface IRnsHandler {
   findSingleBid(index: string): Promise<IRnsBidItem>
   findAllBids(): Promise<IRnsBidHashMap>
   findSingleForSaleName(rnsName: string): Promise<IRnsForSaleItem>
-  findAllForSaleNames(): Promise<IRnsForSaleHashMap>
+  findSomeForSaleNames(options?: IPagination): Promise<IPaginatedMap<IRnsForSaleHashMap>>
+  findAllForSaleNames(): Promise<IRnsExpandedForSaleHashMap>
   findExpandedForSaleNames(): Promise<IRnsExpandedForSaleHashMap>
-  findExistingNames(): Promise<IRnsOwnedHashMap>
-  findSingleRns(rns: string): Promise<IRnsOwnedItem>
+  findMyExistingNames(): Promise<IRnsOwnedHashMap>
+  findSingleRns(rns: string): Promise<IRnsItem>
   findMatchingAddress(rns: string): Promise<string>
 }

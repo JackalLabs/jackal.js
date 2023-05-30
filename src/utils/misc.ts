@@ -141,27 +141,35 @@ export async function handlePagination (handler: any, queryTag: string, addition
 
 /**
  * Set a timer.
- * @param {number} amt - Duration of timeer in ms.
+ * @param {number} duration - Duration of timer in ms.
  * @returns {Promise<void>}
  */
-export async function setDelay (amt: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, Number(amt)))
+export async function setDelay (duration: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, Number(duration)))
 }
 
 /**
- * Convert chain block height to UTC Date
- * TODO - add return statement
- * @param {string} rpcUrl - RPC node address to query.
- * @param {number} currentBlockHeight - Current chain height.
- * @param {number | string} targetBlockHeight - Number or number-like string of future chain height.
+ * Converts chain block height to UTC Date using getAverageBlockTime().
+ * @param {IBlockTimeOptions} options - Values to use for calculating UTC date.
  * @returns {Promise<Date>} - Date object for future date matching input future chain height.
  */
-export async function blockToDate (rpcUrl: string, currentBlockHeight: number, targetBlockHeight: number | string) {
-  const targetHeight = Number(targetBlockHeight) || 0
+export async function blockToDate (options: IBlockTimeOptions): Promise<Date> {
+  if (!options.rpcUrl) throw new Error('RPC URL is required!')
   /** Block time in milliseconds */
-  const blockTime = await getAvgBlockTime(rpcUrl, 20)
-  const blockDiff = targetHeight - currentBlockHeight
-  const diffMs = blockDiff * blockTime
+  const blockTime = await getAverageBlockTime(options.rpcUrl, 20)
+  return blockToDateFixed ({...options, blockTime})
+}
+
+/**
+ * Converts chain block height to UTC Date using provided block time value.
+ * @param {IBlockTimeOptions} options - Values to use for calculating UTC date.
+ * @returns {Date} - Date object for future date matching input future chain height.
+ */
+export function blockToDateFixed (options: IBlockTimeOptions): Date {
+  if (!options.blockTime) throw new Error('Block Time is required!')
+  const targetHeight = Number(options.targetBlockHeight) || 0
+  const blockDiff = targetHeight - options.currentBlockHeight
+  const diffMs = blockDiff * options.blockTime
   const now = Date.now()
   return new Date(now + diffMs)
 }
@@ -172,7 +180,7 @@ export async function blockToDate (rpcUrl: string, currentBlockHeight: number, t
  * @param {number} blocks - Number of blocks to use for average.
  * @returns {Promise<number>} - Time in ms per block of submitted window.
  */
-export async function getAvgBlockTime(
+export async function getAverageBlockTime(
   rpc: string,
   blocks: number
 ): Promise<number> {
@@ -181,7 +189,7 @@ export async function getAvgBlockTime(
     .catch((err) => {
       console.warn('getAvgBlockTime() latestBlockInfo fetch error:')
       console.error(err)
-      return { result: { block: { header: { height: 0, time: 0 } } } }
+      return { result: { block: { header: { height: blocks, time: 0 } } } }
     })
   const blockOffset = Number(latestBlockInfo.result.block.header.height - blocks) || 0
   const pastBlockInfo = await fetch(`${rpc}/block?height=${blockOffset}`)
@@ -239,4 +247,10 @@ interface IFileResponse {
   message: string
   success: boolean
   value: QueryFileResponse
+}
+interface IBlockTimeOptions {
+  blockTime?: number
+  rpcUrl?: string
+  currentBlockHeight: number
+  targetBlockHeight: number | string
 }

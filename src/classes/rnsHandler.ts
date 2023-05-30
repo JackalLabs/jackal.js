@@ -1,17 +1,20 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IQueryHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
 import {
+  IPaginatedMap,
+  IPagination,
   IRnsBidHashMap,
-  IRnsBidItem,
+  IRnsBidItem, IRnsExistsHashMap,
   IRnsExpandedForSaleHashMap,
   IRnsForSaleHashMap,
   IRnsForSaleItem,
   IRnsOwnedHashMap,
-  IRnsOwnedItem,
+  IRnsItem,
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
-import { handlePagination, signerNotEnabled } from '@/utils/misc'
+import { blockToDateFixed, handlePagination, signerNotEnabled } from '@/utils/misc'
+import IRnsExpandedItem from '@/interfaces/rns/IRnsExpandedItem'
 
 /**
  * Class encompassing basic and advanced methods needed for interaction with RNS addresses on the chain.
@@ -279,18 +282,67 @@ export default class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Finds all RNS listed on market
-   * @returns {Promise<IRnsForSaleHashMap>}
+   * Finds paginated RNS listed on market
+   * @returns {Promise<IPaginatedMap<IRnsForSaleHashMap>>}
    */
-  async findAllForSaleNames(): Promise<IRnsForSaleHashMap> {
+  async findSomeForSaleNames(options?: IPagination): Promise<IPaginatedMap<IRnsForSaleHashMap>> {
+    const data = await this.qH.rnsQuery.queryForsaleAll({
+      pagination: {
+        key: options?.nextPage,
+        limit: options?.limit || 100
+      }
+    })
+    const condensed = data.value.forsale.reduce((acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
+      acc[curr.name] = curr
+      return acc
+    }, {})
+
+    return {
+      data: condensed,
+      nextPage: data.value.pagination?.nextKey
+    }
+  }
+
+  /**
+   * Finds all RNS listed on market.
+   * @param {number} blockTime - Block length in milliseconds.
+   * @returns {Promise<IRnsExpandedForSaleHashMap>} - Object map of list items by RNS name.
+   */
+  async findAllForSaleNames(blockTime?: number): Promise<IRnsExpandedForSaleHashMap> {
+    const extendData: Promise<IRnsExistsHashMap> = this.findAllNames()
     const data: IRnsForSaleItem[] = (
       await handlePagination(this.qH.rnsQuery, 'queryForsaleAll', {})
     ).reduce((acc: IRnsForSaleItem[], curr: any) => {
       acc.push(...curr.forsale)
       return acc
     }, [])
+    const ready = await extendData
+    return data.reduce(
+      (acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
+        const cleanName = curr.name.replace('.jkl', '')
+        const { expires } = ready[cleanName]
 
-    return data.reduce((acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
+        acc[curr.name] = {
+          ...curr,
+          expires,
+          expireDate: parseExpires(blockTime || 6000, expires),
+          mine: false
+        }
+        return acc
+      },
+      {}
+    )
+
+  }
+
+  async findAllNames(): Promise<IRnsExistsHashMap> {
+    const data: IRnsItem[] = (
+      await handlePagination(this.qH.rnsQuery, 'queryNamesAll', {})
+    ).reduce((acc: IRnsItem[], curr: any) => {
+      acc.push(...curr.names)
+      return acc
+    }, [])
+    return data.reduce((acc: IRnsExistsHashMap, curr: IRnsItem) => {
       acc[curr.name] = curr
       return acc
     }, {})
@@ -298,24 +350,30 @@ export default class RnsHandler implements IRnsHandler {
 
   /**
    * Finds all RNS listed on market and flags "mine" boolean if the user owns the RNS.
+   * @param {number} blockTime - Block length in milliseconds.
    * @returns {Promise<IRnsExpandedForSaleHashMap>} - Object map of list items by RNS name.
    */
-  async findExpandedForSaleNames (): Promise<IRnsExpandedForSaleHashMap> {
+  async findExpandedForSaleNames (blockTime?: number): Promise<IRnsExpandedForSaleHashMap> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findExpandedForSaleNames'))
-    const rawOwned = await this.findExistingNames()
-
+    const address = this.walletRef.getJackalAddress()
+    const fullData = this.findAllNames()
     const data: IRnsForSaleItem[] = (
       await handlePagination(this.qH.rnsQuery, 'queryForsaleAll', {})
     ).reduce((acc: IRnsForSaleItem[], curr: any) => {
       acc.push(...curr.forsale)
       return acc
     }, [])
-
+    const ready = await fullData
     return data.reduce(
       (acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
+        const cleanName = curr.name.replace('.jkl', '')
+        const { expires } = ready[cleanName]
+
         acc[curr.name] = {
           ...curr,
-          mine: !!rawOwned[reverseSanitizeRns(curr.name)]
+          expires,
+          expireDate: parseExpires(blockTime || 6000, expires),
+          mine: curr.owner === address
         }
         return acc
       },
@@ -325,26 +383,29 @@ export default class RnsHandler implements IRnsHandler {
 
   /**
    * Finds all RNS the user owns.
+   * @param {number} blockTime - Block length in milliseconds.
    * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
    */
-  async findExistingNames (): Promise<IRnsOwnedHashMap> {
+  async findMyExistingNames (blockTime?: number): Promise<IRnsOwnedHashMap> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findExistingNames'))
     const address = this.walletRef.getJackalAddress()
-
-    const data: IRnsOwnedItem[] = (
+    const data: IRnsItem[] = (
       await handlePagination(this.qH.rnsQuery, 'queryListOwnedNames', {
         address
       })
-    ).reduce((acc: IRnsOwnedItem[], curr: any) => {
+    ).reduce((acc: IRnsItem[], curr: any) => {
       acc.push(...curr.names)
       return acc
     }, [])
-
-    return data.reduce((acc: IRnsOwnedHashMap, curr: IRnsOwnedItem) => {
+    return data.reduce((acc: IRnsOwnedHashMap, curr: IRnsItem) => {
+      const item: IRnsExpandedItem = {
+        ...curr,
+        expireDate: parseExpires(blockTime || 6000, curr.expires)
+      }
       if (curr.locked) {
-        acc.free = curr
+        acc.free = item
       } else {
-        acc[curr.name] = curr
+        acc[curr.name] = item
       }
       return acc
     }, {})
@@ -353,12 +414,12 @@ export default class RnsHandler implements IRnsHandler {
   /**
    * Find RNS details using RNS address.
    * @param {string} rns - RNS address to search.
-   * @returns {Promise<IRnsOwnedItem>} - Data if found, defaults to item with empty values if no match found.
+   * @returns {Promise<IRnsItem>} - Data if found, defaults to item with empty values if no match found.
    */
-  async findSingleRns (rns: string): Promise<IRnsOwnedItem> {
+  async findSingleRns (rns: string): Promise<IRnsItem> {
     const trueRns = sanitizeRns(rns)
     return (await this.qH.rnsQuery.queryNames({ index: trueRns })).value
-      .names as IRnsOwnedItem
+      .names as IRnsItem
   }
 
   /**
@@ -386,10 +447,10 @@ function sanitizeRns (rns: string): string {
  * @param {string} rns - RNS address to process.
  * @returns {string} - Source RNS address with ".jkl" and ".ibc" excluded.
  */
-function reverseSanitizeRns (rns: string): string {
-  const strippedExtensions = /\.(jkl|ibc)$/
-  return rns.replace(strippedExtensions, '')
-}
+// function reverseSanitizeRns (rns: string): string {
+//   const strippedExtensions = /\.(jkl|ibc)$/
+//   return rns.replace(strippedExtensions, '')
+// }
 
 /**
  * Enforces JSON.stringify on data. Used by: makeUpdateMsg(), makeNewRegistrationMsg(), and makeAddRecordMsg().
@@ -407,4 +468,18 @@ function sanitizeRnsData (data: string, caller: string) {
     console.error(err)
     return '{}'
   }
+}
+
+function parseExpires (blockTime: number, expires: number): string {
+  const dd = blockToDateFixed({
+    /** Block time in milliseconds */
+    blockTime: blockTime,
+    currentBlockHeight: 2000000,
+    targetBlockHeight: expires
+  })
+  return dd.toLocaleString('default', {
+    year: 'numeric',
+    month: 'long',
+    day: '2-digit'
+  })
 }
