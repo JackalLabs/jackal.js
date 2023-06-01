@@ -73,6 +73,17 @@ export default class NotificationHandler implements INotificationHandler {
     })
   }
 
+  async broadcastMakeCounter(): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'broadcastMakeCounter'))
+    const msg = this.makeCounter()
+    const pH = this.walletRef.getProtoHandler()
+    pH.debugBroadcaster([msg], { memo: '', step: false })
+      .catch((err) => {
+        console.warn(err)
+        throw err
+      })
+  }
+
   async getNotification(
     forAddress: string,
     index: number

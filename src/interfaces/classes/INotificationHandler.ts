@@ -19,6 +19,8 @@ export default interface INotificationHandler {
   makeCounter(): EncodeObject
   makeBlockedSender(sender: string): EncodeObject
 
+  broadcastMakeCounter(): Promise<void>
+
   getNotification(
     forAddress: string,
     index: number
