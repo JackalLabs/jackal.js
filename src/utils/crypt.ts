@@ -5,6 +5,8 @@ import { IWalletHandler } from '@/interfaces/classes'
 import { IAesBundle } from '@/interfaces'
 import { stringToUint16, uint16ToString } from '@/utils/misc'
 
+const { crypto } = (window) ? window : globalThis
+
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
  * @param {CryptoKey} key

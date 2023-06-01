@@ -43,6 +43,8 @@ import { Contracts, FidCid, Files, QueryFindFileResponse, Strays } from 'jackal.
 import { buildPostFile, makePermsBlock, readCompressedFileTree, removeCompressedFileTree } from '@/utils/compression'
 import IFileMetaHashMap from '@/interfaces/file/IFileMetaHashMap'
 
+const { crypto } = (window) ? window : globalThis
+
 export default class FileIo implements IFileIo {
   private readonly walletRef: IWalletHandler
   private readonly qH: IQueryHandler
@@ -256,7 +258,7 @@ export default class FileIo implements IFileIo {
         const { cid, fid } = item.handler.getIds()
         const common = {
           aes: await item.handler.getEnc(),
-          num: self.crypto.randomUUID(),
+          num: crypto.randomUUID(),
           pubKey: this.walletRef.getPubkey(),
           usr: this.walletRef.getJackalAddress()
         }
@@ -643,7 +645,7 @@ export default class FileIo implements IFileIo {
         iv: genIv(),
         key: await genKey()
       },
-      num: self.crypto.randomUUID(),
+      num: crypto.randomUUID(),
       pubKey: this.walletRef.getPubkey(),
       usr: this.walletRef.getJackalAddress()
     }
