@@ -18,6 +18,7 @@ import {
 } from '@/interfaces/classes'
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import {
+  IAdditionalWalletOptions,
   ICoin,
   /** TODO */
   // IEnabledSecrets,
@@ -62,14 +63,14 @@ export default class WalletHandler implements IWalletHandler {
     this.traits = traits
   }
 
-  static async trackWallet(config: IWalletConfig): Promise<IWalletHandler> {
+  static async trackWallet(config: IWalletConfig, options?: IAdditionalWalletOptions): Promise<IWalletHandler> {
     if (!window) {
       throw new Error(
         'Jackal.js is only supported in the browser at this time!'
       )
     } else {
       const qH = await QueryHandler.trackQuery(config.queryAddr)
-      const { properties, traits } = await processWallet(config)
+      const { properties, traits } = await processWallet(config, options)
         .catch(err => {
           throw err
         })
@@ -116,8 +117,8 @@ export default class WalletHandler implements IWalletHandler {
     }
   }
 
-  async convertToFullWallet (config: IWalletConfig): Promise<void> {
-    const { properties, traits } = await processWallet(config)
+  async convertToFullWallet (config: IWalletConfig, options?: IAdditionalWalletOptions): Promise<void> {
+    const { properties, traits } = await processWallet(config, options)
       .catch(err => {
         throw err
       })
@@ -251,20 +252,28 @@ async function makeSecret(
     })
   return signed.signature
 }
-async function processWallet (config: IWalletConfig) {
+async function processWallet (config: IWalletConfig, options?: IAdditionalWalletOptions) {
   const { selectedWallet, signerChain, enabledChains, queryAddr, txAddr, chainConfig } = config
   const chainId = signerChain || jackalMainnetChainId
   let windowWallet: Keplr | Leap
   switch (selectedWallet) {
     case 'keplr':
-      if (!window.keplr)
+      if (!window.keplr) {
         throw new Error('Keplr Wallet selected but unavailable')
+      }
       windowWallet = window.keplr
       break
     case 'leap':
-      if (!window.leap)
+      if (!window.leap) {
         throw new Error('Leap Wallet selected but unavailable')
+      }
       windowWallet = window.leap
+      break
+    case 'custom':
+      if (!options?.customWallet) {
+        throw new Error('Custom Wallet selected but unavailable')
+      }
+      windowWallet = options.customWallet
       break
     default:
       throw new Error('A valid wallet selection must be provided')

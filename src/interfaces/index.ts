@@ -1,3 +1,4 @@
+export { default as IAdditionalWalletOptions } from '@/interfaces/IAdditionalWalletOptions'
 export { default as IAesBundle } from '@/interfaces/IAesBundle'
 export { default as IChainConfig } from '@/interfaces/IChainConfig'
 export { default as IChildDirInfo } from '@/interfaces/IChildDirInfo'
