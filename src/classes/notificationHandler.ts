@@ -161,7 +161,7 @@ export default class NotificationHandler implements INotificationHandler {
   }
   async makeAddShareNoti(address: string): Promise<EncodeObject> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeAddShareNoti'))
-    return await this.makeStandardizedShareNotification('dbfs-update', address)
+    return await this.makeStandardizedShareNotification('dbfs-add', address)
   }
   async makeUpdateShareNoti(address: string): Promise<EncodeObject> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeUpdateShareNoti'))
