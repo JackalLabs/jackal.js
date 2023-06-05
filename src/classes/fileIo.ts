@@ -40,7 +40,7 @@ import {
 } from '@/interfaces'
 import IProviderChecks from '@/interfaces/IProviderChecks'
 import { Contracts, FidCid, Files, QueryFindFileResponse, Strays } from 'jackal.js-protos'
-import { buildPostFile, makePermsBlock, readCompressedFileTree, removeCompressedFileTree } from '@/utils/compression'
+import { buildPostFile, makePermsBlock, readFileTreeEntry, removeFileTreeEntry } from '@/utils/compression'
 import IFileMetaHashMap from '@/interfaces/file/IFileMetaHashMap'
 
 export default class FileIo implements IFileIo {
@@ -303,7 +303,7 @@ export default class FileIo implements IFileIo {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'downloadFolder'))
     const owner = this.walletRef.getJackalAddress()
     try {
-      const data = (await readCompressedFileTree(
+      const data = (await readFileTreeEntry(
         owner,
         rawPath,
         this.walletRef
@@ -452,7 +452,7 @@ export default class FileIo implements IFileIo {
       dirs.map(async (name) => {
         const rawPath = `${location}/${name}`
         if (await this.checkFolderIsFileTree(rawPath)) {
-          encoded.push(await removeCompressedFileTree(rawPath, this.walletRef))
+          encoded.push(await removeFileTreeEntry(rawPath, this.walletRef))
         } else {
           encoded.push(
             ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
@@ -556,7 +556,7 @@ export default class FileIo implements IFileIo {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'checkFolderIsFileTree'))
     const owner = this.walletRef.getJackalAddress()
     try {
-      const data = await readCompressedFileTree(owner, rawPath, this.walletRef)
+      const data = await readFileTreeEntry(owner, rawPath, this.walletRef)
         .catch((err: Error) => {
           throw err
         })

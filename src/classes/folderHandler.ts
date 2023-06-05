@@ -3,7 +3,7 @@ import { IChildDirInfo, IFileMeta, IFileMetaHashMap, IFolderFrame } from '@/inte
 import { IFolderHandler, IWalletHandler } from '@/interfaces/classes'
 import { signerNotEnabled, stripper } from '@/utils/misc'
 import { merkleMeBro } from '@/utils/hash'
-import { saveCompressedFileTree } from '@/utils/compression'
+import { saveFileTreeEntry } from '@/utils/compression'
 import { convertFromEncryptedFile } from '@/utils/crypt'
 
 export default class FolderHandler implements IFolderHandler {
@@ -65,7 +65,7 @@ export default class FolderHandler implements IFolderHandler {
   }
   async getForFiletree(walletRef: IWalletHandler): Promise<EncodeObject> {
     if (!walletRef.traits) throw new Error(signerNotEnabled('FolderHandler', 'getForFiletree'))
-    return await saveCompressedFileTree(
+    return await saveFileTreeEntry(
       walletRef.getJackalAddress(),
       this.getWhereAmI(),
       this.getWhoAmI(),

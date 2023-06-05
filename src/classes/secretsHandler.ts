@@ -1,7 +1,7 @@
 import { ISecretsHandler, IWalletHandler } from '@/interfaces/classes'
 import { ISharedTracker } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { readCompressedFileTree, removeCompressedFileTree, saveCompressedFileTree } from '@/utils/compression'
+import { readFileTreeEntry, removeFileTreeEntry, saveFileTreeEntry } from '@/utils/compression'
 import { signerNotEnabled } from '@/utils/misc'
 
 export default class SecretsHandler implements ISecretsHandler {
@@ -26,7 +26,7 @@ export default class SecretsHandler implements ISecretsHandler {
     shared: ISharedTracker
   ): Promise<EncodeObject> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'saveSharing'))
-    return await saveCompressedFileTree(
+    return await saveFileTreeEntry(
       toAddress,
       `s/Sharing`,
       toAddress,
@@ -36,7 +36,7 @@ export default class SecretsHandler implements ISecretsHandler {
   }
   async readSharing(owner: string, rawPath: string): Promise<ISharedTracker> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'readSharing'))
-    const shared = await readCompressedFileTree(
+    const shared = await readFileTreeEntry(
       owner,
       rawPath,
       this.walletRef
@@ -49,6 +49,6 @@ export default class SecretsHandler implements ISecretsHandler {
   }
   async stopSharing(rawPath: string): Promise<EncodeObject> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'stopSharing'))
-    return await removeCompressedFileTree(rawPath, this.walletRef)
+    return await removeFileTreeEntry(rawPath, this.walletRef)
   }
 }

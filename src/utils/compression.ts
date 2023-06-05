@@ -1,7 +1,15 @@
 import PLZSU from '@karnthis/plzsu'
 import { IEditorsViewers, IMsgPartialPostFileBundle, IPermsParts } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { aesToString, cryptString, genIv, genKey, stringToAes } from '@/utils/crypt'
+import {
+  aesToString,
+  compressEncryptString,
+  cryptString,
+  decryptDecompressString,
+  genIv,
+  genKey,
+  stringToAes
+} from '@/utils/crypt'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import { Files } from 'jackal.js-protos'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
@@ -18,12 +26,13 @@ export function decompressData(input: string): string {
   return Plzsu.decompress(input.substring(6))
 }
 
-export async function saveCompressedFileTree(
+export async function saveFileTreeEntry(
   toAddress: string,
   rawPath: string,
   rawTarget: string,
   rawContents: { [key: string]: any },
-  walletRef: IWalletHandler
+  walletRef: IWalletHandler,
+  compress?: boolean
 ): Promise<EncodeObject> {
   const aes = {
     iv: genIv(),
@@ -34,17 +43,26 @@ export async function saveCompressedFileTree(
   const msg: IMsgPartialPostFileBundle = {
     account,
     creator,
-    contents: await cryptString(
-      JSON.stringify(rawContents),
-      aes.key,
-      aes.iv,
-      'encrypt'
-    ),
+    contents: '',
     hashParent: await merkleMeBro(rawPath),
     hashChild: await hashAndHex(rawTarget),
     trackingNumber: self.crypto.randomUUID(),
     editors: '',
     viewers: ''
+  }
+  if (compress) {
+    msg.contents = await compressEncryptString(
+      JSON.stringify(rawContents),
+      aes.key,
+      aes.iv
+    )
+  } else {
+    msg.contents = await cryptString(
+      JSON.stringify(rawContents),
+      aes.key,
+      aes.iv,
+      'encrypt'
+    )
   }
   const basePerms: any = {
     num: msg.trackingNumber,
@@ -77,10 +95,11 @@ export async function saveCompressedFileTree(
   }
   return buildPostFile(msg, walletRef.getProtoHandler())
 }
-export async function readCompressedFileTree(
+export async function readFileTreeEntry(
   owner: string,
   rawPath: string,
-  walletRef: IWalletHandler
+  walletRef: IWalletHandler,
+  decompress?: boolean
 ): Promise<{ [key: string]: any }> {
   const result = await getFileTreeData(
     rawPath,
@@ -98,14 +117,19 @@ export async function readCompressedFileTree(
         `v${trackingNumber}${walletRef.getJackalAddress()}`
       )
       const keys = await stringToAes(walletRef, parsedVA[viewName])
-      const final = await cryptString(contents, keys.key, keys.iv, 'decrypt')
-      return JSON.parse(final)
+      if (decompress) {
+        const final = await decryptDecompressString(contents, keys.key, keys.iv)
+        return JSON.parse(final)
+      } else {
+        const final = await cryptString(contents, keys.key, keys.iv, 'decrypt')
+        return JSON.parse(final)
+      }
     } catch (err: any) {
       throw err
     }
   }
 }
-export async function removeCompressedFileTree(
+export async function removeFileTreeEntry(
   rawPath: string,
   walletRef: IWalletHandler
 ): Promise<EncodeObject> {

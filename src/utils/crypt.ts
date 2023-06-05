@@ -181,7 +181,9 @@ export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv
  */
 export async function compressEncryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
   const compString = compressData(input)
-  return await cryptString(compString, key, iv, 'encrypt')
+  const data = await cryptString(compString, key, iv, 'encrypt')
+  console.log(data)
+  return data
 }
 
 /**
@@ -192,8 +194,9 @@ export async function compressEncryptString (input: string, key: CryptoKey, iv: 
  * @returns {Promise<string>} - Decrypted and decompressed string.
  */
 export async function decryptDecompressString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
-  const decryptBlob = await aesCrypt(new Blob([input]), key, iv, 'decrypt')
-  return decompressData(await decryptBlob.text())
+  console.log(input)
+  // const decryptBlob = await cryptString(input, key, iv, 'decrypt')
+  return decompressData(await cryptString(input, key, iv, 'decrypt'))
 }
 
 /**

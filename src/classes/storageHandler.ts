@@ -3,7 +3,7 @@ import { EncodeObject } from '@cosmjs/proto-signing'
 import { IPayData, ISharedTracker, IStoragePaymentInfo, IStray } from '@/interfaces'
 import { handlePagination, numTo3xTB, signerNotEnabled } from '@/utils/misc'
 import { DeliverTxResponse } from '@cosmjs/stargate'
-import { readCompressedFileTree, removeCompressedFileTree, saveCompressedFileTree } from '@/utils/compression'
+import { readFileTreeEntry, removeFileTreeEntry, saveFileTreeEntry } from '@/utils/compression'
 
 export default class StorageHandler implements IStorageHandler {
   private readonly walletRef: IWalletHandler
@@ -94,7 +94,7 @@ export default class StorageHandler implements IStorageHandler {
     shared: ISharedTracker
   ): Promise<EncodeObject> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'saveSharing'))
-    return await saveCompressedFileTree(
+    return await saveFileTreeEntry(
       toAddress,
       `s/Sharing`,
       toAddress,
@@ -104,7 +104,7 @@ export default class StorageHandler implements IStorageHandler {
   }
   async readSharing(owner: string, rawPath: string): Promise<ISharedTracker> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'readSharing'))
-    const shared = await readCompressedFileTree(
+    const shared = await readFileTreeEntry(
       owner,
       rawPath,
       this.walletRef
@@ -117,6 +117,6 @@ export default class StorageHandler implements IStorageHandler {
   }
   async stopSharing(rawPath: string): Promise<EncodeObject> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'stopSharing'))
-    return await removeCompressedFileTree(rawPath, this.walletRef)
+    return await removeFileTreeEntry(rawPath, this.walletRef)
   }
 }
