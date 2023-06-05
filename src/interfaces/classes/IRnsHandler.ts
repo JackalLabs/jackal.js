@@ -31,9 +31,10 @@ export default interface IRnsHandler {
   findAllBids(): Promise<IRnsBidHashMap>
   findSingleForSaleName(rnsName: string): Promise<IRnsForSaleItem>
   findSomeForSaleNames(options?: IPagination): Promise<IPaginatedMap<IRnsForSaleHashMap>>
-  findAllForSaleNames(): Promise<IRnsExpandedForSaleHashMap>
-  findExpandedForSaleNames(): Promise<IRnsExpandedForSaleHashMap>
-  findMyExistingNames(): Promise<IRnsOwnedHashMap>
+  findAllForSaleNames(blockTime?: number): Promise<IRnsExpandedForSaleHashMap>
+  findExpandedForSaleNames (blockTime?: number): Promise<IRnsExpandedForSaleHashMap>
+  findMyExistingNames(blockTime?: number): Promise<IRnsOwnedHashMap>
+  findYourExistingNames (address: string, blockTime?: number): Promise<IRnsOwnedHashMap>
   findSingleRns(rns: string): Promise<IRnsItem>
   findMatchingAddress(rns: string): Promise<string>
 }

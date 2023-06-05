@@ -382,13 +382,24 @@ export default class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Finds all RNS the user owns.
+   * Finds all RNS the current user owns.
    * @param {number} blockTime - Block length in milliseconds.
    * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
    */
   async findMyExistingNames (blockTime?: number): Promise<IRnsOwnedHashMap> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findExistingNames'))
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findMyExistingNames'))
     const address = this.walletRef.getJackalAddress()
+    return this.findYourExistingNames(address, blockTime)
+  }
+
+  /**
+   * Finds all RNS the target user owns.
+   * @param {string} address - JKL address to check for RNS names.
+   * @param {number} blockTime - Block length in milliseconds.
+   * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
+   */
+  async findYourExistingNames (address: string, blockTime?: number): Promise<IRnsOwnedHashMap> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findYourExistingNames'))
     const data: IRnsItem[] = (
       await handlePagination(this.qH.rnsQuery, 'queryListOwnedNames', {
         address
