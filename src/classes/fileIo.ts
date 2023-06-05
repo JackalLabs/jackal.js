@@ -416,6 +416,25 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
+  async deleteHome(): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'deleteHome'))
+    const pH = this.walletRef.getProtoHandler()
+    const parent = await this.downloadFolder(`s/Home`)
+    const moreTargets = [
+      ...new Set([
+        ...parent.getChildDirs(),
+        ...Object.keys(parent.getChildFiles())
+      ])
+    ]
+    const readyToBroadcast = await this.rawDeleteTargets(moreTargets, parent)
+    readyToBroadcast.push(
+      ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
+        `s/Home`
+      ]))
+    )
+    const memo = ``
+    await pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+  }
   async deleteTargets(
     targets: string[],
     parent: IFolderHandler
@@ -451,7 +470,7 @@ export default class FileIo implements IFileIo {
     await Promise.all(
       dirs.map(async (name) => {
         const rawPath = `${location}/${name}`
-        if (await this.checkFolderIsFileTree(rawPath)) {
+        if (await this.checkFolderIsFileTree(rawPath).catch(() => true)) {
           encoded.push(await removeFileTreeEntry(rawPath, this.walletRef))
         } else {
           encoded.push(
@@ -561,12 +580,19 @@ export default class FileIo implements IFileIo {
           throw err
         })
       return await FolderHandler.trackFolder(data as IFolderFrame)
+        .catch((err: Error) => {
+          console.error(err)
+          return FolderHandler.trackNewFolder({
+            myName: '',
+            myParent: '',
+            myOwner: ''
+          })
+        })
     } catch (err) {
       console.warn('checkFolderIsFileTree()', err)
       return null
     }
   }
-
   private async createFileTreeFolderMsg(
     pathName: string,
     parentPath: string,
@@ -592,7 +618,15 @@ export default class FileIo implements IFileIo {
         const fileTreeResult = (
           await getFileTreeData(rawPath, creator, this.qH)
         ).value.files as Files
-        const { fids = [] } = JSON.parse(fileTreeResult.contents)
+        let fids
+        try {
+          fids = (JSON.parse(fileTreeResult.contents)).fids
+        } catch (err) {
+          console.error(`[FileIo] makeDelete()`)
+          console.error(err)
+          console.warn('Proceeding...')
+          fids = []
+        }
         const { cids } = (
           await this.qH.storageQuery.queryFidCid({ fid: fids[0] })
         ).value.fidCid as FidCid
