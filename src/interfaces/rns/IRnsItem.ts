@@ -1,9 +1,9 @@
-export default interface IRnsOwnedItem {
+export default interface IRnsItem {
   name: string
   expires: number
   value: string
   data: string
-  subdomains: IRnsOwnedItem[]
+  subdomains: IRnsItem[]
   tld: string
   locked: number
 }

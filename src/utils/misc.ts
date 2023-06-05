@@ -1,8 +1,6 @@
-import { PageResponse } from 'jackal.js-protos/dist/postgen/cosmos/base/query/v1beta1/pagination'
-import { IProtoHandler } from '@/interfaces/classes'
-import { QueryFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/filetree/query'
+import { PageResponse, QueryFileResponse } from 'jackal.js-protos'
+import { IQueryHandler } from '@/interfaces/classes'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
-import SuccessNoUndefined from 'jackal.js-protos/dist/types/TSuccessNoUndefined'
 
 /**
  * Notify that function is deprecated and should no longer be used.
@@ -19,6 +17,22 @@ export function deprecated (thing: string, version: string, opts?: { aggressive?
   }
   console.error(notice)
   if (opts?.aggressive) alert(notice)
+}
+
+export function getRandomIndex (limit: number) {
+  return Math.floor(Math.random() * Number(limit) || 0)
+}
+
+/**
+ * Notify that Signer has not been enabled.
+ * @param {string} module - Name of parent Module.
+ * @param {string} func - Name of function error occured in.
+ * @returns {string} - String containing error message.
+ */
+export function signerNotEnabled (module: string, func: string) {
+  let notice = `[${module}] ${func}() - Signer has not been enabled. Please init ProtoHandler`
+  console.error(notice)
+  return notice
 }
 
 /**
@@ -127,27 +141,35 @@ export async function handlePagination (handler: any, queryTag: string, addition
 
 /**
  * Set a timer.
- * @param {number} amt - Duration of timeer in ms.
+ * @param {number} duration - Duration of timer in ms.
  * @returns {Promise<void>}
  */
-export async function setDelay (amt: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, Number(amt)))
+export async function setDelay (duration: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, Number(duration)))
 }
 
 /**
- * Convert chain block height to UTC Date
- * TODO - add return statement
- * @param {string} rpcUrl - RPC node address to query.
- * @param {number} currentBlockHeight - Current chain height.
- * @param {number | string} targetBlockHeight - Number or number-like string of future chain height.
+ * Converts chain block height to UTC Date using getAverageBlockTime().
+ * @param {IBlockTimeOptions} options - Values to use for calculating UTC date.
  * @returns {Promise<Date>} - Date object for future date matching input future chain height.
  */
-export async function blockToDate (rpcUrl: string, currentBlockHeight: number, targetBlockHeight: number | string) {
-  const targetHeight = Number(targetBlockHeight) || 0
+export async function blockToDate (options: IBlockTimeOptions): Promise<Date> {
+  if (!options.rpcUrl) throw new Error('RPC URL is required!')
   /** Block time in milliseconds */
-  const blockTime = await getAvgBlockTime(rpcUrl, 20)
-  const blockDiff = targetHeight - currentBlockHeight
-  const diffMs = blockDiff * blockTime
+  const blockTime = await getAverageBlockTime(options.rpcUrl, 20)
+  return blockToDateFixed ({...options, blockTime})
+}
+
+/**
+ * Converts chain block height to UTC Date using provided block time value.
+ * @param {IBlockTimeOptions} options - Values to use for calculating UTC date.
+ * @returns {Date} - Date object for future date matching input future chain height.
+ */
+export function blockToDateFixed (options: IBlockTimeOptions): Date {
+  if (!options.blockTime) throw new Error('Block Time is required!')
+  const targetHeight = Number(options.targetBlockHeight) || 0
+  const blockDiff = targetHeight - options.currentBlockHeight
+  const diffMs = blockDiff * options.blockTime
   const now = Date.now()
   return new Date(now + diffMs)
 }
@@ -158,21 +180,28 @@ export async function blockToDate (rpcUrl: string, currentBlockHeight: number, t
  * @param {number} blocks - Number of blocks to use for average.
  * @returns {Promise<number>} - Time in ms per block of submitted window.
  */
-export async function getAvgBlockTime(
+export async function getAverageBlockTime(
   rpc: string,
   blocks: number
 ): Promise<number> {
-  const info = await fetch(`${rpc}/block`)
-    .then((res) => res.text())
-    .then((res) => {
-      return res
-    })
+  const latestBlockInfo = await fetch(`${rpc}/block`)
+    .then((res) => res.json())
     .catch((err) => {
-      console.warn('getAvgBlockTime() block fetch error:')
+      console.warn('getAvgBlockTime() latestBlockInfo fetch error:')
+      console.error(err)
+      return { result: { block: { header: { height: blocks, time: 0 } } } }
+    })
+  const blockOffset = Number(latestBlockInfo.result.block.header.height - blocks) || 0
+  const pastBlockInfo = await fetch(`${rpc}/block?height=${blockOffset}`)
+    .then((res) => res.json())
+    .catch((err) => {
+      console.warn('getAvgBlockTime() pastBlockInfo fetch error:')
       console.error(err)
       return { result: { block: { header: { time: 0 } } } }
     })
-  return 0
+  const latest = Date.parse(latestBlockInfo.result.block.header.time)
+  const past = Date.parse(pastBlockInfo.result.block.header.time)
+  return Math.round((latest - past) / blocks)
 }
 
 export function uint8ToString(buf: Uint8Array): string {
@@ -201,14 +230,27 @@ export function stringToUint16(str: string): Uint16Array {
 export async function getFileTreeData(
   rawPath: string,
   owner: string,
-  pH: IProtoHandler
-): Promise<SuccessNoUndefined<QueryFileResponse>> {
+  qH: IQueryHandler
+): Promise<IFileResponse> {
+  console.log('rawPath')
+  console.log(rawPath)
   const hexAddress = await merkleMeBro(rawPath)
   const hexedOwner = await hashAndHex(
     `o${hexAddress}${await hashAndHex(owner)}`
   )
-  return await pH.fileTreeQuery.queryFiles({
+  return await qH.fileTreeQuery.queryFiles({
     address: hexAddress,
     ownerAddress: hexedOwner
   })
+}
+interface IFileResponse {
+  message: string
+  success: boolean
+  value: QueryFileResponse
+}
+interface IBlockTimeOptions {
+  blockTime?: number
+  rpcUrl?: string
+  currentBlockHeight: number
+  targetBlockHeight: number | string
 }

@@ -1,8 +1,7 @@
-import { IAesBundle } from '@/interfaces'
+import { IAesBundle, IFileMeta } from '@/interfaces'
 import { IFileUploadHandler } from '@/interfaces/classes'
-import { genIv, genKey, convertToEncryptedFile } from '@/utils/crypt'
+import { convertToEncryptedFile, genIv, genKey } from '@/utils/crypt'
 import { hexFullPath, merkleMeBro } from '@/utils/hash'
-import { IFileMeta } from '@/interfaces'
 
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File
@@ -63,6 +62,9 @@ export default class FileUploadHandler implements IFileUploadHandler {
     this.key = aes?.key || this.key
     this.iv = aes?.iv || this.iv
     return convertToEncryptedFile(this.file, this.key, this.iv)
+  }
+  getForPublicUpload(): File {
+    return this.file
   }
   async getEnc(): Promise<IAesBundle> {
     return {

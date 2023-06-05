@@ -197,14 +197,13 @@ export async function decryptDecompressString (input: string, key: CryptoKey, iv
 }
 
 /**
- * Encrypts source string using AES-256 (AEG-GCM).
- * @param {string} input - Source string.
- * @param {CryptoKey} key - AES-256 key.
- * @param {Uint8Array} iv - AES-256 iv.
- * @returns {Promise<string>} - Encrypted string.
+ * Encrypt or decrypt a string using AES-256 (AES-GCM).
+ * @param {string} input - Source string to encrypt or decrypt.
+ * @param {CryptoKey} key - Key to use. Decryption key must match encryption key that was used.
+ * @param {Uint8Array} iv - Iv to use. Decryption iv must match encryption iv that was used.
+ * @param {"encrypt" | "decrypt"} mode - Toggle between encryption and decryption.
+ * @returns {Promise<string>} - Processed result.
  */
-export async function encryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
-  return await (await aesCrypt(new Blob([input]), key, iv, 'encrypt')).text()
 export async function cryptString(
   input: string,
   key: CryptoKey,
@@ -214,15 +213,4 @@ export async function cryptString(
   const uint16 = stringToUint16(input)
   const result = await aesCrypt(new Blob([uint16]), key, iv, mode)
   return uint16ToString(new Uint16Array(await result.arrayBuffer()))
-}
-
-/**
- * Decrypts source string using AES-256 (AEG-GCM).
- * @param {string} input - Source string.
- * @param {CryptoKey} key - AES-256 key.
- * @param {Uint8Array} iv - AES-256 iv.
- * @returns {Promise<string>} - Decrypted string.
- */
-export async function decryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
-  return await (await aesCrypt(new Blob([input]), key, iv, 'decrypt')).text()
 }

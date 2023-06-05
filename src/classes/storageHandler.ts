@@ -1,30 +1,17 @@
-import {
-  IProtoHandler,
-  IStorageHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
+import { IQueryHandler, IStorageHandler, IWalletHandler } from '@/interfaces/classes'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import {
-  IPayData,
-  ISharedTracker,
-  IStoragePaymentInfo,
-  IStray
-} from '@/interfaces'
-import { handlePagination, numTo3xTB } from '@/utils/misc'
+import { IPayData, ISharedTracker, IStoragePaymentInfo, IStray } from '@/interfaces'
+import { handlePagination, numTo3xTB, signerNotEnabled } from '@/utils/misc'
 import { DeliverTxResponse } from '@cosmjs/stargate'
-import {
-  readCompressedFileTree,
-  removeCompressedFileTree,
-  saveCompressedFileTree
-} from '@/utils/compression'
+import { readCompressedFileTree, removeCompressedFileTree, saveCompressedFileTree } from '@/utils/compression'
 
 export default class StorageHandler implements IStorageHandler {
   private readonly walletRef: IWalletHandler
-  private readonly pH: IProtoHandler
+  private readonly qH: IQueryHandler
 
   private constructor(wallet: IWalletHandler) {
     this.walletRef = wallet
-    this.pH = wallet.getProtoHandler()
+    this.qH = wallet.getQueryHandler()
   }
 
   static async trackStorage(wallet: IWalletHandler): Promise<IStorageHandler> {
@@ -36,33 +23,37 @@ export default class StorageHandler implements IStorageHandler {
     duration: number,
     space: number
   ): Promise<DeliverTxResponse> {
-    const msg: EncodeObject = this.pH.storageTx.msgBuyStorage({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'buyStorage'))
+    const pH = this.walletRef.getProtoHandler()
+    const msg: EncodeObject = pH.storageTx.msgBuyStorage({
       creator: this.walletRef.getJackalAddress(),
       forAddress,
       duration: `${duration * 720 || 720}h`,
       bytes: numTo3xTB(space),
       paymentDenom: 'ujkl'
     })
-    // await this.pH.debugBroadcaster([msg], true)
-    return (await this.pH.debugBroadcaster([msg], {})) as DeliverTxResponse
+    return (await pH.debugBroadcaster([msg], {}))
   }
   async upgradeStorage(
     forAddress: string,
     duration: number,
     space: number
   ): Promise<DeliverTxResponse> {
-    const msg: EncodeObject = this.pH.storageTx.msgUpgradeStorage({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'upgradeStorage'))
+    const pH = this.walletRef.getProtoHandler()
+    const msg: EncodeObject = pH.storageTx.msgUpgradeStorage({
       creator: this.walletRef.getJackalAddress(),
       forAddress,
       duration: `${duration * 720 || 720}h`,
       bytes: numTo3xTB(space),
       paymentDenom: 'ujkl'
     })
-    // await this.pH.debugBroadcaster([msg], true)
-    return (await this.pH.debugBroadcaster([msg], {})) as DeliverTxResponse
+    return (await pH.debugBroadcaster([msg], {}))
   }
   makeStorageInitMsg(): EncodeObject {
-    return this.pH.fileTreeTx.msgPostkey({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'makeStorageInitMsg'))
+    const pH = this.walletRef.getProtoHandler()
+    return pH.fileTreeTx.msgPostkey({
       creator: this.walletRef.getJackalAddress(),
       key: this.walletRef.getPubkey()
     })
@@ -70,14 +61,14 @@ export default class StorageHandler implements IStorageHandler {
 
   async getAllStrays(): Promise<IStray[]> {
     return (
-      await handlePagination(this.pH.storageQuery, 'queryStraysAll', {})
+      await handlePagination(this.qH.storageQuery, 'queryStraysAll', {})
     ).reduce((acc: IStray[], curr: any) => {
       acc.push(...curr.strays)
       return acc
     }, [])
   }
   async getClientFreeSpace(address: string): Promise<number> {
-    return (await this.pH.storageQuery.queryGetClientFreeSpace({ address }))
+    return (await this.qH.storageQuery.queryGetClientFreeSpace({ address }))
       .value.bytesfree
   }
   async getStorageJklPrice(space: number, duration: number): Promise<number> {
@@ -85,14 +76,14 @@ export default class StorageHandler implements IStorageHandler {
       bytes: Number(numTo3xTB(space)),
       duration: `${duration * 720 || 720}h`
     }
-    return (await this.pH.storageQuery.queryPriceCheck(request)).value.price
+    return (await this.qH.storageQuery.queryPriceCheck(request)).value.price
   }
   async getPayData(address: string): Promise<IPayData> {
-    return (await this.pH.storageQuery.queryGetPayData({ address })).value
+    return (await this.qH.storageQuery.queryGetPayData({ address })).value
   }
   async getStoragePaymentInfo(address: string): Promise<IStoragePaymentInfo> {
     const result = (
-      await this.pH.storageQuery.queryStoragePaymentInfo({ address })
+      await this.qH.storageQuery.queryStoragePaymentInfo({ address })
     ).value.storagePaymentInfo
     return result ? result : { spaceAvailable: 0, spaceUsed: 0, address: '' }
   }
@@ -102,6 +93,7 @@ export default class StorageHandler implements IStorageHandler {
     toAddress: string,
     shared: ISharedTracker
   ): Promise<EncodeObject> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'saveSharing'))
     return await saveCompressedFileTree(
       toAddress,
       `s/Sharing`,
@@ -111,6 +103,7 @@ export default class StorageHandler implements IStorageHandler {
     )
   }
   async readSharing(owner: string, rawPath: string): Promise<ISharedTracker> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'readSharing'))
     const shared = await readCompressedFileTree(
       owner,
       rawPath,
@@ -123,6 +116,7 @@ export default class StorageHandler implements IStorageHandler {
     return shared as ISharedTracker
   }
   async stopSharing(rawPath: string): Promise<EncodeObject> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'stopSharing'))
     return await removeCompressedFileTree(rawPath, this.walletRef)
   }
 }

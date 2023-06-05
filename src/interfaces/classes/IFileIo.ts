@@ -1,15 +1,6 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IFileDownloadHandler, IFolderHandler } from '@/interfaces/classes'
-import {
-  IDeleteItem,
-  IDownloadDetails,
-  IFolderAdd,
-  IFolderChildFiles,
-  IMiner,
-  IStaggeredTracker,
-  IUploadList
-} from '@/interfaces'
-import type { TFileOrFFile } from '@/types/TFoldersAndFiles'
+import { IDownloadDetails, IMiner, IStaggeredTracker, IUploadList } from '@/interfaces'
 
 export default interface IFileIo {
   getCurrentProvider(): IMiner
@@ -48,7 +39,7 @@ export default interface IFileIo {
     initMsg: EncodeObject | null,
     startingDirs?: string[]
   ): Promise<EncodeObject[]>
-  convertFolderType(rawPath: string): Promise<void>
+  convertFolderType(rawPath: string): Promise<IFolderHandler>
   rawConvertFolderType(rawPath: string): Promise<EncodeObject[]>
-  checkFolderIsFileTree(rawPath: string): Promise<boolean>
+  checkFolderIsFileTree(rawPath: string): Promise<IFolderHandler | null>
 }

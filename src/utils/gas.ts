@@ -3,7 +3,7 @@ import { IGasHashMap, IGasRate, IWrappedEncodeObject } from '@/interfaces'
 
 const hashMap: IGasHashMap = {
   /** Filetree */
-  '/canine_chain.filetree.MsgPostFile': 75,
+  '/canine_chain.filetree.MsgPostFile': 90,
   '/canine_chain.filetree.MsgAddViewers': 142,
   '/canine_chain.filetree.MsgPostkey': 12,
   '/canine_chain.filetree.MsgDeleteFile': 9,
@@ -99,11 +99,15 @@ export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]):
 /**
  * Return a Gas object for use in a masterBroadcaster()-like call.
  * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @param {number | string} gasOverride - Number or number-like string to replace calculated gas value.
  * @returns {IGasRate} - Gas object with best estimate based on input.
  * @private
  */
-export function finalizeGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): IGasRate {
-  const totalGas = estimateGas(msgArray)
+export function finalizeGas (
+  msgArray: (EncodeObject | IWrappedEncodeObject)[],
+  gasOverride?: number | string
+): IGasRate {
+  const totalGas = Number(gasOverride) || estimateGas(msgArray)
   return {
     amount: [],
     gas: totalGas.toString()
