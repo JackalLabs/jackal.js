@@ -17,15 +17,36 @@ import { getFileTreeData } from '@/utils/misc'
 
 const Plzsu = new PLZSU()
 
+/**
+ * Compresses string using PLZSU compression library.
+ * @param {string} input - String to compress.
+ * @returns {string} - Compressed string.
+ */
 export function compressData(input: string): string {
   return `jklpc1${Plzsu.compress(input)}`
 }
+
+/**
+ * Decompresses string using PLZSU compression library.
+ * @param {string} input - String to decompress.
+ * @returns {string} - Decompressed string.
+ */
 export function decompressData(input: string): string {
   if (!input.startsWith('jklpc1'))
     throw new Error('Invalid Decompression String')
   return Plzsu.decompress(input.substring(6))
 }
 
+/**
+ * Save encrypted data to FileTree path with optional compression.
+ * @param {string} toAddress - Jkl address of owner.
+ * @param {string} rawPath - Parent path to store to.
+ * @param {string} rawTarget - Specific entry to store to.
+ * @param {{[p: string]: any}} rawContents - Data object to store.
+ * @param {IWalletHandler} walletRef - Wallet instance for accessing functions.
+ * @param {boolean} compress - Optional boolean to flag if rawContents should be compressed.
+ * @returns {Promise<EncodeObject>} - FileTree msg to save entry.
+ */
 export async function saveFileTreeEntry(
   toAddress: string,
   rawPath: string,
@@ -95,6 +116,15 @@ export async function saveFileTreeEntry(
   }
   return buildPostFile(msg, walletRef.getProtoHandler())
 }
+
+/**
+ *
+ * @param {string} owner - Jkl address of owner.
+ * @param {string} rawPath - Path to stored data.
+ * @param {IWalletHandler} walletRef - Wallet instance for accessing functions.
+ * @param {boolean} decompress - Optional boolean to flag if retrieved data should be decompressed.
+ * @returns {Promise<{[p: string]: any}>} - Stored data object.
+ */
 export async function readFileTreeEntry(
   owner: string,
   rawPath: string,
@@ -119,9 +149,17 @@ export async function readFileTreeEntry(
       const keys = await stringToAes(walletRef, parsedVA[viewName])
       if (decompress) {
         const final = await decryptDecompressString(contents, keys.key, keys.iv)
+          .catch((err: Error) => {
+            console.error(err)
+            return '{}'
+          })
         return JSON.parse(final)
       } else {
         const final = await cryptString(contents, keys.key, keys.iv, 'decrypt')
+          .catch((err: Error) => {
+            console.error(err)
+            return '{}'
+          })
         return JSON.parse(final)
       }
     } catch (err: any) {
@@ -129,6 +167,13 @@ export async function readFileTreeEntry(
     }
   }
 }
+
+/**
+ *
+ * @param {string} rawPath - Path to FileTree entry to remove.
+ * @param {IWalletHandler} walletRef
+ * @returns {Promise<EncodeObject>}
+ */
 export async function removeFileTreeEntry(
   rawPath: string,
   walletRef: IWalletHandler
@@ -142,6 +187,12 @@ export async function removeFileTreeEntry(
 }
 
 /** Helpers */
+/**
+ * Creates properly formatted data block for use in IMsgPartialPostFileBundle.editors and viewers.
+ * @param {IPermsParts} parts - All elements needed to build IEditorsViewers.
+ * @param {IWalletHandler} walletRef - Wallet instance for accessing functions.
+ * @returns {Promise<IEditorsViewers>} - Completed permissions block.
+ */
 export async function makePermsBlock(
   parts: IPermsParts,
   walletRef: IWalletHandler
@@ -152,6 +203,12 @@ export async function makePermsBlock(
   return perms
 }
 
+/**
+ * Map data object to specific order of properties required by PostFile msg.
+ * @param {IMsgPartialPostFileBundle} data - Data object to map.
+ * @param {IProtoHandler} pH - ProtoHandler instance for accessing msgPostFile function.
+ * @returns {Promise<EncodeObject>} - Encoded msgPostFile in correct order.
+ */
 export async function buildPostFile(
   data: IMsgPartialPostFileBundle,
   pH: IProtoHandler
