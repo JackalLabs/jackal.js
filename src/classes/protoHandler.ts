@@ -1,5 +1,13 @@
 import { IProtoHandler } from '@/interfaces/classes'
-import { IAllQuery, IAllTx, ProtoBuilder, TMasterBroadcaster } from 'jackal.js-protos'
+import {
+  IAllQuery,
+  IAllTx, ITxBank, ITxDistribution,
+  ITxFileTree, ITxGov,
+  ITxNotifications,
+  ITxOracle, ITxRns, ITxStaking, ITxStorage,
+  ProtoBuilder,
+  TMasterBroadcaster
+} from 'jackal.js-protos'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { finalizeGas } from '@/utils/gas'
 import { DeliverTxResponse } from '@cosmjs/stargate'
@@ -10,6 +18,13 @@ export default class ProtoHandler extends QueryHandler implements IProtoHandler 
   private readonly masterBroadcaster: TMasterBroadcaster
   private readonly allTxClients: IAllTx
 
+  /**
+   * Receives properties from trackProto() to instantiate ProtoHandler. Linked to WalletHandler instance.
+   * @param {TMasterBroadcaster} mb - Master broadcaster to use for all SignAndBroadcast sessions.
+   * @param {IAllTx} allTxClients
+   * @param {IAllQuery} allQueryClients
+   * @private
+   */
   private constructor(
     mb: TMasterBroadcaster,
     allTxClients: IAllTx,
@@ -20,6 +35,11 @@ export default class ProtoHandler extends QueryHandler implements IProtoHandler 
     this.allTxClients = allTxClients
   }
 
+  /**
+   * Async wrapper to create a ProtoHandler instance.
+   * @param {IProtoConfig} cfg - All settings needed to generate the ProtoHandler instance.
+   * @returns {Promise<ProtoHandler>} - Instance of ProtoHandler.
+   */
   static async trackProto(cfg: IProtoConfig) {
     const builder = new ProtoBuilder(cfg.signer, cfg.rpcUrl, cfg.queryUrl)
     const mb = await builder.makeMasterBroadcaster()
@@ -29,6 +49,14 @@ export default class ProtoHandler extends QueryHandler implements IProtoHandler 
   }
 
   /** General */
+
+  /**
+   * SignAndBroadcast group of 1 or more msgs to chain. Generally debugBroadcaster() is preferred.
+   * @param {EncodeObject[]} msgs - Msgs to broadcast.
+   * @param {string} memo - Optional memo to include in broadcast.
+   * @param {number | string} gasOverride - Optional fixed gas amount to override calculated gas.
+   * @returns {Promise<DeliverTxResponse>} - Result of broadcast.
+   */
   async broadcaster(
     msgs: EncodeObject[],
     memo: string = '',
@@ -41,6 +69,16 @@ export default class ProtoHandler extends QueryHandler implements IProtoHandler 
       throw err
     })
   }
+
+  /**
+   * SignAndBroadcast group of 1 or more msgs to chain. Generally debugBroadcaster() is preferred.
+   * @param {EncodeObject[]} msgs - Msgs to broadcast.
+   * @param {{gas?: number | string, memo?: string, step?: boolean}} extra
+   * - Optional fixed gas amount to override calculated gas.
+   * - Optional memo to include in broadcast.
+   * - Optional flag to process msgs one at a time if true.
+   * @returns {Promise<DeliverTxResponse>} - Result of broadcast.
+   */
   async debugBroadcaster(
     msgs: EncodeObject[],
     extra: { gas?: number | string; memo?: string; step?: boolean } = {
@@ -73,38 +111,88 @@ export default class ProtoHandler extends QueryHandler implements IProtoHandler 
       return resp
     }
   }
+
+  /**
+   * Advanced use only. Expose base broadcaster for creating custom SignAndBroadcast process.
+   * @returns {TMasterBroadcaster}
+   */
   get rawBroadcaster() {
     return this.masterBroadcaster
   }
 
   /** Custom */
-  get fileTreeTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxFileTree}
+   */
+  get fileTreeTx(): ITxFileTree {
     return this.allTxClients.fileTree
   }
-  get notificationsTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxNotifications}
+   */
+  get notificationsTx(): ITxNotifications {
     return this.allTxClients.notifications
   }
-  get oracleTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxOracle}
+   */
+  get oracleTx(): ITxOracle {
     return this.allTxClients.oracle
   }
-  get rnsTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxRns}
+   */
+  get rnsTx(): ITxRns {
     return this.allTxClients.rns
   }
-  get storageTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxStorage}
+   */
+  get storageTx(): ITxStorage {
     return this.allTxClients.storage
   }
 
   /** Static */
-  get bankTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxBank}
+   */
+  get bankTx(): ITxBank {
     return this.allTxClients.bank
   }
-  get distributionTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxDistribution}
+   */
+  get distributionTx(): ITxDistribution {
     return this.allTxClients.distribution
   }
-  get govTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxGov}
+   */
+  get govTx(): ITxGov {
     return this.allTxClients.gov
   }
-  get stakingTx() {
+
+  /**
+   * Expose FileTree Tx client instance.
+   * @returns {ITxStaking}
+   */
+  get stakingTx(): ITxStaking {
     return this.allTxClients.staking
   }
 }
