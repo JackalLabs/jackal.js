@@ -1,5 +1,6 @@
 /** Classes */
 export { default as AbciHandler } from '@/classes/abciHandler'
+export { default as CustomWallet } from '@/classes/customWallet'
 export { default as FileDownloadHandler } from '@/classes/fileDownloadHandler'
 export { default as FileUploadHandler } from '@/classes/fileUploadHandler'
 export { default as FileIo } from '@/classes/fileIo'

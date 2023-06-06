@@ -1,4 +1,5 @@
 export { default as IAbciHandler } from '@/interfaces/classes/IAbciHandler'
+export { default as ICustomWallet } from '@/interfaces/classes/ICustomWallet'
 export { default as IFileDownloadHandler } from '@/interfaces/classes/IFileDownloadHandler'
 export { default as IFileIo } from '@/interfaces/classes/IFileIo'
 export { default as IFileUploadHandler } from '@/interfaces/classes/IFileUploadHandler'
