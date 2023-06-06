@@ -149,7 +149,7 @@ export default class StorageHandler implements IStorageHandler {
 
   /** Manage FT Noti */
   private readonly sharingRoot = 's/Sharing'
-  
+
   /**
    * Save data to file sharing address. Overwrites existing data. Savable only by owner.
    * @param {string} receiverAddress - Jkl address receiving sharing data.

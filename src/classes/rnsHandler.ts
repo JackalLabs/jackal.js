@@ -481,6 +481,12 @@ function sanitizeRnsData (data: string, caller: string) {
   }
 }
 
+/**
+ * Convert RNS blockheight-based expiration to formatted Date string.
+ * @param {number} blockTime - Duration of a block in milliseconds.
+ * @param {number} expires - Blockheight of RNS expiration
+ * @returns {string} - Localized date using 4 digit year, 2 digit day, and month name.
+ */
 function parseExpires (blockTime: number, expires: number): string {
   const dd = blockToDateFixed({
     /** Block time in milliseconds */
