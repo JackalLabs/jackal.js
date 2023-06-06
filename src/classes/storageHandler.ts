@@ -9,15 +9,32 @@ export default class StorageHandler implements IStorageHandler {
   private readonly walletRef: IWalletHandler
   private readonly qH: IQueryHandler
 
+  /**
+   * Receives properties from trackStorage() instantiate StorageHandler.
+   * @param {IWalletHandler} wallet - Query or signing WalletHandler instance.
+   * @private
+   */
   private constructor(wallet: IWalletHandler) {
     this.walletRef = wallet
     this.qH = wallet.getQueryHandler()
   }
 
+  /**
+   * Creates StorageHandler instance.
+   * @param {IWalletHandler} wallet - Query or signing WalletHandler instance.
+   * @returns {Promise<IStorageHandler>} - StorageHandler instance linked to provided WalletHandler instance.
+   */
   static async trackStorage(wallet: IWalletHandler): Promise<IStorageHandler> {
     return new StorageHandler(wallet)
   }
 
+  /**
+   * Purchase storage for specified address that does not currently have storage. For existing see upgradeStorage().
+   * @param {string} forAddress - Jkl address to receive the purchased storage.
+   * @param {number} duration - How long in months to purchase the storage.
+   * @param {number} space - Amount of effective storage to purchase in TB.
+   * @returns {Promise<DeliverTxResponse>} - Result of purchase broadcast.
+   */
   async buyStorage(
     forAddress: string,
     duration: number,
@@ -34,6 +51,14 @@ export default class StorageHandler implements IStorageHandler {
     })
     return (await pH.debugBroadcaster([msg], {}))
   }
+
+  /**
+   * Purchase storage for specified address that currently has storage. For new see buyStorage().
+   * @param {string} forAddress - Jkl address to receive the purchased storage.
+   * @param {number} duration - How long in months to purchase the storage.
+   * @param {number} space - Amount of effective storage to purchase in TB.
+   * @returns {Promise<DeliverTxResponse>} - Result of purchase broadcast.
+   */
   async upgradeStorage(
     forAddress: string,
     duration: number,
@@ -50,6 +75,11 @@ export default class StorageHandler implements IStorageHandler {
     })
     return (await pH.debugBroadcaster([msg], {}))
   }
+
+  /**
+   * Initialize address' storage system. Replaces WalletHandler.initAccount().
+   * @returns {EncodeObject} - Postkey msg ready for broadcast.
+   */
   makeStorageInitMsg(): EncodeObject {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'makeStorageInitMsg'))
     const pH = this.walletRef.getProtoHandler()
@@ -59,6 +89,10 @@ export default class StorageHandler implements IStorageHandler {
     })
   }
 
+  /**
+   * Find all strays in the storage deals system.
+   * @returns {Promise<IStray[]>}
+   */
   async getAllStrays(): Promise<IStray[]> {
     return (
       await handlePagination(this.qH.storageQuery, 'queryStraysAll', {})
@@ -67,10 +101,23 @@ export default class StorageHandler implements IStorageHandler {
       return acc
     }, [])
   }
+
+  /**
+   * Determine how much space jkl address has remaining.
+   * @param {string} address - Jkl address to check.
+   * @returns {Promise<number>} - Remaining space in bytes.
+   */
   async getClientFreeSpace(address: string): Promise<number> {
     return (await this.qH.storageQuery.queryGetClientFreeSpace({ address }))
       .value.bytesfree
   }
+
+  /**
+   * Determine current price in $JKL of specified size and duration of storage.
+   * @param {number} space - Amount of effective space to use for price check.
+   * @param {number} duration - Amount of time to use for price check.
+   * @returns {Promise<number>} - Estimated price of specified storage in ujkl.
+   */
   async getStorageJklPrice(space: number, duration: number): Promise<number> {
     const request = {
       bytes: Number(numTo3xTB(space)),
@@ -78,9 +125,21 @@ export default class StorageHandler implements IStorageHandler {
     }
     return (await this.qH.storageQuery.queryPriceCheck(request)).value.price
   }
+
+  /**
+   * Determine what storage plan (if any) has been purchased for the provided jkl address.
+   * @param {string} address - Jkl address to check.
+   * @returns {Promise<IPayData>} - Storage plan details.
+   */
   async getPayData(address: string): Promise<IPayData> {
     return (await this.qH.storageQuery.queryGetPayData({ address })).value
   }
+
+  /**
+   * Determine space used and available for provided jkl address.
+   * @param {string} address - Jkl address to check.
+   * @returns {Promise<IStoragePaymentInfo>} - Space used and available. Defaults to zeros when nothing is found.
+   */
   async getStoragePaymentInfo(address: string): Promise<IStoragePaymentInfo> {
     const result = (
       await this.qH.storageQuery.queryStoragePaymentInfo({ address })
@@ -89,24 +148,39 @@ export default class StorageHandler implements IStorageHandler {
   }
 
   /** Manage FT Noti */
+  private readonly sharingRoot = 's/Sharing'
+  
+  /**
+   * Save data to file sharing address. Overwrites existing data. Savable only by owner.
+   * @param {string} receiverAddress - Jkl address receiving sharing data.
+   * @param {ISharedTracker} shared - Bundle of all records shared with receiverAddress.
+   * @returns {Promise<EncodeObject>} - PostFile msg ready for broadcast.
+   */
   async saveSharing(
-    toAddress: string,
+    receiverAddress: string,
     shared: ISharedTracker
   ): Promise<EncodeObject> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'saveSharing'))
     return await saveFileTreeEntry(
-      toAddress,
-      `s/Sharing`,
-      toAddress,
+      receiverAddress,
+      this.sharingRoot,
+      receiverAddress,
       shared,
       this.walletRef
     )
   }
-  async readSharing(owner: string, rawPath: string): Promise<ISharedTracker> {
+
+  /**
+   * Read data saved with saveSharing(). accessible by owner and sharing receiver.
+   * @param {string} owner - data owner's jkl address.
+   * @param {string} receiverAddress - Jkl address receiving sharing data.
+   * @returns {Promise<ISharedTracker>} - Bundle of all records shared with receiver.
+   */
+  async readSharing(owner: string, receiverAddress: string): Promise<ISharedTracker> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'readSharing'))
     const shared = await readFileTreeEntry(
       owner,
-      rawPath,
+      `${this.sharingRoot}/${receiverAddress}`,
       this.walletRef
     ).catch((err) => {
       throw new Error(
@@ -115,8 +189,14 @@ export default class StorageHandler implements IStorageHandler {
     })
     return shared as ISharedTracker
   }
-  async stopSharing(rawPath: string): Promise<EncodeObject> {
+
+  /**
+   * Remove all sharing data for specified receiver.
+   * @param {string} receiverAddress - Jkl address receiving sharing data.
+   * @returns {Promise<EncodeObject>} - DeleteFile msg ready for broadcast.
+   */
+  async stopSharing(receiverAddress: string): Promise<EncodeObject> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'stopSharing'))
-    return await removeFileTreeEntry(rawPath, this.walletRef)
+    return await removeFileTreeEntry(`${this.sharingRoot}/${receiverAddress}`, this.walletRef)
   }
 }
