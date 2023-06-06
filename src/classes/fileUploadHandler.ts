@@ -3,6 +3,8 @@ import { IFileUploadHandler } from '@/interfaces/classes'
 import { convertToEncryptedFile, genIv, genKey } from '@/utils/crypt'
 import { hexFullPath, merkleMeBro } from '@/utils/hash'
 
+const { crypto } = (window) ? window : globalThis
+
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File
   private key: CryptoKey
@@ -35,7 +37,7 @@ export default class FileUploadHandler implements IFileUploadHandler {
   ): Promise<IFileUploadHandler> {
     const savedKey = await genKey()
     const savedIv = genIv()
-    const uuid = self.crypto.randomUUID()
+    const uuid = crypto.randomUUID()
     return new FileUploadHandler(file, parentPath, uuid, savedKey, savedIv)
   }
 

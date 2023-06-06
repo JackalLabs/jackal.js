@@ -1,7 +1,7 @@
 import { AccountData, EncodeObject, isOfflineDirectSigner, OfflineSigner } from '@cosmjs/proto-signing'
 import { decrypt, encrypt, PrivateKey } from 'eciesjs'
-import { Keplr, Window as KeplrWindow } from '@keplr-wallet/types'
-import { Leap, LeapWindow } from '@/types/leap'
+import { Window as KeplrWindow } from '@keplr-wallet/types'
+import { LeapWindow } from '@/types/leap'
 import { defaultQueryAddr9091, defaultTxAddr26657, jackalMainnetChainId } from '@/utils/globals'
 import {
   IAbciHandler,
@@ -18,6 +18,7 @@ import {
 } from '@/interfaces/classes'
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import {
+  IAdditionalWalletOptions,
   ICoin,
   /** TODO */
   // IEnabledSecrets,
@@ -40,6 +41,7 @@ import {
 } from '@/index'
 import QueryHandler from '@/classes/queryHandler'
 import { signerNotEnabled } from '@/utils/misc'
+import { TWalletExtensions } from '@/types/TWalletExtensions'
 
 declare global {
   interface Window extends KeplrWindow, LeapWindow {}
@@ -72,16 +74,17 @@ export default class WalletHandler implements IWalletHandler {
   /**
    * Creates full WalletHandler vs query-only from trackQueryWallet().
    * @param {IWalletConfig} config - Config items needed to create a signing WalletHandler.
+   * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports customWallet.
    * @returns {Promise<IWalletHandler>} - Signing WalletHandler.
    */
-  static async trackWallet(config: IWalletConfig): Promise<IWalletHandler> {
+  static async trackWallet(config: IWalletConfig, options?: IAdditionalWalletOptions): Promise<IWalletHandler> {
     if (!window) {
       throw new Error(
         'Jackal.js is only supported in the browser at this time!'
       )
     } else {
       const qH = await QueryHandler.trackQuery(config.queryAddr)
-      const { properties, traits } = await processWallet(config)
+      const { properties, traits } = await processWallet(config, options)
         .catch(err => {
           throw err
         })
@@ -154,10 +157,11 @@ export default class WalletHandler implements IWalletHandler {
   /**
    * Converts query-only WalletHandler instance to signing instance.
    * @param {IWalletConfig} config - Requires same object as trackWallet().
+   * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports customWallet.
    * @returns {Promise<void>}
    */
-  async convertToFullWallet (config: IWalletConfig): Promise<void> {
-    const { properties, traits } = await processWallet(config)
+  async convertToFullWallet (config: IWalletConfig, options?: IAdditionalWalletOptions): Promise<void> {
+    const { properties, traits } = await processWallet(config, options)
       .catch(err => {
         throw err
       })
@@ -418,7 +422,7 @@ export default class WalletHandler implements IWalletHandler {
 async function makeSecret(
   chainId: string,
   acct: string,
-  walletExtension: Keplr | Leap
+  walletExtension: TWalletExtensions
 ): Promise<string> {
   const memo = 'Initiate Jackal Session'
   const signed = await walletExtension
@@ -432,22 +436,31 @@ async function makeSecret(
 /**
  * Create the traits and properties used by a signing WalletHandler.
  * @param {IWalletConfig} config - Config items needed to create a signing WalletHandler.
+ * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports customWallet.
  * @returns {Promise<{traits: IWalletHandlerPublicProperties, properties: IWalletHandlerPrivateProperties}>}
  */
-async function processWallet (config: IWalletConfig) {
+async function processWallet (config: IWalletConfig, options?: IAdditionalWalletOptions) {
   const { selectedWallet, signerChain, enabledChains, queryAddr, txAddr, chainConfig } = config
   const chainId = signerChain || jackalMainnetChainId
-  let windowWallet: Keplr | Leap
+  let windowWallet: TWalletExtensions
   switch (selectedWallet) {
     case 'keplr':
-      if (!window.keplr)
+      if (!window.keplr) {
         throw new Error('Keplr Wallet selected but unavailable')
+      }
       windowWallet = window.keplr
       break
     case 'leap':
-      if (!window.leap)
+      if (!window.leap) {
         throw new Error('Leap Wallet selected but unavailable')
+      }
       windowWallet = window.leap
+      break
+    case 'custom':
+      if (!options?.customWallet) {
+        throw new Error('Custom Wallet selected but unavailable')
+      }
+      windowWallet = options.customWallet
       break
     default:
       throw new Error('A valid wallet selection must be provided')
@@ -476,6 +489,7 @@ async function processWallet (config: IWalletConfig) {
   ).catch((err) => {
     throw err
   })
+  console.log('secret', secret)
   const fileTreeInitComplete = success && !!pubkey?.key
   const secretAsHex = bufferToHex(
     Buffer.from(secret, 'base64').subarray(0, 32)

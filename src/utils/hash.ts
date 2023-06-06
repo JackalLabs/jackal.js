@@ -1,3 +1,5 @@
+const { crypto } = (window) ? window : globalThis
+
 /**
  * Hash input using SHA-256, then convert to hex string.
  * @param {string} input - Source string for hashing.

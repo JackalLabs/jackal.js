@@ -15,6 +15,7 @@ import { Files } from 'jackal.js-protos'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import { getFileTreeData } from '@/utils/misc'
 
+const { crypto } = (window) ? window : globalThis
 const Plzsu = new PLZSU()
 
 /**
@@ -67,7 +68,7 @@ export async function saveFileTreeEntry(
     contents: '',
     hashParent: await merkleMeBro(rawPath),
     hashChild: await hashAndHex(rawTarget),
-    trackingNumber: self.crypto.randomUUID(),
+    trackingNumber: crypto.randomUUID(),
     editors: '',
     viewers: ''
   }

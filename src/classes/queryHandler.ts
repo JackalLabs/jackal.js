@@ -4,12 +4,22 @@ import { IAllQuery, QueryBuilder } from 'jackal.js-protos'
 export default class QueryHandler implements IQueryHandler {
   protected readonly allQueryClients: IAllQuery
 
+  /**
+   * Receives properties from trackQuery() to instantiate QueryHandler. May be linked to WalletHandler instance.
+   * @param {IAllQuery} allQueryClients
+   * @protected
+   */
   protected constructor(
     allQueryClients: IAllQuery
   ) {
     this.allQueryClients = allQueryClients
   }
 
+  /**
+   *
+   * @param {string} queryUrl
+   * @returns {Promise<QueryHandler>}
+   */
   static async trackQuery(queryUrl?: string) {
     const builder = new QueryBuilder(queryUrl)
     const allQueries = builder.makeAllQuery()
