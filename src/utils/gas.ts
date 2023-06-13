@@ -3,7 +3,7 @@ import { IGasHashMap, IGasRate, IWrappedEncodeObject } from '@/interfaces'
 
 const hashMap: IGasHashMap = {
   /** Filetree */
-  '/canine_chain.filetree.MsgPostFile': 75,
+  '/canine_chain.filetree.MsgPostFile': 90,
   '/canine_chain.filetree.MsgAddViewers': 142,
   '/canine_chain.filetree.MsgPostkey': 12,
   '/canine_chain.filetree.MsgDeleteFile': 9,
@@ -73,9 +73,12 @@ const hashMap: IGasHashMap = {
 }
 const baseRate = 56
 
-export function estimateGas(
-  msgArray: (EncodeObject | IWrappedEncodeObject)[]
-): number {
+/**
+ * Generates gas total estimate from list of Tx instances.
+ * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @returns {number} - Adjusted number of gas units collection is expected to require.
+ */
+export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): number {
   const gas = msgArray.reduce((acc, curr) => {
     if (isIWrappedEncodeObject(curr)) {
       switch (true) {
@@ -92,8 +95,15 @@ export function estimateGas(
   }, 0)
   return (gas + baseRate) * 1100
 }
-/** @private */
-export function finalizeGas(
+
+/**
+ * Return a Gas object for use in a masterBroadcaster()-like call.
+ * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @param {number | string} gasOverride - Number or number-like string to replace calculated gas value.
+ * @returns {IGasRate} - Gas object with best estimate based on input.
+ * @private
+ */
+export function finalizeGas (
   msgArray: (EncodeObject | IWrappedEncodeObject)[],
   gasOverride?: number | string
 ): IGasRate {
@@ -104,8 +114,11 @@ export function finalizeGas(
   }
 }
 
-function isIWrappedEncodeObject(
-  toCheck: EncodeObject | IWrappedEncodeObject
-): toCheck is IWrappedEncodeObject {
+/**
+ * Check if an input is a wrapped or raw EncodeObject.
+ * @param {EncodeObject | IWrappedEncodeObject} toCheck - Source value.
+ * @returns {toCheck is IWrappedEncodeObject} - Boolean indicating if source is a IWrappedEncodeObject.
+ */
+function isIWrappedEncodeObject(toCheck: EncodeObject | IWrappedEncodeObject): toCheck is IWrappedEncodeObject {
   return Object.keys(toCheck).includes('encodedObject')
 }

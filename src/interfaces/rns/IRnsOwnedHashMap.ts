@@ -1,5 +1,5 @@
-import type IRnsOwnedItem from '@/interfaces/rns/IRnsOwnedItem'
+import { IRnsExpandedItem } from '@/interfaces'
 
 export default interface IRnsOwnedHashMap {
-  [key: string]: IRnsOwnedItem
+  [key: string]: IRnsExpandedItem
 }

@@ -1,14 +1,9 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import {
-  IChildDirInfo,
-  IFileMeta,
-  IFileMetaHashMap,
-  IFolderFrame
-} from '@/interfaces'
+import { IChildDirInfo, IFileMeta, IFileMetaHashMap, IFolderFrame } from '@/interfaces'
 import { IFolderHandler, IWalletHandler } from '@/interfaces/classes'
-import { stripper } from '@/utils/misc'
+import { signerNotEnabled, stripper } from '@/utils/misc'
 import { merkleMeBro } from '@/utils/hash'
-import { saveCompressedFileTree } from '@/utils/compression'
+import { saveFileTreeEntry } from '@/utils/compression'
 import { convertFromEncryptedFile } from '@/utils/crypt'
 
 export default class FolderHandler implements IFolderHandler {
@@ -54,10 +49,10 @@ export default class FolderHandler implements IFolderHandler {
     return this.folderDetails.whoOwnsMe
   }
   getMyPath(): string {
-    return `${this.getWhereAmI()}/${this.getWhoAmI()}}`
+    return `${this.getWhereAmI()}/${this.getWhoAmI()}`
   }
   getMyChildPath(child: string): string {
-    return `${this.getMyPath()}/${child}}`
+    return `${this.getMyPath()}/${child}`
   }
   getFolderDetails(): IFolderFrame {
     return this.folderDetails
@@ -69,7 +64,8 @@ export default class FolderHandler implements IFolderHandler {
     return this.folderDetails.fileChildren
   }
   async getForFiletree(walletRef: IWalletHandler): Promise<EncodeObject> {
-    return await saveCompressedFileTree(
+    if (!walletRef.traits) throw new Error(signerNotEnabled('FolderHandler', 'getForFiletree'))
+    return await saveFileTreeEntry(
       walletRef.getJackalAddress(),
       this.getWhereAmI(),
       this.getWhoAmI(),

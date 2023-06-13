@@ -1,12 +1,12 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import {
+  Notifications,
   QueryAllNotiCounterResponse,
   QueryAllNotificationsResponse,
   QueryGetNotiCounterResponse,
   QueryGetNotificationsResponse
-} from 'jackal.js-protos/dist/postgen/canine_chain/notifications/query'
+} from 'jackal.js-protos'
 import { IReadableNoti } from '@/interfaces'
-import { Notifications } from 'jackal.js-protos/dist/postgen/canine_chain/notifications/notifications'
 
 export default interface INotificationHandler {
   makeNotification(notification: string, address: string): EncodeObject
@@ -18,6 +18,8 @@ export default interface INotificationHandler {
   makeNotificationDeletion(): EncodeObject
   makeCounter(): EncodeObject
   makeBlockedSender(sender: string): EncodeObject
+
+  broadcastMakeCounter(): Promise<void>
 
   getNotification(
     forAddress: string,

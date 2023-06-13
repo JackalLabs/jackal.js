@@ -1,26 +1,25 @@
 import {
-  RequestInfo,
-  ResponseInfo,
-  ResponseSetOption,
-  RequestInitChain,
-  ResponseInitChain,
-  RequestQuery,
-  ResponseQuery,
   RequestBeginBlock,
+  RequestInfo,
+  RequestInitChain,
+  RequestOfferSnapshot,
+  RequestQuery,
+  ResponseApplySnapshotChunk,
   ResponseBeginBlock,
   ResponseCheckTx,
+  ResponseCommit,
   ResponseDeliverTx,
   ResponseEndBlock,
-  ResponseCommit,
+  ResponseInfo,
+  ResponseInitChain,
   ResponseListSnapshots,
-  RequestOfferSnapshot,
   ResponseOfferSnapshot,
-  ResponseApplySnapshotChunk
-} from 'jackal.js-protos/dist/postgen/tendermint/abci/types'
+  ResponseQuery,
+  ResponseSetOption
+} from 'jackal.js-protos'
 
 export default interface IAbciHandler {
   getEcho(message: string): Promise<string>
-  // getFlush ()
   getBlockInfo(versions: RequestInfo): Promise<ResponseInfo>
   setOptionByKeyValue(key: string, value: string): Promise<ResponseSetOption>
   initializeChain(object: RequestInitChain): Promise<ResponseInitChain>
@@ -30,7 +29,7 @@ export default interface IAbciHandler {
   getDeliverTx(tx: Uint8Array): Promise<ResponseDeliverTx>
   getEndBlock(height: number): Promise<ResponseEndBlock>
   getCommit(): Promise<ResponseCommit>
-  getlistSnapshots(): Promise<ResponseListSnapshots>
+  getListSnapshots(): Promise<ResponseListSnapshots>
   getOfferSnapshot(object: RequestOfferSnapshot): Promise<ResponseOfferSnapshot>
   getSnapshotChunk(
     height: number,

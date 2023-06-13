@@ -1,18 +1,27 @@
 {
   "name": "jackal.js",
-  "version": "1.2.0",
+  "version": "2.0.0-rc.3",
   "description": "Javascript library for interacting with the Jackal Chain",
   "keywords": [
     "jackal",
     "canine"
   ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.umd.js"
+    }
+  },
+  "type": "module",
+  "main": "./dist/index.umd.js",
+  "module": "./dist/index.es.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc && tscpaths -v -p tsconfig.json -s ./src -o ./dist",
-    "packit": "npm run build && npm pack --pack-destination packs",
-    "push": "npm run build && npm publish",
-    "test": "echo \"Error: no tests included\" && exit 1"
+    "build": "tsc && vite build",
+    "packit": "npm run build && npm pack --pack-destination packs"
   },
   "contributors": [
     {
@@ -33,7 +42,7 @@
       "email": "danny@jackallabs.io"
     }
   ],
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/JackalLabs/jackal.js.git"
@@ -44,21 +53,21 @@
   "homepage": "https://github.com/JackalLabs/jackal.js/#README",
   "dependencies": {
     "@cosmjs/launchpad": "^0.27.1",
-    "@cosmjs/proto-signing": "^0.28.13",
-    "@cosmjs/stargate": "^0.28.13",
+    "@cosmjs/proto-signing": "^0.30.1",
+    "@cosmjs/stargate": "^0.30.1",
     "@karnthis/plzsu": "^1.0.0",
     "bech32": "^2.0.0",
     "bip32": "^3.0.1",
     "bip39": "^3.0.4",
     "bs58check": "^2.1.2",
     "eciesjs": "^0.3.15",
-    "jackal.js-protos": "^1.3.1",
+    "jackal.js-protos": "~1.3.11",
     "make-random": "^3.0.2"
   },
   "devDependencies": {
     "@keplr-wallet/types": "^0.11.0",
-    "@modii/tscpaths": "^0.2.3",
-    "@tsconfig/node16": "^1.0.3",
+    "@rollup/plugin-commonjs": "^25.0.0",
+    "@rollup/plugin-typescript": "^11.1.1",
     "@types/bs58check": "^2.1.0",
     "@types/jest": "^29.2.2",
     "@types/node": "^18.7.18",
@@ -70,8 +79,13 @@
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.0",
     "jest": "^29.3.0",
-    "prettier": "2.8.8",
+    "prettier": "^2.8.8",
+    "rollup-plugin-typescript-paths": "^1.4.0",
     "ts-jest": "^29.0.3",
-    "typescript": "~4.9.4"
+    "tslib": "^2.4.0",
+    "typescript": "~4.9.4",
+    "vite": "^4.3.2",
+    "vite-plugin-dts": "^2.3.0",
+    "vite-tsconfig-paths": "^4.2.0"
   }
 }

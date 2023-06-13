@@ -1,10 +1,5 @@
 import { DeliverTxResponse } from '@cosmjs/stargate'
-import {
-  IPayData,
-  ISharedTracker,
-  IStoragePaymentInfo,
-  IStray
-} from '@/interfaces'
+import { IPayData, ISharedTracker, IStoragePaymentInfo, IStray } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 
 export default interface IStorageHandler {

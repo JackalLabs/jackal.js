@@ -1,4 +1,4 @@
-import { ProposalStatus } from 'jackal.js-protos/dist/postgen/cosmos/gov/v1beta1/gov'
+import { ProposalStatus } from 'jackal.js-protos'
 import { ICoin } from '@/interfaces'
 
 export default interface IPropDetails {

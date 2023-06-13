@@ -1,8 +1,4 @@
-import {
-  IGovHandler,
-  IProtoHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
+import { IGovHandler, IQueryHandler, IWalletHandler } from '@/interfaces/classes'
 import {
   ICoin,
   IDelegationRewards,
@@ -18,14 +14,15 @@ import {
 import { TValidatorStatus } from '@/types/TValidatorStatus'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { TPropStatus } from '@/types/TPropStatus'
+import { signerNotEnabled } from '@/utils/misc'
 
 export default class GovHandler implements IGovHandler {
   private readonly walletRef: IWalletHandler
-  private readonly pH: IProtoHandler
+  private readonly qH: IQueryHandler
 
   private constructor(wallet: IWalletHandler) {
     this.walletRef = wallet
-    this.pH = wallet.getProtoHandler()
+    this.qH = wallet.getQueryHandler()
   }
 
   static async trackGov(wallet: IWalletHandler): Promise<IGovHandler> {
@@ -34,13 +31,15 @@ export default class GovHandler implements IGovHandler {
 
   /** Staking Queries */
   async getTotalRewards(): Promise<IDelegationRewards> {
-    const ret = await this.pH.distributionQuery.queryDelegationTotalRewards({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getTotalRewards'))
+    const ret = await this.qH.distributionQuery.queryDelegationTotalRewards({
       delegatorAddress: this.walletRef.getJackalAddress()
     })
     return ret.value
   }
   async getCondensedTotalRewards(): Promise<number> {
-    const ret = await this.pH.distributionQuery.queryDelegationTotalRewards({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getCondensedTotalRewards'))
+    const ret = await this.qH.distributionQuery.queryDelegationTotalRewards({
       delegatorAddress: this.walletRef.getJackalAddress()
     })
     return ret.value.total.reduce((acc: number, coin: ICoin) => {
@@ -49,14 +48,16 @@ export default class GovHandler implements IGovHandler {
     }, 0)
   }
   async getRewards(validatorAddress: string): Promise<ICoin[]> {
-    const ret = await this.pH.distributionQuery.queryDelegationRewards({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getRewards'))
+    const ret = await this.qH.distributionQuery.queryDelegationRewards({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorAddress
     })
     return ret.value.rewards
   }
   async getCondensedRewards(validatorAddress: string): Promise<number> {
-    const ret = await this.pH.distributionQuery.queryDelegationRewards({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getCondensedRewards'))
+    const ret = await this.qH.distributionQuery.queryDelegationRewards({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorAddress
     })
@@ -66,8 +67,9 @@ export default class GovHandler implements IGovHandler {
     }, 0)
   }
   async getTotalStaked(): Promise<number> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getTotalStaked'))
     const delegations = (
-      await this.pH.stakingQuery.queryDelegatorDelegations({
+      await this.qH.stakingQuery.queryDelegatorDelegations({
         delegatorAddr: this.walletRef.getJackalAddress()
       })
     ).value.delegationResponses as IDelegationSummary[]
@@ -77,8 +79,9 @@ export default class GovHandler implements IGovHandler {
     }, 0)
   }
   async getStakedMap(): Promise<IDelegationSummaryMap> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getStakedMap'))
     const delegations = (
-      await this.pH.stakingQuery.queryDelegatorDelegations({
+      await this.qH.stakingQuery.queryDelegatorDelegations({
         delegatorAddr: this.walletRef.getJackalAddress()
       })
     ).value.delegationResponses as IDelegationSummary[]
@@ -93,13 +96,14 @@ export default class GovHandler implements IGovHandler {
   async getStakedValidatorDetailsMap(): Promise<IStakingValidatorStakedMap> {
     const allVals = await this.getCompleteMergedValidatorDetailsMap()
     const staked = await this.getStakedMap()
-    return await includeStaked(staked, allVals, true)
+    return await includeStaked(allVals, staked, true)
   }
   async getDelegatorValidatorDetails(
     validatorAddress: string
   ): Promise<IStakingValidator> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getDelegatorValidatorDetails'))
     const result = (
-      await this.pH.stakingQuery.queryDelegatorValidator({
+      await this.qH.stakingQuery.queryDelegatorValidator({
         delegatorAddr: this.walletRef.getJackalAddress(),
         validatorAddr: validatorAddress
       })
@@ -111,8 +115,9 @@ export default class GovHandler implements IGovHandler {
     }
   }
   async getAllDelegatorValidatorDetails(): Promise<IStakingValidator[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getAllDelegatorValidatorDetails'))
     return (
-      await this.pH.stakingQuery.queryDelegatorValidators({
+      await this.qH.stakingQuery.queryDelegatorValidators({
         delegatorAddr: this.walletRef.getJackalAddress()
       })
     ).value.validators as IStakingValidator[]
@@ -128,7 +133,7 @@ export default class GovHandler implements IGovHandler {
     validatorAddress: string
   ): Promise<IStakingValidator> {
     const result = (
-      await this.pH.stakingQuery.queryValidator({
+      await this.qH.stakingQuery.queryValidator({
         validatorAddr: validatorAddress
       })
     ).value.validator
@@ -142,7 +147,7 @@ export default class GovHandler implements IGovHandler {
     status: TValidatorStatus
   ): Promise<IStakingValidator[]> {
     return (
-      await this.pH.stakingQuery.queryValidators({
+      await this.qH.stakingQuery.queryValidators({
         status: validatorStatusMap[status.toUpperCase()]
       })
     ).value.validators as IStakingValidator[]
@@ -170,14 +175,14 @@ export default class GovHandler implements IGovHandler {
     const allOfStatus = await this.getAllValidatorDetailsMap(status)
     const flagged = flagStaked(allOfStatus, staked)
     const stakedMap = await this.getStakedMap()
-    return await includeStaked(stakedMap, flagged)
+    return await includeStaked(flagged, stakedMap)
   }
   async getInactiveMergedValidatorDetailsStakedMap(): Promise<IStakingValidatorExtendedMap> {
     const staked = await this.getAllDelegatorValidatorDetailsMap()
     const allInactive = await this.getInactiveMergedValidatorDetailsMap()
     const flagged = flagStaked(allInactive, staked)
     const stakedMap = await this.getStakedMap()
-    return await includeStaked(stakedMap, flagged)
+    return await includeStaked(flagged, stakedMap)
   }
   async getInactiveMergedValidatorDetailsMap(): Promise<IStakingValidatorExtendedMap> {
     const staked = this.getAllDelegatorValidatorDetailsMap()
@@ -198,10 +203,22 @@ export default class GovHandler implements IGovHandler {
     }
     return flagStaked(merged, await staked)
   }
+  async getPublicMergedValidatorDetailsMap(
+    status: TValidatorStatus
+  ): Promise<IStakingValidatorStakedMap> {
+    const allOfStatus = await this.getAllValidatorDetailsMap(status)
+    return await includeStaked(flagStaked(allOfStatus, {}), {})
+  }
+  async getPublicInactiveMergedValidatorDetailsStakedMap(): Promise<IStakingValidatorExtendedMap> {
+    const allUnbonding = this.getAllValidatorDetailsMap('UNBONDING')
+    const allUnbonded = this.getAllValidatorDetailsMap('UNBONDED')
+    const merged = { ...(await allUnbonding), ...(await allUnbonded) }
+    return flagStaked(merged, {})
+  }
   /** End Staking Queries */
   /** Voting Queries */
   async getPropDetails(proposalId: number): Promise<IPropDetails> {
-    const prop = await this.pH.govQuery.queryProposal({
+    const prop = await this.qH.govQuery.queryProposal({
       proposalId
     })
     return prop.value.proposal as IPropDetails
@@ -210,7 +227,7 @@ export default class GovHandler implements IGovHandler {
     status: TPropStatus
   ): Promise<IPropDetails[]> {
     return (
-      await this.pH.govQuery.queryProposals({
+      await this.qH.govQuery.queryProposals({
         proposalStatus: propStatusMap[status.toUpperCase()]
       })
     ).value.proposals as IPropDetails[]
@@ -233,20 +250,23 @@ export default class GovHandler implements IGovHandler {
   /** End Voting Queries */
   /** Staking Msgs */
   async claimDelegatorRewards(validatorAddresses: string[]): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'claimDelegatorRewards'))
+    const pH = this.walletRef.getProtoHandler()
     const msgs = validatorAddresses.map((address: string) => {
-      return this.pH.distributionTx.msgWithdrawDelegatorReward({
+      return pH.distributionTx.msgWithdrawDelegatorReward({
         delegatorAddress: this.walletRef.getJackalAddress(),
         validatorAddress: address
       })
     })
-    // await this.pH.debugBroadcaster(msgs, true)
-    await this.pH.debugBroadcaster(msgs, {})
+    await pH.debugBroadcaster(msgs, {})
   }
   rawDelegateTokens(
     validatorAddress: string,
     amount: number | string
   ): EncodeObject {
-    return this.pH.stakingTx.msgDelegate({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'rawDelegateTokens'))
+    const pH = this.walletRef.getProtoHandler()
+    return pH.stakingTx.msgDelegate({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorAddress,
       amount: {
@@ -259,15 +279,18 @@ export default class GovHandler implements IGovHandler {
     validatorAddress: string,
     amount: number | string
   ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'delegateTokens'))
+    const pH = this.walletRef.getProtoHandler()
     const msg = this.rawDelegateTokens(validatorAddress, amount)
-    // await this.pH.debugBroadcaster([msg], true)
-    await this.pH.debugBroadcaster([msg], {})
+    await pH.debugBroadcaster([msg], {})
   }
   rawUndelegateTokens(
     validatorAddress: string,
     amount: number | string
   ): EncodeObject {
-    return this.pH.stakingTx.msgUndelegate({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'rawUndelegateTokens'))
+    const pH = this.walletRef.getProtoHandler()
+    return pH.stakingTx.msgUndelegate({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorAddress,
       amount: {
@@ -280,16 +303,19 @@ export default class GovHandler implements IGovHandler {
     validatorAddress: string,
     amount: number | string
   ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'undelegateTokens'))
+    const pH = this.walletRef.getProtoHandler()
     const msg = this.rawUndelegateTokens(validatorAddress, amount)
-    // await this.pH.debugBroadcaster([msg], true)
-    await this.pH.debugBroadcaster([msg], {})
+    await pH.debugBroadcaster([msg], {})
   }
   rawRedelegateTokens(
     fromAddress: string,
     toAddress: string,
     amount: number | string
   ): EncodeObject {
-    return this.pH.stakingTx.msgBeginRedelegate({
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'rawRedelegateTokens'))
+    const pH = this.walletRef.getProtoHandler()
+    return pH.stakingTx.msgBeginRedelegate({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorSrcAddress: fromAddress,
       validatorDstAddress: toAddress,
@@ -304,9 +330,10 @@ export default class GovHandler implements IGovHandler {
     toAddress: string,
     amount: number | string
   ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'redelegateTokens'))
+    const pH = this.walletRef.getProtoHandler()
     const msg = this.rawRedelegateTokens(fromAddress, toAddress, amount)
-    // await this.pH.debugBroadcaster([msg], true)
-    await this.pH.debugBroadcaster([msg], {})
+    await pH.debugBroadcaster([msg], {})
   }
   /** End Staking Msgs */
   /** Voting Msgs */
@@ -346,8 +373,8 @@ function flagStaked(
   return final
 }
 async function includeStaked(
-  stakedMap: IDelegationSummaryMap,
   flagged: IStakingValidatorExtendedMap,
+  stakedMap: IDelegationSummaryMap,
   ignore?: boolean
 ): Promise<IStakingValidatorStakedMap> {
   const final: IStakingValidatorStakedMap = {}

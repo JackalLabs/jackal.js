@@ -1,28 +1,21 @@
-import {
-  IProtoHandler,
-  ISecretsHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
-import { IEnableSecrets, ISharedTracker } from '@/interfaces'
+import { ISecretsHandler, IWalletHandler } from '@/interfaces/classes'
+import { ISharedTracker } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import {
-  readCompressedFileTree,
-  removeCompressedFileTree,
-  saveCompressedFileTree
-} from '@/utils/compression'
+import { readFileTreeEntry, removeFileTreeEntry, saveFileTreeEntry } from '@/utils/compression'
+import { signerNotEnabled } from '@/utils/misc'
 
 export default class SecretsHandler implements ISecretsHandler {
   private readonly walletRef: IWalletHandler
-  private readonly pH: IProtoHandler
+  // private readonly qH: IQueryHandler
 
   private constructor(wallet: IWalletHandler) {
     this.walletRef = wallet
-    this.pH = wallet.getProtoHandler()
+    // this.qH = wallet.getQueryHandler()
   }
 
   static async trackSecrets(
     wallet: IWalletHandler,
-    enable: IEnableSecrets
+    // enable: IEnabledSecrets
   ): Promise<ISecretsHandler> {
     return new SecretsHandler(wallet)
   }
@@ -32,7 +25,8 @@ export default class SecretsHandler implements ISecretsHandler {
     toAddress: string,
     shared: ISharedTracker
   ): Promise<EncodeObject> {
-    return await saveCompressedFileTree(
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'saveSharing'))
+    return await saveFileTreeEntry(
       toAddress,
       `s/Sharing`,
       toAddress,
@@ -41,7 +35,8 @@ export default class SecretsHandler implements ISecretsHandler {
     )
   }
   async readSharing(owner: string, rawPath: string): Promise<ISharedTracker> {
-    const shared = await readCompressedFileTree(
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'readSharing'))
+    const shared = await readFileTreeEntry(
       owner,
       rawPath,
       this.walletRef
@@ -53,6 +48,7 @@ export default class SecretsHandler implements ISecretsHandler {
     return shared as ISharedTracker
   }
   async stopSharing(rawPath: string): Promise<EncodeObject> {
-    return await removeCompressedFileTree(rawPath, this.walletRef)
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'stopSharing'))
+    return await removeFileTreeEntry(rawPath, this.walletRef)
   }
 }
