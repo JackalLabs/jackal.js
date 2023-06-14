@@ -1,0 +1,517 @@
+<!DOCTYPE html><html class="default" lang="en"><head><meta charSet="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>IRnsHandler | jackal.js</title><meta name="description" content="Documentation for jackal.js"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="../assets/style.css"/><link rel="stylesheet" href="../assets/highlight.css"/><script defer src="../assets/main.js"></script><script async src="../assets/search.js" id="tsd-search-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os"</script><header class="tsd-page-toolbar">
+<div class="tsd-toolbar-contents container">
+<div class="table-cell" id="tsd-search" data-base="..">
+<div class="field"><label for="tsd-search-field" class="tsd-widget tsd-toolbar-icon search no-caption"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M15.7824 13.833L12.6666 10.7177C12.5259 10.5771 12.3353 10.499 12.1353 10.499H11.6259C12.4884 9.39596 13.001 8.00859 13.001 6.49937C13.001 2.90909 10.0914 0 6.50048 0C2.90959 0 0 2.90909 0 6.49937C0 10.0896 2.90959 12.9987 6.50048 12.9987C8.00996 12.9987 9.39756 12.4863 10.5008 11.6239V12.1332C10.5008 12.3332 10.5789 12.5238 10.7195 12.6644L13.8354 15.7797C14.1292 16.0734 14.6042 16.0734 14.8948 15.7797L15.7793 14.8954C16.0731 14.6017 16.0731 14.1267 15.7824 13.833ZM6.50048 10.499C4.29094 10.499 2.50018 8.71165 2.50018 6.49937C2.50018 4.29021 4.28781 2.49976 6.50048 2.49976C8.71001 2.49976 10.5008 4.28708 10.5008 6.49937C10.5008 8.70852 8.71314 10.499 6.50048 10.499Z" fill="var(--color-text)"></path></svg></label><input type="text" id="tsd-search-field" aria-label="Search"/></div>
+<div class="field">
+<div id="tsd-toolbar-links"></div></div>
+<ul class="results">
+<li class="state loading">Preparing search index...</li>
+<li class="state failure">The search index is not available</li></ul><a href="../index.html" class="title">jackal.js</a></div>
+<div class="table-cell" id="tsd-widgets"><a href="#" class="tsd-widget tsd-toolbar-icon menu no-caption" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="2" fill="var(--color-text)"></rect><rect x="1" y="7" width="14" height="2" fill="var(--color-text)"></rect><rect x="1" y="11" width="14" height="2" fill="var(--color-text)"></rect></svg></a></div></div></header>
+<div class="container container-main">
+<div class="col-content">
+<div class="tsd-page-title">
+<ul class="tsd-breadcrumb">
+<li><a href="../modules.html">jackal.js</a></li>
+<li><a href="IRnsHandler.html">IRnsHandler</a></li></ul>
+<h1>Interface IRnsHandler</h1></div>
+<section class="tsd-panel tsd-hierarchy">
+<h4>Hierarchy</h4>
+<ul class="tsd-hierarchy">
+<li><span class="target">IRnsHandler</span></li></ul></section>
+<section class="tsd-panel">
+<h4>Implemented by</h4>
+<ul class="tsd-hierarchy">
+<li><a href="../classes/RnsHandler.html" class="tsd-signature-type tsd-kind-class">RnsHandler</a></li></ul></section><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L16">src/interfaces/classes/IRnsHandler.ts:16</a></li></ul></aside>
+<section class="tsd-panel-group tsd-index-group">
+<section class="tsd-panel tsd-index-panel">
+<details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
+<h5 class="tsd-index-heading uppercase" role="button" aria-expanded="false" tabIndex=0><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1.5 5.50969L8 11.6609L14.5 5.50969L12.5466 3.66086L8 7.96494L3.45341 3.66086L1.5 5.50969Z" fill="var(--color-text)"></path></svg> Index</h5></summary>
+<div class="tsd-accordion-details">
+<section class="tsd-index-section">
+<h3 class="tsd-index-heading">Methods</h3>
+<div class="tsd-index-list"><a href="IRnsHandler.html#findAllBids" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-2048"><rect fill="var(--color-icon-background)" stroke="#FF4DB8" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="12"></rect><path d="M9.162 16V7.24H10.578L11.514 10.072C11.602 10.328 11.674 10.584 11.73 10.84C11.794 11.088 11.842 11.28 11.874 11.416C11.906 11.28 11.954 11.088 12.018 10.84C12.082 10.584 12.154 10.324 12.234 10.06L13.122 7.24H14.538V16H13.482V12.82C13.482 12.468 13.49 12.068 13.506 11.62C13.53 11.172 13.558 10.716 13.59 10.252C13.622 9.78 13.654 9.332 13.686 8.908C13.726 8.476 13.762 8.1 13.794 7.78L12.366 12.16H11.334L9.894 7.78C9.934 8.092 9.97 8.456 10.002 8.872C10.042 9.28 10.078 9.716 10.11 10.18C10.142 10.636 10.166 11.092 10.182 11.548C10.206 12.004 10.218 12.428 10.218 12.82V16H9.162Z" fill="var(--color-text)"></path></g></svg><span>find<wbr/>All<wbr/>Bids</span></a>
+<a href="IRnsHandler.html#findAllForSaleNames" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>All<wbr/>For<wbr/>Sale<wbr/>Names</span></a>
+<a href="IRnsHandler.html#findExpandedForSaleNames" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Expanded<wbr/>For<wbr/>Sale<wbr/>Names</span></a>
+<a href="IRnsHandler.html#findMatchingAddress" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Matching<wbr/>Address</span></a>
+<a href="IRnsHandler.html#findMyExistingNames" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>My<wbr/>Existing<wbr/>Names</span></a>
+<a href="IRnsHandler.html#findSingleBid" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Single<wbr/>Bid</span></a>
+<a href="IRnsHandler.html#findSingleForSaleName" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Single<wbr/>For<wbr/>Sale<wbr/>Name</span></a>
+<a href="IRnsHandler.html#findSingleRns" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Single<wbr/>Rns</span></a>
+<a href="IRnsHandler.html#findSomeForSaleNames" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Some<wbr/>For<wbr/>Sale<wbr/>Names</span></a>
+<a href="IRnsHandler.html#findYourExistingNames" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Your<wbr/>Existing<wbr/>Names</span></a>
+<a href="IRnsHandler.html#makeAcceptBidMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Accept<wbr/>Bid<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeAddRecordMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Add<wbr/>Record<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeBidMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Bid<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeBuyMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Buy<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeCancelBidMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Cancel<wbr/>Bid<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeDelRecordMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Del<wbr/>Record<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeDelistMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Delist<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeListMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>List<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeNewRegistrationMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>New<wbr/>Registration<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeRnsInitMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Rns<wbr/>Init<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeTransferMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Transfer<wbr/>Msg</span></a>
+<a href="IRnsHandler.html#makeUpdateMsg" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Update<wbr/>Msg</span></a>
+</div></section></div></details></section></section>
+<section class="tsd-panel-group tsd-member-group">
+<h2>Methods</h2>
+<section class="tsd-panel tsd-member"><a id="findAllBids" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>All<wbr/>Bids</span><a href="#findAllBids" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><g stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" id="icon-anchor"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5"></path></g></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findAllBids.findAllBids-1"><span class="tsd-kind-call-signature">find<wbr/>All<wbr/>Bids</span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsBidHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsBidHashMap</a><span class="tsd-signature-symbol">&gt;</span><a href="#findAllBids.findAllBids-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsBidHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsBidHashMap</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L31">src/interfaces/classes/IRnsHandler.ts:31</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findAllForSaleNames" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>All<wbr/>For<wbr/>Sale<wbr/>Names</span><a href="#findAllForSaleNames" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findAllForSaleNames.findAllForSaleNames-1"><span class="tsd-kind-call-signature">find<wbr/>All<wbr/>For<wbr/>Sale<wbr/>Names</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">blockTime</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsExpandedForSaleHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsExpandedForSaleHashMap</a><span class="tsd-signature-symbol">&gt;</span><a href="#findAllForSaleNames.findAllForSaleNames-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">blockTime</span>: <span class="tsd-signature-type">number</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsExpandedForSaleHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsExpandedForSaleHashMap</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L34">src/interfaces/classes/IRnsHandler.ts:34</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findExpandedForSaleNames" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>Expanded<wbr/>For<wbr/>Sale<wbr/>Names</span><a href="#findExpandedForSaleNames" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findExpandedForSaleNames.findExpandedForSaleNames-1"><span class="tsd-kind-call-signature">find<wbr/>Expanded<wbr/>For<wbr/>Sale<wbr/>Names</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">blockTime</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsExpandedForSaleHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsExpandedForSaleHashMap</a><span class="tsd-signature-symbol">&gt;</span><a href="#findExpandedForSaleNames.findExpandedForSaleNames-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">blockTime</span>: <span class="tsd-signature-type">number</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsExpandedForSaleHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsExpandedForSaleHashMap</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L35">src/interfaces/classes/IRnsHandler.ts:35</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findMatchingAddress" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>Matching<wbr/>Address</span><a href="#findMatchingAddress" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findMatchingAddress.findMatchingAddress-1"><span class="tsd-kind-call-signature">find<wbr/>Matching<wbr/>Address</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span><a href="#findMatchingAddress.findMatchingAddress-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L39">src/interfaces/classes/IRnsHandler.ts:39</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findMyExistingNames" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>My<wbr/>Existing<wbr/>Names</span><a href="#findMyExistingNames" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findMyExistingNames.findMyExistingNames-1"><span class="tsd-kind-call-signature">find<wbr/>My<wbr/>Existing<wbr/>Names</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">blockTime</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsOwnedHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsOwnedHashMap</a><span class="tsd-signature-symbol">&gt;</span><a href="#findMyExistingNames.findMyExistingNames-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">blockTime</span>: <span class="tsd-signature-type">number</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsOwnedHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsOwnedHashMap</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L36">src/interfaces/classes/IRnsHandler.ts:36</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findSingleBid" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>Single<wbr/>Bid</span><a href="#findSingleBid" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findSingleBid.findSingleBid-1"><span class="tsd-kind-call-signature">find<wbr/>Single<wbr/>Bid</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">index</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsBidItem.html" class="tsd-signature-type tsd-kind-interface">IRnsBidItem</a><span class="tsd-signature-symbol">&gt;</span><a href="#findSingleBid.findSingleBid-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">index</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsBidItem.html" class="tsd-signature-type tsd-kind-interface">IRnsBidItem</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L30">src/interfaces/classes/IRnsHandler.ts:30</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findSingleForSaleName" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>Single<wbr/>For<wbr/>Sale<wbr/>Name</span><a href="#findSingleForSaleName" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findSingleForSaleName.findSingleForSaleName-1"><span class="tsd-kind-call-signature">find<wbr/>Single<wbr/>For<wbr/>Sale<wbr/>Name</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rnsName</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsForSaleItem.html" class="tsd-signature-type tsd-kind-interface">IRnsForSaleItem</a><span class="tsd-signature-symbol">&gt;</span><a href="#findSingleForSaleName.findSingleForSaleName-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rnsName</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsForSaleItem.html" class="tsd-signature-type tsd-kind-interface">IRnsForSaleItem</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L32">src/interfaces/classes/IRnsHandler.ts:32</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findSingleRns" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>Single<wbr/>Rns</span><a href="#findSingleRns" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findSingleRns.findSingleRns-1"><span class="tsd-kind-call-signature">find<wbr/>Single<wbr/>Rns</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsItem.html" class="tsd-signature-type tsd-kind-interface">IRnsItem</a><span class="tsd-signature-symbol">&gt;</span><a href="#findSingleRns.findSingleRns-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsItem.html" class="tsd-signature-type tsd-kind-interface">IRnsItem</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L38">src/interfaces/classes/IRnsHandler.ts:38</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findSomeForSaleNames" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>Some<wbr/>For<wbr/>Sale<wbr/>Names</span><a href="#findSomeForSaleNames" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findSomeForSaleNames.findSomeForSaleNames-1"><span class="tsd-kind-call-signature">find<wbr/>Some<wbr/>For<wbr/>Sale<wbr/>Names</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">options</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IPaginatedMap.html" class="tsd-signature-type tsd-kind-interface">IPaginatedMap</a><span class="tsd-signature-symbol">&lt;</span><a href="IRnsForSaleHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsForSaleHashMap</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span><a href="#findSomeForSaleNames.findSomeForSaleNames-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">options</span>: <a href="IPagination.html" class="tsd-signature-type tsd-kind-interface">IPagination</a></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IPaginatedMap.html" class="tsd-signature-type tsd-kind-interface">IPaginatedMap</a><span class="tsd-signature-symbol">&lt;</span><a href="IRnsForSaleHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsForSaleHashMap</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L33">src/interfaces/classes/IRnsHandler.ts:33</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="findYourExistingNames" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>find<wbr/>Your<wbr/>Existing<wbr/>Names</span><a href="#findYourExistingNames" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="findYourExistingNames.findYourExistingNames-1"><span class="tsd-kind-call-signature">find<wbr/>Your<wbr/>Existing<wbr/>Names</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">address</span>, <span class="tsd-kind-parameter">blockTime</span><span class="tsd-signature-symbol">?</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsOwnedHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsOwnedHashMap</a><span class="tsd-signature-symbol">&gt;</span><a href="#findYourExistingNames.findYourExistingNames-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">address</span>: <span class="tsd-signature-type">string</span></h5></li>
+<li>
+<h5><code class="tsd-tag ts-flagOptional">Optional</code> <span class="tsd-kind-parameter">blockTime</span>: <span class="tsd-signature-type">number</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><a href="IRnsOwnedHashMap.html" class="tsd-signature-type tsd-kind-interface">IRnsOwnedHashMap</a><span class="tsd-signature-symbol">&gt;</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L37">src/interfaces/classes/IRnsHandler.ts:37</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeAcceptBidMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Accept<wbr/>Bid<wbr/>Msg</span><a href="#makeAcceptBidMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeAcceptBidMsg.makeAcceptBidMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Accept<wbr/>Bid<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span>, <span class="tsd-kind-parameter">from</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeAcceptBidMsg.makeAcceptBidMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li>
+<li>
+<h5><span class="tsd-kind-parameter">from</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L17">src/interfaces/classes/IRnsHandler.ts:17</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeAddRecordMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Add<wbr/>Record<wbr/>Msg</span><a href="#makeAddRecordMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeAddRecordMsg.makeAddRecordMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Add<wbr/>Record<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">recordValues</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeAddRecordMsg.makeAddRecordMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">recordValues</span>: <a href="IRnsRecordItem.html" class="tsd-signature-type tsd-kind-interface">IRnsRecordItem</a></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L18">src/interfaces/classes/IRnsHandler.ts:18</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeBidMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Bid<wbr/>Msg</span><a href="#makeBidMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeBidMsg.makeBidMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Bid<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span>, <span class="tsd-kind-parameter">bid</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeBidMsg.makeBidMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li>
+<li>
+<h5><span class="tsd-kind-parameter">bid</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L19">src/interfaces/classes/IRnsHandler.ts:19</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeBuyMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Buy<wbr/>Msg</span><a href="#makeBuyMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeBuyMsg.makeBuyMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Buy<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeBuyMsg.makeBuyMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L20">src/interfaces/classes/IRnsHandler.ts:20</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeCancelBidMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Cancel<wbr/>Bid<wbr/>Msg</span><a href="#makeCancelBidMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeCancelBidMsg.makeCancelBidMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Cancel<wbr/>Bid<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeCancelBidMsg.makeCancelBidMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L21">src/interfaces/classes/IRnsHandler.ts:21</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeDelRecordMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Del<wbr/>Record<wbr/>Msg</span><a href="#makeDelRecordMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeDelRecordMsg.makeDelRecordMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Del<wbr/>Record<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeDelRecordMsg.makeDelRecordMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L23">src/interfaces/classes/IRnsHandler.ts:23</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeDelistMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Delist<wbr/>Msg</span><a href="#makeDelistMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeDelistMsg.makeDelistMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Delist<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeDelistMsg.makeDelistMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L22">src/interfaces/classes/IRnsHandler.ts:22</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeListMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>List<wbr/>Msg</span><a href="#makeListMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeListMsg.makeListMsg-1"><span class="tsd-kind-call-signature">make<wbr/>List<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span>, <span class="tsd-kind-parameter">price</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeListMsg.makeListMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li>
+<li>
+<h5><span class="tsd-kind-parameter">price</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L25">src/interfaces/classes/IRnsHandler.ts:25</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeNewRegistrationMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>New<wbr/>Registration<wbr/>Msg</span><a href="#makeNewRegistrationMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeNewRegistrationMsg.makeNewRegistrationMsg-1"><span class="tsd-kind-call-signature">make<wbr/>New<wbr/>Registration<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">registrationValues</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeNewRegistrationMsg.makeNewRegistrationMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">registrationValues</span>: <a href="IRnsRegistrationItem.html" class="tsd-signature-type tsd-kind-interface">IRnsRegistrationItem</a></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L26">src/interfaces/classes/IRnsHandler.ts:26</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeRnsInitMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Rns<wbr/>Init<wbr/>Msg</span><a href="#makeRnsInitMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeRnsInitMsg.makeRnsInitMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Rns<wbr/>Init<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeRnsInitMsg.makeRnsInitMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L24">src/interfaces/classes/IRnsHandler.ts:24</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeTransferMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Transfer<wbr/>Msg</span><a href="#makeTransferMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeTransferMsg.makeTransferMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Transfer<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span>, <span class="tsd-kind-parameter">receiver</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeTransferMsg.makeTransferMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li>
+<li>
+<h5><span class="tsd-kind-parameter">receiver</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L27">src/interfaces/classes/IRnsHandler.ts:27</a></li></ul></aside></li></ul></section>
+<section class="tsd-panel tsd-member"><a id="makeUpdateMsg" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>make<wbr/>Update<wbr/>Msg</span><a href="#makeUpdateMsg" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<ul class="tsd-signatures">
+<li class="tsd-signature tsd-anchor-link" id="makeUpdateMsg.makeUpdateMsg-1"><span class="tsd-kind-call-signature">make<wbr/>Update<wbr/>Msg</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">rns</span>, <span class="tsd-kind-parameter">data</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type ">EncodeObject</span><a href="#makeUpdateMsg.makeUpdateMsg-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
+<li class="tsd-description">
+<div class="tsd-parameters">
+<h4 class="tsd-parameters-title">Parameters</h4>
+<ul class="tsd-parameter-list">
+<li>
+<h5><span class="tsd-kind-parameter">rns</span>: <span class="tsd-signature-type">string</span></h5></li>
+<li>
+<h5><span class="tsd-kind-parameter">data</span>: <span class="tsd-signature-type">string</span></h5></li></ul></div>
+<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">EncodeObject</span></h4><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/6085873/src/interfaces/classes/IRnsHandler.ts#L28">src/interfaces/classes/IRnsHandler.ts:28</a></li></ul></aside></li></ul></section></section></div>
+<div class="col-sidebar">
+<div class="page-menu">
+<div class="tsd-navigation settings">
+<details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
+<h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4.93896 8.531L12 15.591L19.061 8.531L16.939 6.409L12 11.349L7.06098 6.409L4.93896 8.531Z" fill="var(--color-text)" id="icon-chevronDown"></path></svg>Settings</h3></summary>
+<div class="tsd-accordion-details">
+<div class="tsd-filter-visibility">
+<h4 class="uppercase">Member Visibility</h4><form>
+<ul id="tsd-filter-options">
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-protected" name="protected"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Protected</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-private" name="private"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Private</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li>
+<li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></form></div>
+<div class="tsd-theme-toggle">
+<h4 class="uppercase">Theme</h4><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div>
+<details open class="tsd-index-accordion tsd-page-navigation"><summary class="tsd-accordion-summary">
+<h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><use href="#icon-chevronDown"></use></svg>On This Page</h3></summary>
+<div class="tsd-accordion-details">
+<ul>
+<li><a href="#findAllBids" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>All<wbr/>Bids</span></a></li>
+<li><a href="#findAllForSaleNames" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>All<wbr/>For<wbr/>Sale<wbr/>Names</span></a></li>
+<li><a href="#findExpandedForSaleNames" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Expanded<wbr/>For<wbr/>Sale<wbr/>Names</span></a></li>
+<li><a href="#findMatchingAddress" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Matching<wbr/>Address</span></a></li>
+<li><a href="#findMyExistingNames" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>My<wbr/>Existing<wbr/>Names</span></a></li>
+<li><a href="#findSingleBid" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Single<wbr/>Bid</span></a></li>
+<li><a href="#findSingleForSaleName" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Single<wbr/>For<wbr/>Sale<wbr/>Name</span></a></li>
+<li><a href="#findSingleRns" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Single<wbr/>Rns</span></a></li>
+<li><a href="#findSomeForSaleNames" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Some<wbr/>For<wbr/>Sale<wbr/>Names</span></a></li>
+<li><a href="#findYourExistingNames" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>find<wbr/>Your<wbr/>Existing<wbr/>Names</span></a></li>
+<li><a href="#makeAcceptBidMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Accept<wbr/>Bid<wbr/>Msg</span></a></li>
+<li><a href="#makeAddRecordMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Add<wbr/>Record<wbr/>Msg</span></a></li>
+<li><a href="#makeBidMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Bid<wbr/>Msg</span></a></li>
+<li><a href="#makeBuyMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Buy<wbr/>Msg</span></a></li>
+<li><a href="#makeCancelBidMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Cancel<wbr/>Bid<wbr/>Msg</span></a></li>
+<li><a href="#makeDelRecordMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Del<wbr/>Record<wbr/>Msg</span></a></li>
+<li><a href="#makeDelistMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Delist<wbr/>Msg</span></a></li>
+<li><a href="#makeListMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>List<wbr/>Msg</span></a></li>
+<li><a href="#makeNewRegistrationMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>New<wbr/>Registration<wbr/>Msg</span></a></li>
+<li><a href="#makeRnsInitMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Rns<wbr/>Init<wbr/>Msg</span></a></li>
+<li><a href="#makeTransferMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Transfer<wbr/>Msg</span></a></li>
+<li><a href="#makeUpdateMsg" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-2048"></use></svg><span>make<wbr/>Update<wbr/>Msg</span></a></li></ul></div></details></div>
+<div class="site-menu">
+<nav class="tsd-navigation"><a href="../modules.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-4"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-namespace)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M9.33 16V7.24H10.77L13.446 14.74C13.43 14.54 13.41 14.296 13.386 14.008C13.37 13.712 13.354 13.404 13.338 13.084C13.33 12.756 13.326 12.448 13.326 12.16V7.24H14.37V16H12.93L10.266 8.5C10.282 8.692 10.298 8.936 10.314 9.232C10.33 9.52 10.342 9.828 10.35 10.156C10.366 10.476 10.374 10.784 10.374 11.08V16H9.33Z" fill="var(--color-text)"></path></g></svg><span>jackal.js</span></a>
+<ul class="tsd-small-nested-navigation">
+<li><a href="../classes/AbciHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-128"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-class)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M11.898 16.1201C11.098 16.1201 10.466 15.8961 10.002 15.4481C9.53803 15.0001 9.30603 14.3841 9.30603 13.6001V9.64012C9.30603 8.85612 9.53803 8.24012 10.002 7.79212C10.466 7.34412 11.098 7.12012 11.898 7.12012C12.682 7.12012 13.306 7.34812 13.77 7.80412C14.234 8.25212 14.466 8.86412 14.466 9.64012H13.386C13.386 9.14412 13.254 8.76412 12.99 8.50012C12.734 8.22812 12.37 8.09212 11.898 8.09212C11.426 8.09212 11.054 8.22412 10.782 8.48812C10.518 8.75212 10.386 9.13212 10.386 9.62812V13.6001C10.386 14.0961 10.518 14.4801 10.782 14.7521C11.054 15.0161 11.426 15.1481 11.898 15.1481C12.37 15.1481 12.734 15.0161 12.99 14.7521C13.254 14.4801 13.386 14.0961 13.386 13.6001H14.466C14.466 14.3761 14.234 14.9921 13.77 15.4481C13.306 15.8961 12.682 16.1201 11.898 16.1201Z" fill="var(--color-text)"></path></g></svg><span>Abci<wbr/>Handler</span></a></li>
+<li><a href="../classes/CustomWallet.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Custom<wbr/>Wallet</span></a></li>
+<li><a href="../classes/FileDownloadHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>File<wbr/>Download<wbr/>Handler</span></a></li>
+<li><a href="../classes/FileIo.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>File<wbr/>Io</span></a></li>
+<li><a href="../classes/FileUploadHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>File<wbr/>Upload<wbr/>Handler</span></a></li>
+<li><a href="../classes/FolderHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Folder<wbr/>Handler</span></a></li>
+<li><a href="../classes/GovHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Gov<wbr/>Handler</span></a></li>
+<li><a href="../classes/NotificationHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Notification<wbr/>Handler</span></a></li>
+<li><a href="../classes/OracleHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Oracle<wbr/>Handler</span></a></li>
+<li><a href="../classes/RnsHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Rns<wbr/>Handler</span></a></li>
+<li><a href="../classes/SecretsHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Secrets<wbr/>Handler</span></a></li>
+<li><a href="../classes/StorageHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Storage<wbr/>Handler</span></a></li>
+<li><a href="../classes/WalletHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-128"></use></svg><span>Wallet<wbr/>Handler</span></a></li>
+<li><a href="IAbciHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-256"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-interface)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M9.51 16V15.016H11.298V8.224H9.51V7.24H14.19V8.224H12.402V15.016H14.19V16H9.51Z" fill="var(--color-text)"></path></g></svg><span>IAbci<wbr/>Handler</span></a></li>
+<li><a href="IAdditionalWalletOptions.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IAdditional<wbr/>Wallet<wbr/>Options</span></a></li>
+<li><a href="IAesBundle.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IAes<wbr/>Bundle</span></a></li>
+<li><a href="IChainConfig.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IChain<wbr/>Config</span></a></li>
+<li><a href="IChildDirInfo.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IChild<wbr/>Dir<wbr/>Info</span></a></li>
+<li><a href="ICoin.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>ICoin</span></a></li>
+<li><a href="ICurrency.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>ICurrency</span></a></li>
+<li><a href="ICustomWallet.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>ICustom<wbr/>Wallet</span></a></li>
+<li><a href="IDelegationDetails.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IDelegation<wbr/>Details</span></a></li>
+<li><a href="IDelegationRewards.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IDelegation<wbr/>Rewards</span></a></li>
+<li><a href="IDelegationSummary.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IDelegation<wbr/>Summary</span></a></li>
+<li><a href="IDelegationSummaryMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IDelegation<wbr/>Summary<wbr/>Map</span></a></li>
+<li><a href="IDeleteItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IDelete<wbr/>Item</span></a></li>
+<li><a href="IDownloadDetails.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IDownload<wbr/>Details</span></a></li>
+<li><a href="IEditorsViewers.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IEditors<wbr/>Viewers</span></a></li>
+<li><a href="IEnabledSecrets.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IEnabled<wbr/>Secrets</span></a></li>
+<li><a href="IFileBuffer.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Buffer</span></a></li>
+<li><a href="IFileConfigFull.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Config<wbr/>Full</span></a></li>
+<li><a href="IFileConfigRaw.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Config<wbr/>Raw</span></a></li>
+<li><a href="IFileConfigRelevant.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Config<wbr/>Relevant</span></a></li>
+<li><a href="IFileDetails.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Details</span></a></li>
+<li><a href="IFileDownloadHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Download<wbr/>Handler</span></a></li>
+<li><a href="IFileIo.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Io</span></a></li>
+<li><a href="IFileMeta.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Meta</span></a></li>
+<li><a href="IFileMetaHashMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Meta<wbr/>Hash<wbr/>Map</span></a></li>
+<li><a href="IFileUploadHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFile<wbr/>Upload<wbr/>Handler</span></a></li>
+<li><a href="IFiletreeParsedContents.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFiletree<wbr/>Parsed<wbr/>Contents</span></a></li>
+<li><a href="IFolderAdd.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFolder<wbr/>Add</span></a></li>
+<li><a href="IFolderChildFiles.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFolder<wbr/>Child<wbr/>Files</span></a></li>
+<li><a href="IFolderDownload.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFolder<wbr/>Download</span></a></li>
+<li><a href="IFolderFrame.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFolder<wbr/>Frame</span></a></li>
+<li><a href="IFolderHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IFolder<wbr/>Handler</span></a></li>
+<li><a href="IGasHashMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IGas<wbr/>Hash<wbr/>Map</span></a></li>
+<li><a href="IGasRate.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IGas<wbr/>Rate</span></a></li>
+<li><a href="IGovHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IGov<wbr/>Handler</span></a></li>
+<li><a href="IMiner.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IMiner</span></a></li>
+<li><a href="IMsgFinalPostFileBundle.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IMsg<wbr/>Final<wbr/>Post<wbr/>File<wbr/>Bundle</span></a></li>
+<li><a href="IMsgPartialPostFileBundle.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IMsg<wbr/>Partial<wbr/>Post<wbr/>File<wbr/>Bundle</span></a></li>
+<li><a href="INotificationHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>INotification<wbr/>Handler</span></a></li>
+<li><a href="IOracleFeed.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IOracle<wbr/>Feed</span></a></li>
+<li><a href="IOracleHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IOracle<wbr/>Handler</span></a></li>
+<li><a href="IPaginatedMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IPaginated<wbr/>Map</span></a></li>
+<li><a href="IPagination.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IPagination</span></a></li>
+<li><a href="IPayData.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IPay<wbr/>Data</span></a></li>
+<li><a href="IPermsParts.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IPerms<wbr/>Parts</span></a></li>
+<li><a href="IPropDetails.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IProp<wbr/>Details</span></a></li>
+<li><a href="IPropDetailsMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IProp<wbr/>Details<wbr/>Map</span></a></li>
+<li><a href="IProtoConfig.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IProto<wbr/>Config</span></a></li>
+<li><a href="IProtoHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IProto<wbr/>Handler</span></a></li>
+<li><a href="IProviderModifiedResponse.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IProvider<wbr/>Modified<wbr/>Response</span></a></li>
+<li><a href="IProviderResponse.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IProvider<wbr/>Response</span></a></li>
+<li><a href="IProviderVersionResponse.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IProvider<wbr/>Version<wbr/>Response</span></a></li>
+<li><a href="IQueryHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IQuery<wbr/>Handler</span></a></li>
+<li><a href="IQueueItemPostUpload.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IQueue<wbr/>Item<wbr/>Post<wbr/>Upload</span></a></li>
+<li><a href="IReadableNoti.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IReadable<wbr/>Noti</span></a></li>
+<li><a href="IRnsBidHashMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Bid<wbr/>Hash<wbr/>Map</span></a></li>
+<li><a href="IRnsBidItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Bid<wbr/>Item</span></a></li>
+<li><a href="IRnsExistsHashMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Exists<wbr/>Hash<wbr/>Map</span></a></li>
+<li><a href="IRnsExpandedForSaleHashMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Expanded<wbr/>For<wbr/>Sale<wbr/>Hash<wbr/>Map</span></a></li>
+<li><a href="IRnsExpandedForSaleItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Expanded<wbr/>For<wbr/>Sale<wbr/>Item</span></a></li>
+<li><a href="IRnsExpandedItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Expanded<wbr/>Item</span></a></li>
+<li><a href="IRnsForSaleHashMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>For<wbr/>Sale<wbr/>Hash<wbr/>Map</span></a></li>
+<li><a href="IRnsForSaleItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>For<wbr/>Sale<wbr/>Item</span></a></li>
+<li><a href="IRnsHandler.html" class="current"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Handler</span></a></li>
+<li><a href="IRnsItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Item</span></a></li>
+<li><a href="IRnsOwnedHashMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Owned<wbr/>Hash<wbr/>Map</span></a></li>
+<li><a href="IRnsRecordItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Record<wbr/>Item</span></a></li>
+<li><a href="IRnsRegistrationItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IRns<wbr/>Registration<wbr/>Item</span></a></li>
+<li><a href="ISecretsHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>ISecrets<wbr/>Handler</span></a></li>
+<li><a href="ISharedTracker.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IShared<wbr/>Tracker</span></a></li>
+<li><a href="IStaggeredTracker.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStaggered<wbr/>Tracker</span></a></li>
+<li><a href="IStakingValidator.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStaking<wbr/>Validator</span></a></li>
+<li><a href="IStakingValidatorExtended.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStaking<wbr/>Validator<wbr/>Extended</span></a></li>
+<li><a href="IStakingValidatorExtendedMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStaking<wbr/>Validator<wbr/>Extended<wbr/>Map</span></a></li>
+<li><a href="IStakingValidatorMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStaking<wbr/>Validator<wbr/>Map</span></a></li>
+<li><a href="IStakingValidatorStaked.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStaking<wbr/>Validator<wbr/>Staked</span></a></li>
+<li><a href="IStakingValidatorStakedMap.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStaking<wbr/>Validator<wbr/>Staked<wbr/>Map</span></a></li>
+<li><a href="IStorageClientFree.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStorage<wbr/>Client<wbr/>Free</span></a></li>
+<li><a href="IStorageHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStorage<wbr/>Handler</span></a></li>
+<li><a href="IStoragePaymentInfo.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStorage<wbr/>Payment<wbr/>Info</span></a></li>
+<li><a href="IStray.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IStray</span></a></li>
+<li><a href="ISupportedWallets.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>ISupported<wbr/>Wallets</span></a></li>
+<li><a href="IUploadList.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IUpload<wbr/>List</span></a></li>
+<li><a href="IUploadListItem.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IUpload<wbr/>List<wbr/>Item</span></a></li>
+<li><a href="IWalletConfig.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IWallet<wbr/>Config</span></a></li>
+<li><a href="IWalletHandler.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IWallet<wbr/>Handler</span></a></li>
+<li><a href="IWalletHandlerPrivateProperties.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IWallet<wbr/>Handler<wbr/>Private<wbr/>Properties</span></a></li>
+<li><a href="IWalletHandlerPublicProperties.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IWallet<wbr/>Handler<wbr/>Public<wbr/>Properties</span></a></li>
+<li><a href="IWrappedEncodeObject.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-256"></use></svg><span>IWrapped<wbr/>Encode<wbr/>Object</span></a></li>
+<li><a href="../types/OfflineSigner.html" class="tsd-is-external"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-4194304"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-type-alias)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M11.31 16V8.224H8.91V7.24H14.79V8.224H12.39V16H11.31Z" fill="var(--color-text)"></path></g></svg><span>Offline<wbr/>Signer</span></a></li>
+<li><a href="../types/TFileOrFFile.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-4194304"></use></svg><span>TFile<wbr/>OrFFile</span></a></li>
+<li><a href="../functions/blockToDate.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><g id="icon-64"><rect fill="var(--color-icon-background)" stroke="var(--color-ts-function)" stroke-width="1.5" x="1" y="1" width="22" height="22" rx="6"></rect><path d="M9.39 16V7.24H14.55V8.224H10.446V11.128H14.238V12.112H10.47V16H9.39Z" fill="var(--color-text)"></path></g></svg><span>block<wbr/>To<wbr/>Date</span></a></li>
+<li><a href="../functions/blockToDateFixed.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>block<wbr/>To<wbr/>Date<wbr/>Fixed</span></a></li>
+<li><a href="../functions/bruteForceString.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>brute<wbr/>Force<wbr/>String</span></a></li>
+<li><a href="../functions/checkResults.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>check<wbr/>Results</span></a></li>
+<li><a href="../functions/deprecated.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>deprecated</span></a></li>
+<li><a href="../functions/getAverageBlockTime.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>get<wbr/>Average<wbr/>Block<wbr/>Time</span></a></li>
+<li><a href="../functions/getFileTreeData.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>get<wbr/>File<wbr/>Tree<wbr/>Data</span></a></li>
+<li><a href="../functions/getRandomIndex.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>get<wbr/>Random<wbr/>Index</span></a></li>
+<li><a href="../functions/handlePagination.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>handle<wbr/>Pagination</span></a></li>
+<li><a href="../functions/numTo3xTB.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>num<wbr/>To3xTB</span></a></li>
+<li><a href="../functions/numToWholeTB.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>num<wbr/>To<wbr/>WholeTB</span></a></li>
+<li><a href="../functions/orderStrings.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>order<wbr/>Strings</span></a></li>
+<li><a href="../functions/setDelay.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>set<wbr/>Delay</span></a></li>
+<li><a href="../functions/signerNotEnabled.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>signer<wbr/>Not<wbr/>Enabled</span></a></li>
+<li><a href="../functions/stringToUint16.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>string<wbr/>To<wbr/>Uint16</span></a></li>
+<li><a href="../functions/stringToUint8.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>string<wbr/>To<wbr/>Uint8</span></a></li>
+<li><a href="../functions/stripper.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>stripper</span></a></li>
+<li><a href="../functions/uint16ToString.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>uint16<wbr/>To<wbr/>String</span></a></li>
+<li><a href="../functions/uint8ToString.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-64"></use></svg><span>uint8<wbr/>To<wbr/>String</span></a></li></ul></nav></div></div></div>
+<div class="tsd-generator">
+<p>Generated using <a href="https://typedoc.org/" target="_blank">TypeDoc</a></p></div>
+<div class="overlay"></div></body></html>
