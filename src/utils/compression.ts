@@ -119,7 +119,7 @@ export async function saveFileTreeEntry(
 }
 
 /**
- *
+ * Read encrypted data from FileTree path with optional decompression.
  * @param {string} owner - Jkl address of owner.
  * @param {string} rawPath - Path to stored data.
  * @param {IWalletHandler} walletRef - Wallet instance for accessing functions.
@@ -152,7 +152,7 @@ export async function readFileTreeEntry(
         const final = await decryptDecompressString(contents, keys.key, keys.iv)
           .catch((err: Error) => {
             console.error(err)
-            return '{}'
+            return contents
           })
         return JSON.parse(final)
       } else {

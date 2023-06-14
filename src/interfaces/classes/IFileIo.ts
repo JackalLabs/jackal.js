@@ -10,6 +10,7 @@ export default interface IFileIo {
   shuffle(): Promise<void>
   refresh(): Promise<void>
 
+  migrate(toCheck: string[]): Promise<void>
   createFolders(parentDir: IFolderHandler, newDirs: string[]): Promise<void>
   rawCreateFolders(
     parentDir: IFolderHandler,

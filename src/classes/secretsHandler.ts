@@ -31,7 +31,8 @@ export default class SecretsHandler implements ISecretsHandler {
       `s/Sharing`,
       toAddress,
       shared,
-      this.walletRef
+      this.walletRef,
+      true
     )
   }
   async readSharing(owner: string, rawPath: string): Promise<ISharedTracker> {
@@ -39,7 +40,8 @@ export default class SecretsHandler implements ISecretsHandler {
     const shared = await readFileTreeEntry(
       owner,
       rawPath,
-      this.walletRef
+      this.walletRef,
+      true
     ).catch((err) => {
       throw new Error(
         `Storage.Handler - readSharing() JSON Parse Failed: ${err.message}`

@@ -121,6 +121,42 @@ export default class FileIo implements IFileIo {
       this.availableProviders[getRandomIndex(this.availableProviders.length)]
   }
 
+  async migrate(toCheck: string[]): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'migrate'))
+    const owner = this.walletRef.getJackalAddress()
+    const toMigrate = []
+    const toCreate = []
+    for (let name of toCheck) {
+      const data = await readFileTreeEntry(owner, `s/${name}`, this.walletRef, true)
+        .catch((err: Error) => {
+          throw err
+        })
+      if (data.fids) {
+        toMigrate.push(`s/${name}`)
+      } else if (Object.keys(data).length === 0) {
+        toCreate.push(name)
+      } else {
+        /* All Good */
+      }
+    }
+    const readyToBroadcast: EncodeObject[] = []
+    if (toCreate.length > 0) {
+      readyToBroadcast.push(
+        ...(await this.rawGenerateInitialDirs(null, toCreate))
+      )
+    }
+    for (let path of toMigrate) {
+      readyToBroadcast.push(
+        ...(await this.rawConvertFolderType(path))
+      )
+    }
+    if (readyToBroadcast.length > 0) {
+      const memo = ``
+      await this.walletRef.getProtoHandler()
+        .debugBroadcaster(readyToBroadcast, { memo, step: false })
+    }
+  }
+
   async createFolders(
     parentDir: IFolderHandler,
     newDirs: string[]
@@ -304,17 +340,16 @@ export default class FileIo implements IFileIo {
   async downloadFolder(rawPath: string): Promise<IFolderHandler> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'downloadFolder'))
     const owner = this.walletRef.getJackalAddress()
-    try {
-      const data = (await readFileTreeEntry(
-        owner,
-        rawPath,
-        this.walletRef
-      ).catch((err: Error) => {
-        throw err
-      })) as IFolderFrame
-      return await FolderHandler.trackFolder(data)
-    } catch (err) {
-      console.error(err)
+    const data = (await readFileTreeEntry(
+      owner,
+      rawPath,
+      this.walletRef,
+      true
+    ).catch((err: Error) => {
+      throw err
+    }))
+
+    if (data.fids) {
       const legacyBundle: IDownloadDetails = {
         rawPath,
         owner,
@@ -322,21 +357,22 @@ export default class FileIo implements IFileIo {
       }
       const legacyHandler = await this.downloadFile(legacyBundle, {
         track: 0
-      }).catch(async (err: Error) => {
+      }).catch((err: Error) => {
         console.error('downloadFolder() : ', err)
-        if (err.message.includes('All file fetch() attempts failed!')) {
-          console.warn('Rebuilding ', rawPath)
-          const parts = rawPath.split('/')
-          const child = parts.pop() as string
-          const folderDetails: IChildDirInfo = {
-            myName: child,
-            myParent: parts.join('/'),
-            myOwner: owner
-          }
-          return await FolderHandler.trackNewFolder(folderDetails)
-        }
       })
       return legacyHandler as IFolderHandler
+    } else if (Object.keys(data).length === 0) {
+      console.warn('Folder recovery failed. Rebuilding ', rawPath)
+      const parts = rawPath.split('/')
+      const child = parts.pop() as string
+      const folderDetails: IChildDirInfo = {
+        myName: child,
+        myParent: parts.join('/'),
+        myOwner: owner
+      }
+      return await FolderHandler.trackNewFolder(folderDetails)
+    } else {
+      return await FolderHandler.trackFolder(data as IFolderFrame)
     }
   }
   async downloadFile(
@@ -424,8 +460,8 @@ export default class FileIo implements IFileIo {
     const parent = await this.downloadFolder(`s/Home`)
     const moreTargets = [
       ...new Set([
-        ...parent.getChildDirs(),
-        ...Object.keys(parent.getChildFiles())
+        ...(parent.getChildDirs() || []),
+        ...(Object.keys(parent.getChildFiles() || {}))
       ])
     ]
     const readyToBroadcast = await this.rawDeleteTargets(moreTargets, parent)
@@ -577,7 +613,7 @@ export default class FileIo implements IFileIo {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'checkFolderIsFileTree'))
     const owner = this.walletRef.getJackalAddress()
     try {
-      const data = await readFileTreeEntry(owner, rawPath, this.walletRef)
+      const data = await readFileTreeEntry(owner, rawPath, this.walletRef, true)
         .catch((err: Error) => {
           throw err
         })

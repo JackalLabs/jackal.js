@@ -70,7 +70,8 @@ export default class FolderHandler implements IFolderHandler {
       this.getWhereAmI(),
       this.getWhoAmI(),
       this.folderDetails,
-      walletRef
+      walletRef,
+      true
     )
   }
   async getChildMerkle(child: string): Promise<string> {
