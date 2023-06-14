@@ -1,29 +1,15 @@
-import IAbciHandler from '@/interfaces/classes/IAbciHandler'
-import IFileDownloadHandler from '@/interfaces/classes/IFileDownloadHandler'
-import IFileHandlerCore from '@/interfaces/classes/IFileHandlerCore'
-import IFileIo from '@/interfaces/classes/IFileIo'
-import IFileUploadHandler from '@/interfaces/classes/IFileUploadHandler'
-import IFolderHandler from '@/interfaces/classes/IFolderHandler'
-import IGovHandler from '@/interfaces/classes/IGovHandler'
-import INotificationHandler from '@/interfaces/classes/INotificationHandler'
-import IOracleHandler from '@/interfaces/classes/IOracleHandler'
-import IProtoHandler from '@/interfaces/classes/IProtoHandler'
-import IRnsHandler from '@/interfaces/classes/IRnsHandler'
-import IStorageHandler from '@/interfaces/classes/IStorageHandler'
-import IWalletHandler from '@/interfaces/classes/IWalletHandler'
-
-export {
-  IAbciHandler,
-  IFileDownloadHandler,
-  IFileHandlerCore,
-  IFileIo,
-  IFileUploadHandler,
-  IFolderHandler,
-  IGovHandler,
-  INotificationHandler,
-  IOracleHandler,
-  IProtoHandler,
-  IRnsHandler,
-  IStorageHandler,
-  IWalletHandler
-}
+export { default as IAbciHandler } from '@/interfaces/classes/IAbciHandler'
+export { default as ICustomWallet } from '@/interfaces/classes/ICustomWallet'
+export { default as IFileDownloadHandler } from '@/interfaces/classes/IFileDownloadHandler'
+export { default as IFileIo } from '@/interfaces/classes/IFileIo'
+export { default as IFileUploadHandler } from '@/interfaces/classes/IFileUploadHandler'
+export { default as IFolderHandler } from '@/interfaces/classes/IFolderHandler'
+export { default as IGovHandler } from '@/interfaces/classes/IGovHandler'
+export { default as INotificationHandler } from '@/interfaces/classes/INotificationHandler'
+export { default as IOracleHandler } from '@/interfaces/classes/IOracleHandler'
+export { default as IProtoHandler } from '@/interfaces/classes/IProtoHandler'
+export { default as IQueryHandler } from '@/interfaces/classes/IQueryHandler'
+export { default as IRnsHandler } from '@/interfaces/classes/IRnsHandler'
+export { default as ISecretsHandler } from '@/interfaces/classes/ISecretsHandler'
+export { default as IStorageHandler } from '@/interfaces/classes/IStorageHandler'
+export { default as IWalletHandler } from '@/interfaces/classes/IWalletHandler'

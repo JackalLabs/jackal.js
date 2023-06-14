@@ -1,19 +1,26 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IGasHashMap, IGasRate } from '@/interfaces'
+import { IGasHashMap, IGasRate, IWrappedEncodeObject } from '@/interfaces'
 
 const hashMap: IGasHashMap = {
   /** Filetree */
-  '/canine_chain.filetree.MsgPostFile': 70,
+  '/canine_chain.filetree.MsgPostFile': 90,
   '/canine_chain.filetree.MsgAddViewers': 142,
   '/canine_chain.filetree.MsgPostkey': 12,
   '/canine_chain.filetree.MsgDeleteFile': 9,
   '/canine_chain.filetree.MsgRemoveViewers': 142,
   '/canine_chain.filetree.MsgMakeRoot': 46,
+  '/canine_chain.filetree.MsgMakeRootV2': 48,
   '/canine_chain.filetree.MsgAddEditors': 142,
   '/canine_chain.filetree.MsgRemoveEditors': 142,
   '/canine_chain.filetree.MsgResetEditors': 142,
   '/canine_chain.filetree.MsgResetViewers': 142,
   '/canine_chain.filetree.MsgChangeOwner': 142,
+  /** Notifications */
+  '/canine_chain.notifications.MsgCreateNotifications': 142,
+  '/canine_chain.notifications.MsgUpdateNotifications': 142,
+  '/canine_chain.notifications.MsgDeleteNotifications': 142,
+  '/canine_chain.notifications.MsgSetCounter': 142,
+  '/canine_chain.notifications.MsgBlockSenders': 142,
   /** Oracle */
   '/canine_chain.oracle.MsgCreateFeed': 142,
   '/canine_chain.oracle.MsgUpdateFeed': 142,
@@ -55,6 +62,8 @@ const hashMap: IGasHashMap = {
   '/cosmos.gov.v1beta1.MsgSubmitProposal': 142,
   '/cosmos.gov.v1beta1.MsgVote': 142,
   '/cosmos.gov.v1beta1.MsgVoteWeighted': 142,
+  /** Slashing */
+  '/cosmos.slashing.v1beta1.MsgUnjail': 142,
   /** Staking */
   '/cosmos.staking.v1beta1.MsgBeginRedelegate': 142,
   '/cosmos.staking.v1beta1.MsgCreateValidator': 142,
@@ -64,18 +73,52 @@ const hashMap: IGasHashMap = {
 }
 const baseRate = 56
 
-export function estimateGas (msgArray: EncodeObject[]): number {
+/**
+ * Generates gas total estimate from list of Tx instances.
+ * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @returns {number} - Adjusted number of gas units collection is expected to require.
+ */
+export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): number {
   const gas = msgArray.reduce((acc, curr) => {
-    return acc + (hashMap[curr.typeUrl] || 0)
+    if (isIWrappedEncodeObject(curr)) {
+      switch (true) {
+        case curr.encodedObject.typeUrl.includes('MsgMakeRoot'):
+          const baseValue = 15
+          const modified = 0.04 * Number(curr.modifier) || 0
+          return acc + (baseValue + modified)
+        default:
+          return acc + (hashMap[curr.encodedObject.typeUrl] || 142)
+      }
+    } else {
+      return acc + (hashMap[curr.typeUrl] || 142)
+    }
   }, 0)
   return (gas + baseRate) * 1100
 }
-/** @private */
-export function finalizeGas (msgArray: EncodeObject[]): IGasRate {
-  const totalGas = estimateGas(msgArray)
+
+/**
+ * Return a Gas object for use in a masterBroadcaster()-like call.
+ * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @param {number | string} gasOverride - Number or number-like string to replace calculated gas value.
+ * @returns {IGasRate} - Gas object with best estimate based on input.
+ * @private
+ */
+export function finalizeGas (
+  msgArray: (EncodeObject | IWrappedEncodeObject)[],
+  gasOverride?: number | string
+): IGasRate {
+  const totalGas = Number(gasOverride) || estimateGas(msgArray)
   return {
     amount: [],
-    // gas: '2000000'
     gas: totalGas.toString()
   }
+}
+
+/**
+ * Check if an input is a wrapped or raw EncodeObject.
+ * @param {EncodeObject | IWrappedEncodeObject} toCheck - Source value.
+ * @returns {toCheck is IWrappedEncodeObject} - Boolean indicating if source is a IWrappedEncodeObject.
+ */
+function isIWrappedEncodeObject(toCheck: EncodeObject | IWrappedEncodeObject): toCheck is IWrappedEncodeObject {
+  return Object.keys(toCheck).includes('encodedObject')
 }

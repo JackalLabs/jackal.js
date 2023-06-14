@@ -1,6 +1,6 @@
 import { Coin } from '@cosmjs/amino/build/coins'
 
 export default interface IGasRate {
-  amount: Coin[],
+  amount: Coin[]
   gas: string
 }

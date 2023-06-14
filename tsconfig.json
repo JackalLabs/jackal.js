@@ -1,36 +1,44 @@
 {
-//  break compile process
-//  "extends": "@tsconfig/node16",
   "compilerOptions": {
-    "lib": [
-      "dom",
-      "es2022"
-    ],
-    "module": "es2022",
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"],
+    "skipLibCheck": true,
+    "allowJs": false,
     "esModuleInterop": true,
-    "target": "es2022",
+    "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
-    "moduleResolution": "node",
+    "stripInternal": true,
+
+    /* Bundler mode */
+    "outDir": "dist",
     "sourceMap": true,
     "declaration": true,
-    "outDir": "dist",
-    "baseUrl": ".",
+    //    "declarationDir": "dist/dts",
+    "declarationMap": true,
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "noEmit": true,
+
+    /* Linting */
     "strict": true,
-    "stripInternal": true,
-    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ]
+      "@/*": ["src/*"]
     },
     "typeRoots": [
-      "./node_modules/@types",
+      "./src/interfaces",
       "./src/types"
     ]
   },
-  "include": [
-    "src/**/*.ts"
-  ],
+  "include": ["src/**/*.ts"],
   "exclude": [
     "node_modules"
   ]

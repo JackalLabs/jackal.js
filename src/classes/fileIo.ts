@@ -1,128 +1,211 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-// import { randomUUID, random } from 'make-random'
-import { IQueryFileTree, IQueryStorage, ITxFileTree } from 'jackal.js-protos'
+// import { random } from 'make-random'
 
-import { hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
-import { exportJackalKey, genIv, genKey, importJackalKey } from '@/utils/crypt'
-import { bruteForceString, setDelay } from '@/utils/misc'
+import { hashAndHex, merkleMeBro } from '@/utils/hash'
+import { genIv, genKey, stringToAes } from '@/utils/crypt'
+import {
+  bruteForceString,
+  getFileTreeData,
+  getRandomIndex,
+  handlePagination,
+  setDelay,
+  signerNotEnabled,
+  stripper
+} from '@/utils/misc'
 import FileDownloadHandler from '@/classes/fileDownloadHandler'
 import FolderHandler from '@/classes/folderHandler'
-import WalletHandler from '@/classes/walletHandler'
 import {
   IFileDownloadHandler,
   IFileIo,
+  IFileUploadHandler,
   IFolderHandler,
-  IProtoHandler,
+  IQueryHandler,
   IWalletHandler
 } from '@/interfaces/classes'
 import {
-  IAesBundle,
-  IDeleteItem, IDownloadDetails,
-  IEditorsViewers,
-  IFileConfigFull,
+  IChildDirInfo,
+  IDownloadDetails,
   IFileConfigRaw,
   IFiletreeParsedContents,
-  IFolderAdd,
-  IFolderChildFiles,
+  IFolderFrame,
   IMiner,
   IMsgPartialPostFileBundle,
   IProviderModifiedResponse,
   IProviderResponse,
+  IProviderVersionResponse,
   IQueueItemPostUpload,
   IStaggeredTracker,
-  IUploadList, IUploadListItem
+  IUploadList,
+  IUploadListItem
 } from '@/interfaces'
-import { TFileOrFFile } from '@/types/TFoldersAndFiles'
 import IProviderChecks from '@/interfaces/IProviderChecks'
-import { QueryFindFileResponse } from 'jackal.js-protos/dist/postgen/canine_chain/storage/query'
-import SuccessIncluded from 'jackal.js-protos/dist/types/TSuccessIncluded'
+import { Contracts, FidCid, Files, QueryFindFileResponse, Strays } from 'jackal.js-protos'
+import { buildPostFile, makePermsBlock, readFileTreeEntry, removeFileTreeEntry } from '@/utils/compression'
+import IFileMetaHashMap from '@/interfaces/file/IFileMetaHashMap'
+
+const { crypto } = (window) ? window : globalThis
 
 export default class FileIo implements IFileIo {
   private readonly walletRef: IWalletHandler
-  private readonly pH: IProtoHandler
+  private readonly qH: IQueryHandler
   private availableProviders: IMiner[]
   private currentProvider: IMiner
 
-  private constructor (wallet: IWalletHandler, providers: IMiner[], currentProvider: IMiner) {
+  private constructor(
+    wallet: IWalletHandler,
+    providers: IMiner[],
+    currentProvider: IMiner
+  ) {
     this.walletRef = wallet
-    this.pH = wallet.getProtoHandler()
+    this.qH = wallet.getQueryHandler()
     this.availableProviders = providers
     this.currentProvider = currentProvider
   }
 
-  static async trackIo (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<FileIo> {
-    const providers = await verifyProviders(await getProviders(wallet.getProtoHandler().storageQuery), versionFilter)
-    const provider = providers[await random(providers.length)]
+  static async trackIo(
+    wallet: IWalletHandler,
+    versionFilter?: string | string[]
+  ): Promise<FileIo> {
+    if (!wallet.traits) throw new Error(signerNotEnabled('FileIo', 'trackIo'))
+    const providers = await verifyProviders(
+      await getProviders(wallet.getProtoHandler()),
+      wallet.traits.chainId,
+      versionFilter
+    )
+    // const provider = providers[await random(providers.length)]
+    const provider = providers[getRandomIndex(providers.length)]
     return new FileIo(wallet, providers, provider)
   }
-  static async checkProviders (wallet: IWalletHandler, versionFilter?: string | string[]): Promise<IProviderChecks> {
-    const raw = await fetchProviders(wallet.getProtoHandler().storageQuery)
+  static async checkProviders(
+    wallet: IWalletHandler,
+    versionFilter?: string | string[]
+  ): Promise<IProviderChecks> {
+    if (!wallet.traits) throw new Error(signerNotEnabled('FileIo', 'checkProviders'))
+    const raw = await fetchProviders(wallet.getQueryHandler())
     const filtered = await filterProviders(raw)
     return {
       filtered,
       raw,
-      verified: (versionFilter) ? await verifyProviders(filtered, versionFilter) : filtered
+      verified: versionFilter
+        ? await verifyProviders(filtered, wallet.traits.chainId, versionFilter)
+        : filtered
     }
   }
 
-  async clearProblems (exclude: string): Promise<void> {
-    this.availableProviders = this.availableProviders.filter(prov => prov.ip !== exclude)
-    await this.shuffle()
+  getCurrentProvider(): IMiner {
+    return this.currentProvider
   }
-  async shuffle (): Promise<void> {
-    this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
+  getAvailableProviders(): IMiner[] {
+    return this.availableProviders
   }
-  async refresh (): Promise<void> {
-    this.availableProviders = await verifyProviders(await getProviders(this.pH.storageQuery))
-    this.currentProvider = this.availableProviders[await random(this.availableProviders.length)]
-  }
-  forceProvider (toSet: IMiner): void {
+  forceProvider(toSet: IMiner): void {
     this.currentProvider = toSet
   }
-  async uploadFolders (toUpload: IFolderAdd, owner: string): Promise<void> {
-    const readyToBroadcast = await this.rawUploadFolders(toUpload, owner)
-    const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+  async clearProblems(exclude: string): Promise<void> {
+    this.availableProviders = this.availableProviders.filter(
+      (prov) => prov.ip !== exclude
+    )
+    await this.shuffle()
   }
-  async rawUploadFolders (toUpload: IFolderAdd, owner: string): Promise<EncodeObject[]> {
-    const { newDir, parentDir } = toUpload
-    const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
-    const jackalAddr = this.walletRef.getJackalAddress()
-
-    newDir.setIds(await this.tumbleUpload(jackalAddr, await newDir.getForUpload()))
-    const { cfg, file } = await prepExistingUpload(parentDir, owner, this.walletRef)
-    parentDir.setIds(await this.tumbleUpload(jackalAddr, file))
-
-    return await this.rawAfterUpload([
-      { handler: newDir, data: null },
-      { handler: parentDir, data: cfg }
-    ])
+  async shuffle(): Promise<void> {
+    this.currentProvider =
+      this.availableProviders[getRandomIndex(this.availableProviders.length)]
   }
-  async verifyFoldersExist (toCheck: string[]): Promise<number> {
+  async refresh(): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'refresh'))
+    this.availableProviders = await verifyProviders(
+      await getProviders(this.qH),
+      this.walletRef.traits.chainId
+    )
+    this.currentProvider =
+      this.availableProviders[getRandomIndex(this.availableProviders.length)]
+  }
+
+  async migrate(toCheck: string[]): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'migrate'))
+    const owner = this.walletRef.getJackalAddress()
+    const toMigrate = []
     const toCreate = []
-
-    for (let i = 0; i < toCheck.length; i++) {
-      const folderName = toCheck[i]
-      const hexAddress = await merkleMeBro(`s/${folderName}`)
-      const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(this.walletRef.getJackalAddress())}`)
-      const { version } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
-      const fileProviders = verifyFileProviderIps(await this.pH.storageQuery.queryFindFile({ fid: version }))
-      if (fileProviders && fileProviders.length) {
-        console.info(`${folderName} exists`)
+    for (let name of toCheck) {
+      const data = await readFileTreeEntry(owner, `s/${name}`, this.walletRef, true)
+        .catch((err: Error) => {
+          throw err
+        })
+      if (data.fids) {
+        toMigrate.push(`s/${name}`)
+      } else if (Object.keys(data).length === 0) {
+        toCreate.push(name)
       } else {
-        console.warn(`${folderName} does not exist`)
-        toCreate.push(folderName)
+        /* All Good */
       }
     }
+    const readyToBroadcast: EncodeObject[] = []
+    if (toCreate.length > 0) {
+      readyToBroadcast.push(
+        ...(await this.rawGenerateInitialDirs(null, toCreate))
+      )
+    }
+    for (let path of toMigrate) {
+      readyToBroadcast.push(
+        ...(await this.rawConvertFolderType(path))
+      )
+    }
+    if (readyToBroadcast.length > 0) {
+      const memo = ``
+      await this.walletRef.getProtoHandler()
+        .debugBroadcaster(readyToBroadcast, { memo, step: false })
+    }
+  }
 
+  async createFolders(
+    parentDir: IFolderHandler,
+    newDirs: string[]
+  ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'createFolders'))
+    const pH = this.walletRef.getProtoHandler()
+    const readyToBroadcast = await this.rawCreateFolders(parentDir, newDirs)
+    const memo = ``
+    await pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+  }
+  async rawCreateFolders(
+    parentDir: IFolderHandler,
+    newDirs: string[]
+  ): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawCreateFolders'))
+    const result = await parentDir.addChildDirs(newDirs, this.walletRef)
+    if (result.existing.length > 0) {
+      console.log(
+        'The following duplicate folder names were ignored: ',
+        result.existing
+      )
+    }
+    return result.encoded
+  }
+  async verifyFoldersExist(toCheck: string[]): Promise<number> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'verifyFoldersExist'))
+    const toCreate = []
+    for (let i = 0; i < toCheck.length; i++) {
+      const check = await this.checkFolderIsFileTree(`s/${toCheck[i]}`)
+      if (check) {
+        console.info(`${toCheck[i]} exists`)
+      } else {
+        console.warn(`${toCheck[i]} does not exist`)
+        toCreate.push(toCheck[i])
+      }
+    }
     if (toCreate.length) {
-      console.dir(toCreate)
+      console.log('Creating: ', toCreate)
       await this.generateInitialDirs(null, toCreate)
     }
     return toCreate.length
   }
-  async staggeredUploadFiles (sourceHashMap: IUploadList, tracker: IStaggeredTracker): Promise<void> {
+  async staggeredUploadFiles(
+    sourceHashMap: IUploadList,
+    parent: IFolderHandler,
+    tracker: IStaggeredTracker
+  ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'staggeredUploadFiles'))
+    const pH = this.walletRef.getProtoHandler()
     const sourceKeys = Object.keys(sourceHashMap)
     const jackalAddr = this.walletRef.getJackalAddress()
     let queueHashMap: { [key: string]: boolean } = {}
@@ -132,195 +215,236 @@ export default class FileIo implements IFileIo {
     await Promise.any(
       Object.values(sourceHashMap).map(async (bundle: IUploadListItem) => {
         const { exists, handler, key, uploadable } = bundle
-        let prom
-        if (exists && !handler.isFolder) {
-          const { cfg, file} = await prepExistingUpload(handler, jackalAddr, this.walletRef)
-          bundle.data = cfg
-          prom = await this.tumbleUpload(jackalAddr, file)
-        } else {
-          prom = await this.tumbleUpload(jackalAddr, uploadable)
-        }
-        handler.setIds(prom as IProviderModifiedResponse)
+        const existing = exists
+          ? await prepExistingUpload(handler, jackalAddr, this.walletRef).catch((err) => {
+            console.warn('prepExistingUpload() Failed')
+            console.error(err)
+            throw err
+          })
+          : { cfg: null, file: null }
+        bundle.data = existing.cfg
+        const prom = await this.tumbleUpload(
+          jackalAddr,
+          existing.file || uploadable
+        ).catch((err) => {
+          console.warn('tumbleUpload() Failed')
+          console.error(err)
+          throw err
+        })
+        handler.setIds(prom)
         sourceHashMap[key].handler = handler
         queueHashMap[key] = true
         tracker.complete++
-        console.log('Done')
         return 'Done'
       })
-    )
-      .catch(err => {
-        console.warn('All Uploads Failed')
-        console.error(err)
-      })
+    ).catch((err) => {
+      console.warn('All Uploads Failed')
+      console.error(err)
+      alert('All Uploads Failed')
+    })
     do {
       await statusCheck(sourceKeys.length, tracker)
-      const processingNames: any[] = Object.keys(queueHashMap).filter(name => queueHashMap[name])
-      const processValues = processingNames.map(name => sourceHashMap[name])
+      const processingNames: any[] = Object.keys(queueHashMap).filter(
+        (name) => queueHashMap[name]
+      )
+      const processValues = processingNames.map((name) => sourceHashMap[name])
       if (processingNames.length === 0) {
         // do nothing
       } else {
+        const fileNames = processValues.reduce((acc, curr) => {
+          acc[curr.handler.getWhoAmI()] = curr.handler.getMeta()
+          return acc
+        }, {} as IFileMetaHashMap)
         const readyToBroadcast = await this.rawAfterUpload(processValues)
-
+        readyToBroadcast.push(
+          await parent.addChildFileReferences(fileNames, this.walletRef)
+        )
         const memo = `Processing batch of ${processValues.length} uploads`
-        // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-        await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
-          .catch(err => {
+        await pH
+          .debugBroadcaster(readyToBroadcast, { memo, step: false })
+          .catch((err) => {
             throw err
           })
-
         for (let key of processingNames) {
           delete queueHashMap[key]
         }
       }
     } while (Object.keys(queueHashMap).length > 0)
   }
-  async uploadFiles (
-    toUpload: TFileOrFFile[],
-    owner: string,
-    existingChildren: IFolderChildFiles
-  ): Promise<void> {
-    const readyToBroadcast = await this.rawUploadFiles(toUpload, owner, existingChildren)
-      .catch(err => {
-        throw err
-      })
-    const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
-  }
-  async rawUploadFiles (
-    toUpload: TFileOrFFile[],
-    owner: string,
-    existingChildren: IFolderChildFiles
+  // private async afterUpload(ids: IQueueItemPostUpload[]): Promise<void> {
+  //   if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'afterUpload'))
+  //   const pH = this.walletRef.getProtoHandler()
+  //   const readyToBroadcast = await this.rawAfterUpload(ids)
+  //   const memo = ``
+  //   await pH
+  //     .debugBroadcaster(readyToBroadcast, { memo, step: false })
+  //     .catch((err) => {
+  //       throw err
+  //     })
+  // }
+  private async rawAfterUpload(
+    ids: IQueueItemPostUpload[]
   ): Promise<EncodeObject[]> {
-    if (!toUpload.length) {
-      throw new Error('Empty File array submitted for upload')
-    } else {
-      const jackalAddr = this.walletRef.getJackalAddress()
-
-      const readyToUpload: any[] = []
-      for (let i = 0; i < toUpload.length; i++) {
-        const itemName = toUpload[i].getWhoAmI()
-        const { cfg, file } = (!existingChildren[itemName] && !toUpload[i].isFolder)
-          ? { cfg: null, file: await toUpload[i].getForUpload()}
-          : await prepExistingUpload(toUpload[i], owner, this.walletRef)
-        readyToUpload.push({ uploadable: file, handler: toUpload[i], data: cfg })
-      }
-
-      const uploadDone: IQueueItemPostUpload[] = await Promise.all(
-        readyToUpload.map(async (bundle) => {
-          bundle.handler.setIds(await this.tumbleUpload(jackalAddr, bundle.uploadable))
-          return { handler: bundle.handler, data: bundle.data }
-        }))
-
-      return await this.rawAfterUpload(uploadDone)
-    }
-  }
-  private async afterUpload (ids: IQueueItemPostUpload[]): Promise<void> {
-    const readyToBroadcast = await this.rawAfterUpload(ids)
-    const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
-      .catch(err => {
-        throw err
-      })
-  }
-  private async rawAfterUpload (ids: IQueueItemPostUpload[]): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawAfterUpload'))
+    const pH = this.walletRef.getProtoHandler()
     const creator = this.walletRef.getJackalAddress()
-
     const needingReset: EncodeObject[] = []
-    const ready = await Promise.all(ids.flatMap(async (item: IQueueItemPostUpload) => {
-      const { cid, fid } = item.handler.getIds()
+    const ready = await Promise.all(
+      ids.flatMap(async (item: IQueueItemPostUpload) => {
+        const { cid, fid } = item.handler.getIds()
+        const common = {
+          aes: await item.handler.getEnc(),
+          num: crypto.randomUUID(),
+          pubKey: this.walletRef.getPubkey(),
+          usr: this.walletRef.getJackalAddress()
+        }
 
-      const pubKey = this.walletRef.getPubkey()
-
-      const perms = await aesToString(this.walletRef, pubKey, await item.handler.getEnc())
-      const workingUUID = self.crypto.randomUUID()
-      const folderView: IEditorsViewers = {}
-      folderView[await hashAndHex(`v${workingUUID}${creator}`)] = perms
-      const folderEdit: IEditorsViewers = {}
-      folderEdit[await hashAndHex(`e${workingUUID}${creator}`)] = perms
-
-      const msgPostFileBundle: IMsgPartialPostFileBundle = {
-        creator,
-        account: await hashAndHex(creator),
-        hashParent: await item.handler.getMerklePath(),
-        hashChild: await hashAndHex(item.handler.getWhoAmI()),
-        contents: JSON.stringify({ fids: fid }),
-        viewers: JSON.stringify(folderView),
-        editors: JSON.stringify(folderEdit),
-        trackingNumber: workingUUID
-      }
-
-      if (item.data) {
-        msgPostFileBundle.viewers = JSON.stringify(item.data.viewingAccess)
-        msgPostFileBundle.editors = JSON.stringify(item.data.editAccess)
-        msgPostFileBundle.trackingNumber = item.data.trackingNumber
-        const delItem = await this.makeDelete(
+        const msgPostFileBundle: IMsgPartialPostFileBundle = {
           creator,
-          [
-            {
-              location: item.handler.getWhereAmI(),
-              name: item.handler.getWhoAmI()
-            }
-          ]
+          account: await hashAndHex(creator),
+          hashParent: await item.handler.getMerklePath(),
+          hashChild: await hashAndHex(item.handler.getWhoAmI()),
+          contents: JSON.stringify({ fids: fid }),
+          viewers: JSON.stringify(
+            await makePermsBlock({ base: 'v', ...common }, this.walletRef)
+          ),
+          editors: JSON.stringify(
+            await makePermsBlock({ base: 'e', ...common }, this.walletRef)
+          ),
+          trackingNumber: common.num
+        }
+        if (item.data) {
+          msgPostFileBundle.viewers = item.data.viewingAccess
+          msgPostFileBundle.editors = item.data.editAccess
+          msgPostFileBundle.trackingNumber = item.data.trackingNumber
+          const delItem = await this.makeDelete(creator, [
+            `${item.handler.getWhereAmI()}/${item.handler.getWhoAmI()}`
+          ])
+          needingReset.push(...delItem)
+        }
+        const msgPost: EncodeObject = await buildPostFile(
+          msgPostFileBundle,
+          pH
         )
-        needingReset.push(...delItem)
-      }
-
-      const msgPost: EncodeObject = await buildPostFile(msgPostFileBundle, this.pH.fileTreeTx)
-      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({ creator, cid, payOnce: false })
-      return [msgPost, msgSign]
-    }))
-
+        const msgSign: EncodeObject = pH.storageTx.msgSignContract({
+          creator,
+          cid,
+          payOnce: false
+        })
+        return [msgPost, msgSign]
+      })
+    )
     ready.unshift(ready.pop() as EncodeObject[])
     return [...needingReset, ...ready.flat()]
-
   }
-  async downloadFile (downloadDetails: IDownloadDetails, completion: { track: number }): Promise<IFileDownloadHandler | IFolderHandler> {
-    const { hexAddress, owner, isFolder } = downloadDetails
-    const hexedOwner = await hashAndHex(`o${hexAddress}${await hashAndHex(owner)}`)
-    const { version, data } = await getFileChainData(hexAddress, hexedOwner, this.pH.fileTreeQuery)
-    if (!version) throw new Error('No Existing File')
-    const fileProviders = verifyFileProviderIps(await this.pH.storageQuery.queryFindFile({ fid: version }))
+  async downloadFolder(rawPath: string): Promise<IFolderHandler> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'downloadFolder'))
+    const owner = this.walletRef.getJackalAddress()
+    const data = (await readFileTreeEntry(
+      owner,
+      rawPath,
+      this.walletRef,
+      true
+    ).catch((err: Error) => {
+      throw err
+    }))
+
+    if (data.fids) {
+      const legacyBundle: IDownloadDetails = {
+        rawPath,
+        owner,
+        isFolder: true
+      }
+      const legacyHandler = await this.downloadFile(legacyBundle, {
+        track: 0
+      }).catch((err: Error) => {
+        console.error('downloadFolder() : ', err)
+      })
+      return legacyHandler as IFolderHandler
+    } else if (Object.keys(data).length === 0) {
+      console.warn('Folder recovery failed. Rebuilding ', rawPath)
+      const parts = rawPath.split('/')
+      const child = parts.pop() as string
+      const folderDetails: IChildDirInfo = {
+        myName: child,
+        myParent: parts.join('/'),
+        myOwner: owner
+      }
+      return await FolderHandler.trackNewFolder(folderDetails)
+    } else {
+      return await FolderHandler.trackFolder(data as IFolderFrame)
+    }
+  }
+  async downloadFile(
+    downloadDetails: IDownloadDetails,
+    completion: { track: number }
+  ): Promise<IFileDownloadHandler | IFolderHandler> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'downloadFile'))
+    const { rawPath, owner, isFolder } = downloadDetails
+    const {
+      success,
+      value: { files }
+    } = await getFileTreeData(rawPath, owner, this.qH)
+    if (!success) throw new Error('No Existing File')
+    const { contents, editAccess, viewingAccess, trackingNumber } =
+      files as Files
+    let parsedContents: IFiletreeParsedContents
+    try {
+      parsedContents = JSON.parse(contents)
+    } catch (err) {
+      console.warn('downloadFile() : ', rawPath)
+      console.error(err)
+      alert(err)
+      parsedContents = { fids: [] }
+    }
+    const fid = parsedContents.fids[0]
+    const fileProviders = verifyFileProviderIps(
+      (await this.qH.storageQuery.queryFindFile({ fid })).value
+    )
     if (fileProviders && fileProviders.length) {
       const config = {
-        editAccess: JSON.parse(data.editAccess),
-        viewingAccess: JSON.parse(data.viewingAccess),
-        trackingNumber: data.trackingNumber
+        editAccess: JSON.parse(editAccess),
+        viewingAccess: JSON.parse(viewingAccess),
+        trackingNumber: trackingNumber
       }
-      const requester = await hashAndHex(`e${config.trackingNumber}${this.walletRef.getJackalAddress()}`)
+      const requester = await hashAndHex(
+        `v${trackingNumber}${this.walletRef.getJackalAddress()}`
+      )
       for (let i = 0; i < fileProviders.length; i++) {
-        const url = `${fileProviders[i].replace(/\/+$/, '')}/download/${version}`
+        const url = `${fileProviders[i].replace(/\/+$/, '')}/download/${fid}`
         try {
           const resp = await fetch(url)
           const contentLength = resp.headers.get('Content-Length')
-
           if (!resp.body) throw new Error()
           const reader = resp.body.getReader()
-
           let receivedLength = 0
           let chunks = []
-          while(true) {
-            const {done, value} = await reader.read()
+          while (true) {
+            const { done, value } = await reader.read()
             if (done) {
               break
             }
-
             chunks.push(value)
             receivedLength += value.length
-            completion.track = Math.floor((receivedLength / Number(contentLength)) * 100) || 1
-            // console.log(`${completion.track}% Complete`)
+            completion.track =
+              Math.floor((receivedLength / Number(contentLength)) * 100) || 1
           }
-
           const rawFile = new Blob(chunks)
-          const { key, iv } = await stringToAes(this.walletRef, config.editAccess[requester])
+          const { key, iv } = await stringToAes(
+            this.walletRef,
+            config.viewingAccess[requester]
+          )
           if (isFolder) {
-            return await FolderHandler.trackFolder(rawFile, config, key, iv)
+            return await FolderHandler.trackLegacyFolder(rawFile, key, iv)
           } else {
-            return await FileDownloadHandler.trackFile(rawFile, config, key, iv)
+            return await FileDownloadHandler.trackFile(rawFile, key, iv)
           }
         } catch (err) {
-          console.warn(`File fetch() failed. Attempt #${i + 1}. ${2 - i} attempts remaining`)
+          const attempt = i + 1
+          const remaining = fileProviders.length - attempt
+          console.warn(
+            `File fetch() failed. Attempt #${attempt}. ${remaining} attempts remaining`
+          )
           console.error(err)
           console.warn(`Bad file provider url: ${url}`)
         }
@@ -330,172 +454,255 @@ export default class FileIo implements IFileIo {
       throw new Error('No available providers!')
     }
   }
-  async deleteFolder(dirName: string, parentPath: string): Promise<void> {
-    const readyToBroadcast = await this.rawDeleteFolder(dirName, parentPath)
-      .catch(err => {
-        throw err
+  async deleteHome(): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'deleteHome'))
+    const pH = this.walletRef.getProtoHandler()
+    let parent
+    try {
+      parent = await this.downloadFolder(`s/Home`)
+    } catch (err) {
+      console.error(err)
+      console.warn('Override engaged')
+      parent = await FolderHandler.trackNewFolder({
+        myName: '',
+        myParent: '',
+        myOwner: ''
       })
+    }
+    const moreTargets = [
+      ...new Set([
+        ...(parent.getChildDirs() || []),
+        ...(Object.keys(parent.getChildFiles() || {}))
+      ])
+    ]
+    const readyToBroadcast = await this.rawDeleteTargets(moreTargets, parent)
+    readyToBroadcast.push(
+      ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
+        `s/Home`
+      ]))
+    )
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+    await pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
-  async rawDeleteFolder(dirName: string, parentPath: string): Promise<EncodeObject[]> {
-    const hexTarget = await WalletHandler.getAbitraryMerkle(parentPath, dirName)
-    const tmpDir = await this.downloadFile(
-        {
-          hexAddress: hexTarget,
-          owner: this.walletRef.getJackalAddress(),
-          isFolder: true
-        },
-      { track: 0 }
-      ) as IFolderHandler
-    const locationAddress = `${tmpDir.getWhereAmI()}/${tmpDir.getWhoAmI()}`
-
-    const files = Object.keys(tmpDir.getChildFiles() || {}) || []
-    const dirs = tmpDir.getChildDirs()
-
-    const combinedList = [...files, ...dirs]
-    const tmp: IDeleteItem[] = await Promise.all(combinedList.map(async (value: string) => {
-      return {
-        location: locationAddress,
-        name: value
-      }
-    }))
-
-    const deletions: EncodeObject[] = await this.makeDelete(this.walletRef.getJackalAddress(), tmp)
-
-    await Promise.all(dirs.map(async (dir) => {
-      deletions.push(...(await this.rawDeleteFolder(dir, locationAddress)))
-    }))
-
-    return deletions
-  }
-  async deleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<void> {
+  async deleteTargets(
+    targets: string[],
+    parent: IFolderHandler
+  ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'deleteTargets'))
+    const pH = this.walletRef.getProtoHandler()
     const readyToBroadcast = await this.rawDeleteTargets(targets, parent)
+    const existingDirs = parent.getChildDirs()
+    const existingFiles = parent.getChildFiles()
+    const dirs = targets.filter((target) => existingDirs.includes(target))
+    const files = targets.filter((target) =>
+      Object.keys(existingFiles).includes(target)
+    )
+    readyToBroadcast.push(
+      await parent.removeChildDirAndFileReferences(dirs, files, this.walletRef)
+    )
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
+    await pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
   }
-  async rawDeleteTargets (targets: IDeleteItem[], parent: IFolderHandler): Promise<EncodeObject[]> {
-    const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
-    const names = targets.map((target:IDeleteItem) => target.name)
-
-    parent.removeChildDirs(names)
-    parent.removeChildFiles(names)
-    const msgs = await this.makeDelete(this.walletRef.getJackalAddress(), targets)
-
-    const { cfg, file } = await prepExistingUpload(parent, parent.getWhoOwnsMe(), this.walletRef)
-    parent.setIds(await this.tumbleUpload(parent.getWhoOwnsMe(), file))
-    const uploadMsg = await this.rawAfterUpload([{ handler: parent, data: cfg }])
-    msgs.push(...uploadMsg)
-
-    return msgs
+  async rawDeleteTargets(
+    targets: string[],
+    parent: IFolderHandler
+  ): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawDeleteTargets'))
+    const existingDirs = parent.getChildDirs()
+    const existingFiles = parent.getChildFiles()
+    const dirs = targets.filter((target) => existingDirs.includes(target))
+    const files = targets.filter((target) =>
+      Object.keys(existingFiles).includes(target)
+    )
+    const location = `${parent.getWhereAmI()}/${parent.getWhoAmI()}`
+    const encoded: EncodeObject[] = []
+    await Promise.all(
+      dirs.map(async (name) => {
+        const rawPath = `${location}/${name}`
+        if (await this.checkFolderIsFileTree(rawPath).catch(() => true)) {
+          encoded.push(await removeFileTreeEntry(rawPath, this.walletRef))
+        } else {
+          encoded.push(
+            ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
+              rawPath
+            ]))
+          )
+        }
+      })
+    )
+    await Promise.all(
+      files.map(async (name) => {
+        encoded.push(
+          ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
+            `${location}/${name}`
+          ]))
+        )
+      })
+    )
+    for (let dir of dirs) {
+      const folder = await this.downloadFolder(`${location}/${dir}`)
+      const moreTargets = [
+        ...new Set([
+          ...folder.getChildDirs(),
+          ...Object.keys(folder.getChildFiles())
+        ])
+      ]
+      encoded.push(...(await this.rawDeleteTargets(moreTargets, folder)))
+    }
+    return encoded
   }
-  async generateInitialDirs (initMsg: EncodeObject | null, startingDirs?: string[]): Promise<void> {
-    const readyToBroadcast = await this.rawGenerateInitialDirs(initMsg, startingDirs)
+  async generateInitialDirs(
+    initMsg: EncodeObject | null,
+    startingDirs?: string[]
+  ): Promise<void> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'generateInitialDirs'))
+    const pH = this.walletRef.getProtoHandler()
+    const readyToBroadcast = await this.rawGenerateInitialDirs(
+      initMsg,
+      startingDirs
+    )
     const memo = ``
-    // await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: true })
-    await this.pH.debugBroadcaster(readyToBroadcast, { memo, step: false })
-      .catch(err => {
-        console.error(err)
+    await pH
+      .debugBroadcaster(readyToBroadcast, { memo, step: false })
+      .catch((err) => {
+        console.error('generateInitialDirs() -', err)
       })
   }
-  async rawGenerateInitialDirs (
+  async rawGenerateInitialDirs(
     initMsg: EncodeObject | null,
     startingDirs?: string[]
   ): Promise<EncodeObject[]> {
-    const url = `${this.currentProvider.ip.replace(/\/+$/, '')}/upload`
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawGenerateInitialDirs'))
     const toGenerate = startingDirs || ['Config', 'Home', 'WWW']
-
     const creator = this.walletRef.getJackalAddress()
-    const pubKey = this.walletRef.getPubkey()
-    const account = await hashAndHex(creator)
-
-    const rootTrackingNumber = self.crypto.randomUUID()
-    const rootPermissions: IEditorsViewers = {}
-    rootPermissions[await hashAndHex(`e${rootTrackingNumber}${creator}`)] = await aesToString(
-      this.walletRef,
-      pubKey,
-      {
-        iv: genIv(),
-        key: await genKey()
+    const dirMsgs: EncodeObject[] = await Promise.all(
+      toGenerate.map(async (pathName: string) => {
+        return await this.createFileTreeFolderMsg(pathName, 's', creator)
       })
-    const msgRoot = this.pH.fileTreeTx.msgMakeRoot({
-      creator,
-      account,
-      rootHashPath: await merkleMeBro('s'),
-      contents: JSON.stringify({ fids: [] }),
-      editors: JSON.stringify(rootPermissions),
-      viewers: JSON.stringify(rootPermissions),
-      trackingNumber: rootTrackingNumber
-    })
-
-    const folderHandlerList: TFileOrFFile[] = []
-    for (let i = 0; i < toGenerate.length; i++) {
-      const folder = await FolderHandler.trackNewFolder(
-        { myName: toGenerate[i], myParent: 's', myOwner: this.walletRef.getJackalAddress()
-        })
-      folderHandlerList.push(folder)
-    }
-
-    const msgs: EncodeObject[][] = await Promise.all(folderHandlerList.map(async (item: TFileOrFFile) => {
-      const { cid, fid } = await this.tumbleUpload(this.walletRef.getJackalAddress(), await item.getForUpload())
-      const folderView: any = {}
-      const folderEdit: any = {}
-      const perms = await aesToString(this.walletRef, pubKey, await item.getEnc())
-      const workingUUID = self.crypto.randomUUID()
-      folderView[await hashAndHex(`v${workingUUID}${creator}`)] = perms
-      folderEdit[await hashAndHex(`e${workingUUID}${creator}`)] = perms
-
-      const msgPost: EncodeObject = await buildPostFile({
-        creator,
-        account,
-        hashParent: await item.getMerklePath(),
-        hashChild: await hashAndHex(item.getWhoAmI()),
-        contents: JSON.stringify({ fids: fid }),
-        viewers: JSON.stringify(folderView),
-        editors: JSON.stringify(folderEdit),
-        trackingNumber: workingUUID
-      }, this.pH.fileTreeTx)
-
-      const msgSign: EncodeObject = this.pH.storageTx.msgSignContract({
-        creator,
-        cid,
-        payOnce: false
-      })
-      return [ msgPost, msgSign ]
-    }))
+    )
     const readyToBroadcast: EncodeObject[] = []
     if (initMsg) {
       readyToBroadcast.push(initMsg)
     }
-    readyToBroadcast.push(
-      msgRoot,
-      ...msgs.flat()
-    )
+    readyToBroadcast.push(await this.createRoot(), ...dirMsgs)
     return readyToBroadcast
   }
-
-  private async makeDelete (creator: string, targets: IDeleteItem[]): Promise<EncodeObject[]> {
-    const readyToDelete: EncodeObject[][] = await Promise.all(targets.map(async (target: IDeleteItem) => {
-      const hexPath = await hexFullPath(await merkleMeBro(target.location), target.name)
-      const hexOwner = await hashAndHex(`o${hexPath}${await hashAndHex(creator)}`)
-      const { version } = await getFileChainData(hexPath, hexOwner, this.pH.fileTreeQuery)
-      const linkedCids  = JSON.parse((await this.pH.storageQuery.queryFidCid({ fid: version })).value.fidCid?.cids || '[]')
-      const toRemove: string[] = await Promise.all(linkedCids.filter(async (cid: string) => {
-        return await matchOwnerToCid(this.pH, cid, creator)
-      }))
-      const cancelContractsMsgs: EncodeObject[] = toRemove.map((cid: string) => this.pH.storageTx.msgCancelContract({ creator, cid }))
-      const msgDelFile = this.pH.fileTreeTx.msgDeleteFile({
-        creator,
-        hashPath: hexPath,
-        account: await hashAndHex(creator),
+  async convertFolderType(rawPath: string): Promise<IFolderHandler> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'convertFolderType'))
+    const pH = this.walletRef.getProtoHandler()
+    const readyToBroadcast = await this.rawConvertFolderType(rawPath)
+    const memo = ``
+    await pH
+      .debugBroadcaster(readyToBroadcast, { memo, step: false })
+      .catch((err) => {
+        console.error('convertFolderType() -', err)
       })
-      return [...cancelContractsMsgs, msgDelFile]
-    }))
+    return await this.downloadFolder(rawPath)
+  }
+  async rawConvertFolderType(rawPath: string): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'rawConvertFolderType'))
+    const base = await this.downloadFolder(rawPath)
+    const encoded: EncodeObject[] = []
+    if (await this.checkFolderIsFileTree(rawPath)) {
+      // do nothing
+    } else {
+      encoded.push(
+        ...(await this.makeDelete(this.walletRef.getJackalAddress(), [
+          base.getMyPath()
+        ]))
+      )
+    }
+    encoded.push(await base.getForFiletree(this.walletRef))
+    for (let dir of base.getChildDirs()) {
+      encoded.push(
+        ...(await this.rawConvertFolderType(base.getMyChildPath(dir)))
+      )
+    }
+    return encoded
+  }
+  async checkFolderIsFileTree(rawPath: string): Promise<IFolderHandler | null> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'checkFolderIsFileTree'))
+    const owner = this.walletRef.getJackalAddress()
+    try {
+      const data = await readFileTreeEntry(owner, rawPath, this.walletRef, true)
+        .catch((err: Error) => {
+          throw err
+        })
+      return await FolderHandler.trackFolder(data as IFolderFrame)
+        .catch((err: Error) => {
+          console.error(err)
+          return FolderHandler.trackNewFolder({
+            myName: '',
+            myParent: '',
+            myOwner: ''
+          })
+        })
+    } catch (err) {
+      console.warn('checkFolderIsFileTree()', err)
+      return null
+    }
+  }
+  private async createFileTreeFolderMsg(
+    pathName: string,
+    parentPath: string,
+    creator: string
+  ) {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'createFileTreeFolderMsg'))
+    const folderDetails: IChildDirInfo = {
+      myName: stripper(pathName),
+      myParent: parentPath,
+      myOwner: creator
+    }
+    const handler = await FolderHandler.trackNewFolder(folderDetails)
+    return await handler.getForFiletree(this.walletRef)
+  }
+  private async makeDelete(
+    creator: string,
+    targets: string[]
+  ): Promise<EncodeObject[]> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'makeDelete'))
+    const pH = this.walletRef.getProtoHandler()
+    const readyToDelete: EncodeObject[][] = await Promise.all(
+      targets.map(async (rawPath: string) => {
+        const fileTreeResult = (
+          await getFileTreeData(rawPath, creator, this.qH)
+        ).value.files as Files
+        let fids
+        try {
+          fids = (JSON.parse(fileTreeResult.contents)).fids
+        } catch (err) {
+          console.error(`[FileIo] makeDelete()`)
+          console.error(err)
+          console.warn('Proceeding...')
+          fids = []
+        }
+        const { cids } = (
+          await this.qH.storageQuery.queryFidCid({ fid: fids[0] })
+        ).value.fidCid as FidCid
+        const linkedCids = JSON.parse(cids)
+        const toRemove: string[] = await Promise.all(
+          linkedCids.filter(async (cid: string) => {
+            return await matchOwnerToCid(this.qH, cid, creator)
+          })
+        )
+        const cancelContractsMsgs: EncodeObject[] = toRemove.map(
+          (cid: string) => pH.storageTx.msgCancelContract({ creator, cid })
+        )
+        const msgDelFile = pH.fileTreeTx.msgDeleteFile({
+          creator,
+          hashPath: await merkleMeBro(rawPath),
+          account: await hashAndHex(creator)
+        })
+        return [...cancelContractsMsgs, msgDelFile]
+      })
+    )
     return readyToDelete.flat()
   }
-  private async tumbleUpload (sender: string, file: File): Promise<IProviderModifiedResponse> {
+  private async tumbleUpload(
+    sender: string,
+    file: File
+  ): Promise<IProviderModifiedResponse> {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'tumbleUpload'))
     while (this.availableProviders.length > 0) {
       const { ip } = this.currentProvider
       console.log('Current Provider:', ip)
@@ -511,66 +718,99 @@ export default class FileIo implements IFileIo {
     console.log('Provider Options Exhausted')
     return { fid: [''], cid: '' }
   }
+  private async createRoot() {
+    if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'createRoot'))
+    const pH = this.walletRef.getProtoHandler()
+    const common = {
+      aes: {
+        iv: genIv(),
+        key: await genKey()
+      },
+      num: crypto.randomUUID(),
+      pubKey: this.walletRef.getPubkey(),
+      usr: this.walletRef.getJackalAddress()
+    }
+    return pH.fileTreeTx.msgMakeRootV2({
+      creator: this.walletRef.getJackalAddress(),
+      editors: JSON.stringify(
+        await makePermsBlock({ base: 'e', ...common }, this.walletRef)
+      ),
+      viewers: JSON.stringify(
+        await makePermsBlock({ base: 'v', ...common }, this.walletRef)
+      ),
+      trackingNumber: common.num
+    })
+  }
 }
 
 /** Helpers */
- async function prepExistingUpload (data: TFileOrFFile, ownerAddr: string, walletRef: IWalletHandler): Promise<{ file: File, cfg: IFileConfigFull }> {
-  const hexedOwner = await hashAndHex(`o${await data.getFullMerkle()}${await hashAndHex(ownerAddr)}`)
-  const fileChainResult = await getFileChainData(await data.getFullMerkle(), hexedOwner, walletRef.getProtoHandler().fileTreeQuery)
-  const typedData = fileChainResult.data as IFileConfigRaw
+async function prepExistingUpload(
+  data: IFileUploadHandler,
+  ownerAddr: string,
+  walletRef: IWalletHandler
+): Promise<{ file: File; cfg: IFileConfigRaw }> {
+  const hexedOwner = await hashAndHex(
+    `o${await data.getFullMerkle()}${await hashAndHex(ownerAddr)}`
+  )
+  const fileChainResult = await getFileTreeData(
+    await data.getFullMerkle(),
+    hexedOwner,
+    walletRef.getQueryHandler()
+  )
+  const typedData = fileChainResult.value.files as Files
 
-  const configData: IFileConfigFull = {
-    address: typedData.address,
-    contents: JSON.parse(typedData.contents),
-    owner: typedData.owner,
-    editAccess: JSON.parse(typedData.editAccess),
-    viewingAccess: JSON.parse(typedData.viewingAccess),
-    trackingNumber: typedData.trackingNumber
-  }
-
-  const editorKeys = configData.editAccess[
-    await hashAndHex(`e${configData.trackingNumber}${walletRef.getJackalAddress()}`)
-    ]
+  const editPool = JSON.parse(typedData.editAccess)
+  const editor = await hashAndHex(
+    `e${typedData.trackingNumber}${walletRef.getJackalAddress()}`
+  )
+  const editorKeys = editPool[editor]
 
   return {
-    cfg: configData,
+    cfg: typedData,
     file: await data.getForUpload(await stringToAes(walletRef, editorKeys))
   }
 }
 
-
-async function doUpload (url: string, sender: string, file: File): Promise<IProviderModifiedResponse> {
-  console.log('file.size')
-  console.log(file.size)
+async function doUpload(
+  url: string,
+  sender: string,
+  file: File
+): Promise<IProviderModifiedResponse> {
   const fileFormData = new FormData()
   fileFormData.set('file', file)
   fileFormData.set('sender', sender)
   return await fetch(url, { method: 'POST', body: fileFormData as FormData })
     .then((resp): Promise<IProviderResponse> => {
-      if (resp.status !== 200) throw new Error(`Status Message: ${resp.statusText}`)
+      if (resp.status !== 200)
+        throw new Error(`Status Message: ${resp.statusText}`)
       return resp.json()
     })
     .then((resp) => {
-      console.log('resp:', resp)
       return { fid: [resp.fid], cid: resp.cid }
     })
-    .catch(err => {
+    .catch((err) => {
       throw err
     })
 }
 
-async function getProviders (queryClient: IQueryStorage, max?: number): Promise<IMiner[]> {
-  const rawProviderList = await fetchProviders(queryClient)
+async function getProviders(
+  qH: IQueryHandler,
+  max?: number
+): Promise<IMiner[]> {
+  const rawProviderList = await fetchProviders(qH)
   console.info('Raw Providers')
   console.dir(rawProviderList)
   return filterProviders(rawProviderList, max)
 }
-async function fetchProviders (queryClient: IQueryStorage): Promise<IMiner[]> {
-  const rawProviderReturn = await queryClient.queryProvidersAll({})
-  if (!rawProviderReturn || !rawProviderReturn.value.providers) throw new Error('Unable to get Storage Provider list!')
-  return rawProviderReturn.value.providers as IMiner[]
+async function fetchProviders(qH: IQueryHandler): Promise<IMiner[]> {
+  return (
+    await handlePagination(qH.storageQuery, 'queryProvidersAll', {})
+  ).reduce((acc: IMiner[], curr: any) => {
+    acc.push(...curr.providers)
+    return acc
+  }, [])
 }
-async function filterProviders (rawProviderList: IMiner[], max?: number) {
+async function filterProviders(rawProviderList: IMiner[], max?: number) {
   const disallowList = [
     /example/,
     /sample/,
@@ -584,123 +824,105 @@ async function filterProviders (rawProviderList: IMiner[], max?: number) {
     if (one.match('localhost')) {
       return true
     } else {
-      return one.startsWith('https') && !disallowList.some(rx => rx.test(one))
+      return one.startsWith('https') && !disallowList.some((rx) => rx.test(one))
     }
   })
-  return filteredProviders.slice(0, Number(max) || 100)
+  return filteredProviders.slice(0, Number(max) || 1000)
 }
-async function verifyProviders (providers: IMiner[], versionFilter?: string | string[]): Promise<IMiner[]> {
+async function verifyProviders(
+  providers: IMiner[],
+  chainId: string,
+  versionFilter?: string | string[]
+): Promise<IMiner[]> {
   const versionArray: string[] = []
   if (versionFilter) {
-    console.log(`Checking for provider version(s) : ${versionFilter}`);
-    (typeof versionFilter === 'string') ? versionArray.push(versionFilter as string) : versionArray.push(...versionFilter)
+    console.log(`Checking for provider version(s) : ${versionFilter}`)
+    typeof versionFilter === 'string'
+      ? versionArray.push(versionFilter as string)
+      : versionArray.push(...versionFilter)
   }
-  const preRegExArray: string[] = versionArray
-    .map(s => {
-      return s.split('.').slice(0, 2).join('.')
-    })
-  const regEx = new RegExp(`(${preRegExArray.join('|')})\\..+$`)
+  const preRegExArray: string[] = versionArray.map((s) => {
+    return s.split('.').slice(0, 2).join('.')
+  })
+  const verRegEx = new RegExp(`(${preRegExArray.join('|')})\\..+$`)
   const staged: boolean[] = await Promise.all(
     providers.map(async (provider) => {
       const result: boolean = await fetch(
         `${provider.ip.replace(/\/+$/, '')}/version`,
         {
           signal: AbortSignal.timeout(1500)
-        })
+        }
+      )
         .then(async (res): Promise<boolean> => {
-          if (res.ok && versionFilter) {
-            const verResp = (await res.json()).version as string
-            return regEx.test(verResp)
-          } else {
-            return true
-          }
+          const parsed: IProviderVersionResponse = await res.json()
+          const chainCheck =
+            chainId === undefined || chainId === parsed['chain-id']
+          const verCheck =
+            versionFilter === undefined || verRegEx.test(parsed.version)
+          return res.ok && chainCheck && verCheck
         })
-        .catch(() => false)
+        .catch((err: Error) => {
+          console.warn('verifyProviders() Error')
+          console.error(err)
+          if (err.message.includes('AbortSignal')) {
+            alert(
+              'AbortSignal.timeout() error! Chromium family version 103+ required!'
+            )
+          }
+          return false
+        })
       return result
-  }))
-  const verified = providers.filter((provider, index) => staged[index])
+    })
+  )
+  const verified = providers.filter((_, index) => staged[index])
   console.info('Verified Providers')
   console.dir(verified)
   return verified
 }
-function verifyFileProviderIps (resp: SuccessIncluded<QueryFindFileResponse>): string[] | false {
+function verifyFileProviderIps(
+  resp: QueryFindFileResponse
+): string[] | false {
   if (!resp) {
     console.error('Invalid resp passed to verifyFileProviderIps()')
     return false
   }
-  if (!resp.value?.providerIps) {
+  if (!resp.providerIps) {
     console.error('Incomplete resp passed to verifyFileProviderIps()')
     return false
   }
-  const brutedString = bruteForceString(resp.value.providerIps)
+  const brutedString = bruteForceString(resp.providerIps)
   if (!brutedString) {
-    console.error('bruteForceString() returned False in verifyFileProviderIps()')
+    console.error(
+      'bruteForceString() returned False in verifyFileProviderIps()'
+    )
     return false
   }
   try {
-    return JSON.parse(resp.value.providerIps)
+    return JSON.parse(resp.providerIps)
   } catch (err) {
     console.error('JSON.parse() failed in verifyFileProviderIps()')
     console.error(err)
     return false
   }
 }
-async function getFileChainData (hexAddress: string, owner: string, fileTreeQuery: IQueryFileTree) {
-  console.log('getFileChainData')
-  console.log(hexAddress)
-  console.log(owner)
-  const fileResp = await fileTreeQuery.queryFiles({ address: hexAddress, ownerAddress: owner })
-  console.log(fileResp)
-  if (!fileResp.value || !fileResp.value.files) throw new Error('No address found!')
-  const fileData = fileResp.value.files
-  if (!fileResp.success) {
-    fileData.contents = '{ "fids": [] }'
+async function matchOwnerToCid(
+  qH: IQueryHandler,
+  cid: string,
+  owner: string
+): Promise<boolean> {
+  const contractsResult = (await qH.storageQuery.queryContracts({ cid })).value
+    .contracts as Contracts
+  if (contractsResult.signee === owner) {
+    return true
   }
-  const parsedContents: IFiletreeParsedContents = JSON.parse(fileData.contents)
-  return {
-    version: parsedContents.fids[parsedContents.fids.length - 1],
-    data: fileData
-  }
+  const straysResult = (await qH.storageQuery.queryStrays({ cid })).value
+    .strays as Strays
+  return straysResult.signee === owner
 }
-async function matchOwnerToCid (pH: IProtoHandler, cid: string, owner: string): Promise<boolean> {
-   if ((await pH.storageQuery.queryContracts({ cid })).value.contracts?.signee == owner) {
-     return true
-   } else if ((await pH.storageQuery.queryStrays({ cid })).value.strays?.signee == owner) {
-     return true
-   } else {
-     return false
-   }
-}
-async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
-  const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
-  const theKey = wallet.asymmetricEncrypt(await exportJackalKey(aes.key), pubKey)
-  return `${theIv}|${theKey}`
-}
-async function stringToAes (wallet: IWalletHandler, source: string): Promise<IAesBundle> {
-  if (source.indexOf('|') < 0) throw new Error('stringToAes() : Invalid source string')
-
-  const parts = source.split('|')
-  return {
-    iv: new Uint8Array(wallet.asymmetricDecrypt(parts[0])),
-    key: await importJackalKey(new Uint8Array(wallet.asymmetricDecrypt(parts[1])))
-  }
-}
-async function buildPostFile (data: IMsgPartialPostFileBundle, fileTreeTx: ITxFileTree): Promise<EncodeObject> {
-  return fileTreeTx.msgPostFile({
-    creator: data.creator,
-    account: data.account,
-    hashParent: data.hashParent,
-    hashChild: data.hashChild,
-    contents: data.contents,
-    editors: data.editors,
-    viewers: data.viewers,
-    trackingNumber: data.trackingNumber
-  })
-}
-async function random (max: number) {
-   return Math.floor(Math.random() * max)
-}
-async function statusCheck (target: number, tracker: IStaggeredTracker): Promise<void> {
+async function statusCheck(
+  target: number,
+  tracker: IStaggeredTracker
+): Promise<void> {
   await new Promise<void>(async (resolve) => {
     for (tracker.timer = 120; tracker.timer > 0; tracker.timer--) {
       if (tracker.complete === target) {
