@@ -18,10 +18,10 @@ export * from '@/interfaces/classes'
 export * from '@/interfaces'
 
 /** Types */
-export { TFileOrFFile } from "@/types/TFoldersAndFiles";
+export { TFileOrFFile } from '@/types/TFoldersAndFiles'
 
 /** External */
-export { OfflineSigner } from "@cosmjs/proto-signing";
+export { OfflineSigner } from '@cosmjs/proto-signing'
 
 /** Functions */
-export * from "@/utils/misc";
+export * from '@/utils/misc'

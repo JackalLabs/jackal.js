@@ -1,6 +1,11 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { IFileDownloadHandler, IFolderHandler } from '@/interfaces/classes'
-import { IDownloadDetails, IMiner, IStaggeredTracker, IUploadList } from '@/interfaces'
+import {
+  IDownloadDetails,
+  IMiner,
+  IStaggeredTracker,
+  IUploadList
+} from '@/interfaces'
 
 export default interface IFileIo {
   getCurrentProvider(): IMiner

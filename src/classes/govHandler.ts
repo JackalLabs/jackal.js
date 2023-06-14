@@ -1,4 +1,8 @@
-import { IGovHandler, IQueryHandler, IWalletHandler } from '@/interfaces/classes'
+import {
+  IGovHandler,
+  IQueryHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import {
   ICoin,
   IDelegationRewards,
@@ -31,14 +35,18 @@ export default class GovHandler implements IGovHandler {
 
   /** Staking Queries */
   async getTotalRewards(): Promise<IDelegationRewards> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getTotalRewards'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'getTotalRewards'))
     const ret = await this.qH.distributionQuery.queryDelegationTotalRewards({
       delegatorAddress: this.walletRef.getJackalAddress()
     })
     return ret.value
   }
   async getCondensedTotalRewards(): Promise<number> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getCondensedTotalRewards'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('GovHandler', 'getCondensedTotalRewards')
+      )
     const ret = await this.qH.distributionQuery.queryDelegationTotalRewards({
       delegatorAddress: this.walletRef.getJackalAddress()
     })
@@ -48,7 +56,8 @@ export default class GovHandler implements IGovHandler {
     }, 0)
   }
   async getRewards(validatorAddress: string): Promise<ICoin[]> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getRewards'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'getRewards'))
     const ret = await this.qH.distributionQuery.queryDelegationRewards({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorAddress
@@ -56,7 +65,8 @@ export default class GovHandler implements IGovHandler {
     return ret.value.rewards
   }
   async getCondensedRewards(validatorAddress: string): Promise<number> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getCondensedRewards'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'getCondensedRewards'))
     const ret = await this.qH.distributionQuery.queryDelegationRewards({
       delegatorAddress: this.walletRef.getJackalAddress(),
       validatorAddress
@@ -67,7 +77,8 @@ export default class GovHandler implements IGovHandler {
     }, 0)
   }
   async getTotalStaked(): Promise<number> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getTotalStaked'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'getTotalStaked'))
     const delegations = (
       await this.qH.stakingQuery.queryDelegatorDelegations({
         delegatorAddr: this.walletRef.getJackalAddress()
@@ -79,7 +90,8 @@ export default class GovHandler implements IGovHandler {
     }, 0)
   }
   async getStakedMap(): Promise<IDelegationSummaryMap> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getStakedMap'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'getStakedMap'))
     const delegations = (
       await this.qH.stakingQuery.queryDelegatorDelegations({
         delegatorAddr: this.walletRef.getJackalAddress()
@@ -101,7 +113,10 @@ export default class GovHandler implements IGovHandler {
   async getDelegatorValidatorDetails(
     validatorAddress: string
   ): Promise<IStakingValidator> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getDelegatorValidatorDetails'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('GovHandler', 'getDelegatorValidatorDetails')
+      )
     const result = (
       await this.qH.stakingQuery.queryDelegatorValidator({
         delegatorAddr: this.walletRef.getJackalAddress(),
@@ -115,7 +130,10 @@ export default class GovHandler implements IGovHandler {
     }
   }
   async getAllDelegatorValidatorDetails(): Promise<IStakingValidator[]> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'getAllDelegatorValidatorDetails'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('GovHandler', 'getAllDelegatorValidatorDetails')
+      )
     return (
       await this.qH.stakingQuery.queryDelegatorValidators({
         delegatorAddr: this.walletRef.getJackalAddress()
@@ -250,7 +268,8 @@ export default class GovHandler implements IGovHandler {
   /** End Voting Queries */
   /** Staking Msgs */
   async claimDelegatorRewards(validatorAddresses: string[]): Promise<void> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'claimDelegatorRewards'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'claimDelegatorRewards'))
     const pH = this.walletRef.getProtoHandler()
     const msgs = validatorAddresses.map((address: string) => {
       return pH.distributionTx.msgWithdrawDelegatorReward({
@@ -264,7 +283,8 @@ export default class GovHandler implements IGovHandler {
     validatorAddress: string,
     amount: number | string
   ): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'rawDelegateTokens'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'rawDelegateTokens'))
     const pH = this.walletRef.getProtoHandler()
     return pH.stakingTx.msgDelegate({
       delegatorAddress: this.walletRef.getJackalAddress(),
@@ -279,7 +299,8 @@ export default class GovHandler implements IGovHandler {
     validatorAddress: string,
     amount: number | string
   ): Promise<void> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'delegateTokens'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'delegateTokens'))
     const pH = this.walletRef.getProtoHandler()
     const msg = this.rawDelegateTokens(validatorAddress, amount)
     await pH.debugBroadcaster([msg], {})
@@ -288,7 +309,8 @@ export default class GovHandler implements IGovHandler {
     validatorAddress: string,
     amount: number | string
   ): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'rawUndelegateTokens'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'rawUndelegateTokens'))
     const pH = this.walletRef.getProtoHandler()
     return pH.stakingTx.msgUndelegate({
       delegatorAddress: this.walletRef.getJackalAddress(),
@@ -303,7 +325,8 @@ export default class GovHandler implements IGovHandler {
     validatorAddress: string,
     amount: number | string
   ): Promise<void> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'undelegateTokens'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'undelegateTokens'))
     const pH = this.walletRef.getProtoHandler()
     const msg = this.rawUndelegateTokens(validatorAddress, amount)
     await pH.debugBroadcaster([msg], {})
@@ -313,7 +336,8 @@ export default class GovHandler implements IGovHandler {
     toAddress: string,
     amount: number | string
   ): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'rawRedelegateTokens'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'rawRedelegateTokens'))
     const pH = this.walletRef.getProtoHandler()
     return pH.stakingTx.msgBeginRedelegate({
       delegatorAddress: this.walletRef.getJackalAddress(),
@@ -330,7 +354,8 @@ export default class GovHandler implements IGovHandler {
     toAddress: string,
     amount: number | string
   ): Promise<void> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('GovHandler', 'redelegateTokens'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('GovHandler', 'redelegateTokens'))
     const pH = this.walletRef.getProtoHandler()
     const msg = this.rawRedelegateTokens(fromAddress, toAddress, amount)
     await pH.debugBroadcaster([msg], {})

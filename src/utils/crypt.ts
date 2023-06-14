@@ -5,14 +5,14 @@ import { IWalletHandler } from '@/interfaces/classes'
 import { IAesBundle } from '@/interfaces'
 import { stringToUint16, uint16ToString } from '@/utils/misc'
 
-const { crypto } = (window) ? window : globalThis
+const { crypto } = window ? window : globalThis
 
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
  * @param {CryptoKey} key - CryptoKey to convert.
  * @returns {Promise<Uint8Array>} - CryptoKey as Uint8Array.
  */
-export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
+export async function exportJackalKey(key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
 }
 
@@ -21,15 +21,18 @@ export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
  * @param {Uint8Array} rawExport - Uint8Array to recover to CryptoKey.
  * @returns {Promise<CryptoKey>} - Recovered CryptoKey.
  */
-export function importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, ['encrypt', 'decrypt'])
+export function importJackalKey(rawExport: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, [
+    'encrypt',
+    'decrypt'
+  ])
 }
 
 /**
  * Generate a new CryptoKey from scratch. Compatible with AES-256 and exportJackalKey(). Supports encrypt and decrypt.
  * @returns {Promise<CryptoKey>} - Fresh random CryptoKey.
  */
-export function genKey (): Promise<CryptoKey> {
+export function genKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])
 }
 
@@ -37,7 +40,7 @@ export function genKey (): Promise<CryptoKey> {
  * Generate a new iv from scratch. Compatible with AES-256.
  * @returns {Uint8Array} - Fresh random iv.
  */
-export function genIv (): Uint8Array {
+export function genIv(): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(16))
 }
 
@@ -49,7 +52,12 @@ export function genIv (): Uint8Array {
  * @param {"encrypt" | "decrypt"} mode - Toggle between encryption and decryption.
  * @returns {Promise<Blob>} - Processed result.
  */
-export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode: 'encrypt' | 'decrypt'): Promise<Blob> {
+export async function aesCrypt(
+  data: Blob,
+  key: CryptoKey,
+  iv: Uint8Array,
+  mode: 'encrypt' | 'decrypt'
+): Promise<Blob> {
   const algo = {
     name: 'AES-GCM',
     iv
@@ -87,7 +95,11 @@ export async function aesCrypt (data: Blob, key: CryptoKey, iv: Uint8Array, mode
  * @param {IAesBundle} aes - AES iv/CryptoKey set to encrypt.
  * @returns {Promise<string>} - Encrypted string with pipe "|" delimiter.
  */
-export async function aesToString (wallet: IWalletHandler, pubKey: string, aes: IAesBundle): Promise<string> {
+export async function aesToString(
+  wallet: IWalletHandler,
+  pubKey: string,
+  aes: IAesBundle
+): Promise<string> {
   const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
   const key = await exportJackalKey(aes.key)
   const theKey = wallet.asymmetricEncrypt(key, pubKey)
@@ -100,7 +112,10 @@ export async function aesToString (wallet: IWalletHandler, pubKey: string, aes: 
  * @param {string} source - String containing encrypted AES iv/CryptoKey set with pipe "|" delimiter.
  * @returns {Promise<IAesBundle>} - Decrypted AES iv/CryptoKey set.
  */
-export async function stringToAes (wallet: IWalletHandler, source: string): Promise<IAesBundle> {
+export async function stringToAes(
+  wallet: IWalletHandler,
+  source: string
+): Promise<IAesBundle> {
   if (source.indexOf('|') < 0) {
     throw new Error('stringToAes() : Invalid source string')
   }
@@ -120,7 +135,11 @@ export async function stringToAes (wallet: IWalletHandler, source: string): Prom
  * @param {Uint8Array} iv - AES-256 iv.
  * @returns {Promise<File>} - Encrypted File.
  */
-export async function convertToEncryptedFile (workingFile: File, key: CryptoKey, iv: Uint8Array): Promise<File> {
+export async function convertToEncryptedFile(
+  workingFile: File,
+  key: CryptoKey,
+  iv: Uint8Array
+): Promise<File> {
   const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
   const details = {
     name: workingFile.name,
@@ -153,7 +172,11 @@ export async function convertToEncryptedFile (workingFile: File, key: CryptoKey,
  * @param {Uint8Array} iv - AES-256 iv.
  * @returns {Promise<File>} - Decrypted File.
  */
-export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv: Uint8Array): Promise<File> {
+export async function convertFromEncryptedFile(
+  source: Blob,
+  key: CryptoKey,
+  iv: Uint8Array
+): Promise<File> {
   let detailsBlob = new Blob([])
   const blobParts: Blob[] = []
   for (let i = 0; i < source.size; ) {
@@ -181,7 +204,11 @@ export async function convertFromEncryptedFile (source: Blob, key: CryptoKey, iv
  * @param {Uint8Array} iv - AES-256 iv.
  * @returns {Promise<string>} - Compressed and encrypted string.
  */
-export async function compressEncryptString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+export async function compressEncryptString(
+  input: string,
+  key: CryptoKey,
+  iv: Uint8Array
+): Promise<string> {
   const compString = compressData(input)
   const data = await cryptString(compString, key, iv, 'encrypt')
   console.log(data)
@@ -195,7 +222,11 @@ export async function compressEncryptString (input: string, key: CryptoKey, iv: 
  * @param {Uint8Array} iv - AES-256 iv.
  * @returns {Promise<string>} - Decrypted and decompressed string.
  */
-export async function decryptDecompressString (input: string, key: CryptoKey, iv: Uint8Array): Promise<string> {
+export async function decryptDecompressString(
+  input: string,
+  key: CryptoKey,
+  iv: Uint8Array
+): Promise<string> {
   console.log(input)
   // const decryptBlob = await cryptString(input, key, iv, 'decrypt')
   return decompressData(await cryptString(input, key, iv, 'decrypt'))

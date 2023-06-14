@@ -1,4 +1,8 @@
-import { IAbciHandler, IQueryHandler, IWalletHandler } from '@/interfaces/classes'
+import {
+  IAbciHandler,
+  IQueryHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import {
   RequestBeginBlock,
   RequestInfo,

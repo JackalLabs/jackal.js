@@ -41,7 +41,9 @@ export default interface IGovHandler {
   getInactiveMergedValidatorDetailsStakedMap(): Promise<IStakingValidatorExtendedMap>
   getInactiveMergedValidatorDetailsMap(): Promise<IStakingValidatorExtendedMap>
   getCompleteMergedValidatorDetailsMap(): Promise<IStakingValidatorExtendedMap>
-  getPublicMergedValidatorDetailsMap(status: TValidatorStatus): Promise<IStakingValidatorStakedMap>
+  getPublicMergedValidatorDetailsMap(
+    status: TValidatorStatus
+  ): Promise<IStakingValidatorStakedMap>
   getPublicInactiveMergedValidatorDetailsStakedMap(): Promise<IStakingValidatorExtendedMap>
   /** End Staking Queries */
   /** Voting Queries */

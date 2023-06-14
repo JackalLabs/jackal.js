@@ -4,9 +4,7 @@ import { convertFromEncryptedFile } from '@/utils/crypt'
 export default class FileDownloadHandler implements IFileDownloadHandler {
   private readonly file: File
 
-  protected constructor(
-    file: File
-  ) {
+  protected constructor(file: File) {
     this.file = file
   }
 

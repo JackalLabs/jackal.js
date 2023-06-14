@@ -3,7 +3,7 @@ import { IFileUploadHandler } from '@/interfaces/classes'
 import { convertToEncryptedFile, genIv, genKey } from '@/utils/crypt'
 import { hexFullPath, merkleMeBro } from '@/utils/hash'
 
-const { crypto } = (window) ? window : globalThis
+const { crypto } = window ? window : globalThis
 
 export default class FileUploadHandler implements IFileUploadHandler {
   private readonly file: File

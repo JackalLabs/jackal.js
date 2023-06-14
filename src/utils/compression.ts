@@ -1,5 +1,9 @@
 import PLZSU from '@karnthis/plzsu'
-import { IEditorsViewers, IMsgPartialPostFileBundle, IPermsParts } from '@/interfaces'
+import {
+  IEditorsViewers,
+  IMsgPartialPostFileBundle,
+  IPermsParts
+} from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import {
   aesToString,
@@ -15,7 +19,7 @@ import { Files } from 'jackal.js-protos'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
 import { getFileTreeData } from '@/utils/misc'
 
-const { crypto } = (window) ? window : globalThis
+const { crypto } = window ? window : globalThis
 const Plzsu = new PLZSU()
 
 /**
@@ -111,8 +115,8 @@ export async function saveFileTreeEntry(
       usr: toAddress
     }
     msg.viewers = JSON.stringify({
-      ...await makePermsBlock({ base: 'v', ...me }, walletRef),
-      ...await makePermsBlock({ base: 'v', ...them }, walletRef)
+      ...(await makePermsBlock({ base: 'v', ...me }, walletRef)),
+      ...(await makePermsBlock({ base: 'v', ...them }, walletRef))
     })
   }
   return buildPostFile(msg, walletRef.getProtoHandler())
@@ -142,26 +146,33 @@ export async function readFileTreeEntry(
     return {}
   } else {
     try {
-      const { contents, viewingAccess, trackingNumber } = result
-        .value.files as Files
+      const { contents, viewingAccess, trackingNumber } = result.value
+        .files as Files
       const parsedVA = JSON.parse(viewingAccess)
       const viewName = await hashAndHex(
         `v${trackingNumber}${walletRef.getJackalAddress()}`
       )
       const keys = await stringToAes(walletRef, parsedVA[viewName])
       if (decompress) {
-        const final = await decryptDecompressString(contents, keys.key, keys.iv)
-          .catch((err: Error) => {
-            console.error(err)
-            return contents
-          })
+        const final = await decryptDecompressString(
+          contents,
+          keys.key,
+          keys.iv
+        ).catch((err: Error) => {
+          console.error(err)
+          return contents
+        })
         return JSON.parse(final)
       } else {
-        const final = await cryptString(contents, keys.key, keys.iv, 'decrypt')
-          .catch((err: Error) => {
-            console.error(err)
-            return '{}'
-          })
+        const final = await cryptString(
+          contents,
+          keys.key,
+          keys.iv,
+          'decrypt'
+        ).catch((err: Error) => {
+          console.error(err)
+          return '{}'
+        })
         return JSON.parse(final)
       }
     } catch (err: any) {

@@ -1,9 +1,22 @@
-import { IQueryHandler, IStorageHandler, IWalletHandler } from '@/interfaces/classes'
+import {
+  IQueryHandler,
+  IStorageHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IPayData, ISharedTracker, IStoragePaymentInfo, IStray } from '@/interfaces'
+import {
+  IPayData,
+  ISharedTracker,
+  IStoragePaymentInfo,
+  IStray
+} from '@/interfaces'
 import { handlePagination, numTo3xTB, signerNotEnabled } from '@/utils/misc'
 import { DeliverTxResponse } from '@cosmjs/stargate'
-import { readFileTreeEntry, removeFileTreeEntry, saveFileTreeEntry } from '@/utils/compression'
+import {
+  readFileTreeEntry,
+  removeFileTreeEntry,
+  saveFileTreeEntry
+} from '@/utils/compression'
 
 export default class StorageHandler implements IStorageHandler {
   private readonly walletRef: IWalletHandler
@@ -40,7 +53,8 @@ export default class StorageHandler implements IStorageHandler {
     duration: number,
     space: number
   ): Promise<DeliverTxResponse> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'buyStorage'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('StorageHandler', 'buyStorage'))
     const pH = this.walletRef.getProtoHandler()
     const msg: EncodeObject = pH.storageTx.msgBuyStorage({
       creator: this.walletRef.getJackalAddress(),
@@ -49,7 +63,7 @@ export default class StorageHandler implements IStorageHandler {
       bytes: numTo3xTB(space),
       paymentDenom: 'ujkl'
     })
-    return (await pH.debugBroadcaster([msg], {}))
+    return await pH.debugBroadcaster([msg], {})
   }
 
   /**
@@ -64,7 +78,8 @@ export default class StorageHandler implements IStorageHandler {
     duration: number,
     space: number
   ): Promise<DeliverTxResponse> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'upgradeStorage'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('StorageHandler', 'upgradeStorage'))
     const pH = this.walletRef.getProtoHandler()
     const msg: EncodeObject = pH.storageTx.msgUpgradeStorage({
       creator: this.walletRef.getJackalAddress(),
@@ -73,7 +88,7 @@ export default class StorageHandler implements IStorageHandler {
       bytes: numTo3xTB(space),
       paymentDenom: 'ujkl'
     })
-    return (await pH.debugBroadcaster([msg], {}))
+    return await pH.debugBroadcaster([msg], {})
   }
 
   /**
@@ -81,7 +96,8 @@ export default class StorageHandler implements IStorageHandler {
    * @returns {EncodeObject} - Postkey msg ready for broadcast.
    */
   makeStorageInitMsg(): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'makeStorageInitMsg'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('StorageHandler', 'makeStorageInitMsg'))
     const pH = this.walletRef.getProtoHandler()
     return pH.fileTreeTx.msgPostkey({
       creator: this.walletRef.getJackalAddress(),
@@ -160,7 +176,8 @@ export default class StorageHandler implements IStorageHandler {
     receiverAddress: string,
     shared: ISharedTracker
   ): Promise<EncodeObject> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'saveSharing'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('StorageHandler', 'saveSharing'))
     return await saveFileTreeEntry(
       receiverAddress,
       this.sharingRoot,
@@ -177,8 +194,12 @@ export default class StorageHandler implements IStorageHandler {
    * @param {string} receiverAddress - Jkl address receiving sharing data.
    * @returns {Promise<ISharedTracker>} - Bundle of all records shared with receiver.
    */
-  async readSharing(owner: string, receiverAddress: string): Promise<ISharedTracker> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'readSharing'))
+  async readSharing(
+    owner: string,
+    receiverAddress: string
+  ): Promise<ISharedTracker> {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('StorageHandler', 'readSharing'))
     const shared = await readFileTreeEntry(
       owner,
       `${this.sharingRoot}/${receiverAddress}`,
@@ -198,7 +219,11 @@ export default class StorageHandler implements IStorageHandler {
    * @returns {Promise<EncodeObject>} - DeleteFile msg ready for broadcast.
    */
   async stopSharing(receiverAddress: string): Promise<EncodeObject> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('StorageHandler', 'stopSharing'))
-    return await removeFileTreeEntry(`${this.sharingRoot}/${receiverAddress}`, this.walletRef)
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('StorageHandler', 'stopSharing'))
+    return await removeFileTreeEntry(
+      `${this.sharingRoot}/${receiverAddress}`,
+      this.walletRef
+    )
   }
 }

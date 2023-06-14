@@ -1,5 +1,10 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IChildDirInfo, IFileMeta, IFileMetaHashMap, IFolderFrame } from '@/interfaces'
+import {
+  IChildDirInfo,
+  IFileMeta,
+  IFileMetaHashMap,
+  IFolderFrame
+} from '@/interfaces'
 import { IFolderHandler, IWalletHandler } from '@/interfaces/classes'
 import { signerNotEnabled, stripper } from '@/utils/misc'
 import { merkleMeBro } from '@/utils/hash'
@@ -64,7 +69,8 @@ export default class FolderHandler implements IFolderHandler {
     return this.folderDetails.fileChildren
   }
   async getForFiletree(walletRef: IWalletHandler): Promise<EncodeObject> {
-    if (!walletRef.traits) throw new Error(signerNotEnabled('FolderHandler', 'getForFiletree'))
+    if (!walletRef.traits)
+      throw new Error(signerNotEnabled('FolderHandler', 'getForFiletree'))
     return await saveFileTreeEntry(
       walletRef.getJackalAddress(),
       this.getWhereAmI(),

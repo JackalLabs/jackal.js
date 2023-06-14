@@ -1,6 +1,10 @@
 /// <reference types="long" />
 import { AminoSignResponse, StdSignature, StdSignDoc } from '@cosmjs/amino'
-import { DirectSignResponse, OfflineDirectSigner, OfflineSigner } from '@cosmjs/proto-signing'
+import {
+  DirectSignResponse,
+  OfflineDirectSigner,
+  OfflineSigner
+} from '@cosmjs/proto-signing'
 import { BroadcastMode } from 'cosmjs-types/cosmos/tx/v1beta1/service'
 import { ChainInfo } from './chain-info'
 

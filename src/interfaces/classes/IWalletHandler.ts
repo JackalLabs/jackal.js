@@ -1,5 +1,10 @@
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
-import { ICoin, IEnabledSecrets, IWalletConfig, IWalletHandlerPublicProperties } from '@/interfaces'
+import {
+  ICoin,
+  IEnabledSecrets,
+  IWalletConfig,
+  IWalletHandlerPublicProperties
+} from '@/interfaces'
 import {
   IAbciHandler,
   IFileIo,
@@ -15,8 +20,8 @@ import {
 
 export default interface IWalletHandler {
   traits: IWalletHandlerPublicProperties | null
-  convertToFullWallet (config: IWalletConfig): Promise<void>
-  voidFullWallet (): void
+  convertToFullWallet(config: IWalletConfig): Promise<void>
+  voidFullWallet(): void
 
   getRnsInitStatus(): boolean
   setRnsInitStatus(status: boolean): void
@@ -38,12 +43,12 @@ export default interface IWalletHandler {
   /**
    * Handler Factories
    */
-  makeAbciHandler (): Promise<IAbciHandler>
-  makeFileIoHandler (versionFilter?: string | string[]): Promise<IFileIo | null>
-  makeGovHandler (): Promise<IGovHandler>
-  makeNotificationHandler (): Promise<INotificationHandler>
-  makeOracleHandler (): Promise<IOracleHandler>
-  makeRnsHandler (): Promise<IRnsHandler>
-  makeSecretsHandler (enable: IEnabledSecrets): Promise<ISecretsHandler>
-  makeStorageHandler (): Promise<IStorageHandler>
+  makeAbciHandler(): Promise<IAbciHandler>
+  makeFileIoHandler(versionFilter?: string | string[]): Promise<IFileIo | null>
+  makeGovHandler(): Promise<IGovHandler>
+  makeNotificationHandler(): Promise<INotificationHandler>
+  makeOracleHandler(): Promise<IOracleHandler>
+  makeRnsHandler(): Promise<IRnsHandler>
+  makeSecretsHandler(enable: IEnabledSecrets): Promise<ISecretsHandler>
+  makeStorageHandler(): Promise<IStorageHandler>
 }
