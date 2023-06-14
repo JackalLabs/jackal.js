@@ -21,7 +21,8 @@
   ],
   "scripts": {
     "build": "tsc && vite build",
-    "packit": "npm run build && npm pack --pack-destination packs"
+    "packit": "npm run build && npm pack --pack-destination packs",
+    "gen-docs": "npx typedoc"
   },
   "contributors": [
     {
