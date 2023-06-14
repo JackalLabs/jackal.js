@@ -138,7 +138,8 @@ export async function readFileTreeEntry(
     walletRef.getQueryHandler()
   )
   if (!result.success) {
-    throw new Error('Share Data Not Found')
+    console.warn(`'Share Data Not Found for: ${rawPath}`)
+    return {}
   } else {
     try {
       const { contents, viewingAccess, trackingNumber } = result

@@ -457,7 +457,18 @@ export default class FileIo implements IFileIo {
   async deleteHome(): Promise<void> {
     if (!this.walletRef.traits) throw new Error(signerNotEnabled('FileIo', 'deleteHome'))
     const pH = this.walletRef.getProtoHandler()
-    const parent = await this.downloadFolder(`s/Home`)
+    let parent
+    try {
+      parent = await this.downloadFolder(`s/Home`)
+    } catch (err) {
+      console.error(err)
+      console.warn('Override engaged')
+      parent = await FolderHandler.trackNewFolder({
+        myName: '',
+        myParent: '',
+        myOwner: ''
+      })
+    }
     const moreTargets = [
       ...new Set([
         ...(parent.getChildDirs() || []),
