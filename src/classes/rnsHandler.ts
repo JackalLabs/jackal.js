@@ -1,19 +1,28 @@
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { IQueryHandler, IRnsHandler, IWalletHandler } from '@/interfaces/classes'
+import {
+  IQueryHandler,
+  IRnsHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import {
   IPaginatedMap,
   IPagination,
   IRnsBidHashMap,
-  IRnsBidItem, IRnsExistsHashMap,
+  IRnsBidItem,
+  IRnsExistsHashMap,
   IRnsExpandedForSaleHashMap,
   IRnsForSaleHashMap,
   IRnsForSaleItem,
-  IRnsOwnedHashMap,
   IRnsItem,
+  IRnsOwnedHashMap,
   IRnsRecordItem,
   IRnsRegistrationItem
 } from '@/interfaces'
-import { blockToDateFixed, handlePagination, signerNotEnabled } from '@/utils/misc'
+import {
+  blockToDateFixed,
+  handlePagination,
+  signerNotEnabled
+} from '@/utils/misc'
 import IRnsExpandedItem from '@/interfaces/rns/IRnsExpandedItem'
 
 /**
@@ -28,7 +37,7 @@ export default class RnsHandler implements IRnsHandler {
    * @param {IWalletHandler} wallet - Instance of WalletHandler from WalletHandler.trackWallet().
    * @private
    */
-  private constructor (wallet: IWalletHandler) {
+  private constructor(wallet: IWalletHandler) {
     this.walletRef = wallet
     this.qH = wallet.getQueryHandler()
   }
@@ -38,7 +47,7 @@ export default class RnsHandler implements IRnsHandler {
    * @param {IWalletHandler} wallet - Instance of WalletHandler from WalletHandler.trackWallet().
    * @returns {Promise<IRnsHandler>} - Instance of RnsHandler.
    */
-  static async trackRns (wallet: IWalletHandler): Promise<IRnsHandler> {
+  static async trackRns(wallet: IWalletHandler): Promise<IRnsHandler> {
     return new RnsHandler(wallet)
   }
 
@@ -48,8 +57,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} from - The Jackal address to accept the bid from.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeAcceptBidMsg (rns: string, from: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeAcceptBidMsg'))
+  makeAcceptBidMsg(rns: string, from: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeAcceptBidMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgAcceptBid({
@@ -64,8 +74,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {IRnsRecordItem} recordValues - New subdomain's values.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeAddRecordMsg (recordValues: IRnsRecordItem): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeAddRecordMsg'))
+  makeAddRecordMsg(recordValues: IRnsRecordItem): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeAddRecordMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(recordValues.name)
     return pH.rnsTx.msgAddRecord({
@@ -83,8 +94,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} bid - Value of offer in ujkl. Example: "1000000ujkl" (1 $JKL).
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeBidMsg (rns: string, bid: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeBidMsg'))
+  makeBidMsg(rns: string, bid: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeBidMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgBid({
@@ -99,8 +111,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS to purchase.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeBuyMsg (rns: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeBuyMsg'))
+  makeBuyMsg(rns: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeBuyMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgBuy({
@@ -114,8 +127,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS to retract offer from.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeCancelBidMsg (rns: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeCancelBidMsg'))
+  makeCancelBidMsg(rns: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeCancelBidMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgCancelBid({
@@ -129,8 +143,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS to remove.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeDelistMsg (rns: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeDelistMsg'))
+  makeDelistMsg(rns: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeDelistMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgDelist({
@@ -144,8 +159,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS to delete.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeDelRecordMsg (rns: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeDelRecordMsg'))
+  makeDelRecordMsg(rns: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeDelRecordMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgDelRecord({
@@ -158,8 +174,9 @@ export default class RnsHandler implements IRnsHandler {
    * Create Msg to activate user in the RNS system and to generate free account RNS.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeRnsInitMsg (): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeRnsInitMsg'))
+  makeRnsInitMsg(): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeRnsInitMsg'))
     const pH = this.walletRef.getProtoHandler()
     return pH.rnsTx.msgInit({
       creator: this.walletRef.getJackalAddress()
@@ -172,8 +189,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} price - Price of offer in ujkl. Example: "1000000ujkl" (1 $JKL).
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeListMsg (rns: string, price: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeListMsg'))
+  makeListMsg(rns: string, price: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeListMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgList({
@@ -188,8 +206,11 @@ export default class RnsHandler implements IRnsHandler {
    * @param {IRnsRegistrationItem} registrationValues - Bundle containing RNS name, duration in years, and JSON.stringified metadata.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeNewRegistrationMsg (registrationValues: IRnsRegistrationItem): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeNewRegistrationMsg'))
+  makeNewRegistrationMsg(
+    registrationValues: IRnsRegistrationItem
+  ): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeNewRegistrationMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(registrationValues.nameToRegister)
     return pH.rnsTx.msgRegister({
@@ -206,8 +227,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} receiver - Jackal address to transfer to.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeTransferMsg (rns: string, receiver: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeTransferMsg'))
+  makeTransferMsg(rns: string, receiver: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeTransferMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgTransfer({
@@ -223,8 +245,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} data - JSON.stringified new metadata to replace existing data.
    * @returns {EncodeObject} - The Msg for processing by the chain.
    */
-  makeUpdateMsg (rns: string, data: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'makeUpdateMsg'))
+  makeUpdateMsg(rns: string, data: string): EncodeObject {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'makeUpdateMsg'))
     const pH = this.walletRef.getProtoHandler()
     const trueRns = sanitizeRns(rns)
     return pH.rnsTx.msgUpdate({
@@ -239,7 +262,7 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} index - Index to find.
    * @returns {Promise<IRnsBidItem>} - Bid if found, defaults to bid item with empty values if no match found.
    */
-  async findSingleBid (index: string): Promise<IRnsBidItem> {
+  async findSingleBid(index: string): Promise<IRnsBidItem> {
     const trueIndex = sanitizeRns(index)
     return (await this.qH.rnsQuery.queryBids({ index: trueIndex })).value
       .bids as IRnsBidItem
@@ -249,16 +272,13 @@ export default class RnsHandler implements IRnsHandler {
    * List all outstanding bids for all users.
    * @returns {Promise<IRnsBidHashMap>} - Object map of bid arrays by RNS name.
    */
-  async findAllBids (): Promise<IRnsBidHashMap> {
-    const data: IRnsBidItem[] = (await handlePagination(
-      this.qH.rnsQuery,
-      'queryBidsAll',
-      {}
-    ))
-      .reduce((acc: IRnsBidItem[], curr: any) => {
-        acc.push(...curr.bids)
-        return acc
-      }, [])
+  async findAllBids(): Promise<IRnsBidHashMap> {
+    const data: IRnsBidItem[] = (
+      await handlePagination(this.qH.rnsQuery, 'queryBidsAll', {})
+    ).reduce((acc: IRnsBidItem[], curr: any) => {
+      acc.push(...curr.bids)
+      return acc
+    }, [])
 
     return data.reduce((acc: IRnsBidHashMap, curr: IRnsBidItem) => {
       if (!acc[curr.name]?.length) {
@@ -275,7 +295,7 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS address to find.
    * @returns {Promise<IRnsForSaleItem>} - Listing if found, defaults to list item with empty values if no match found.
    */
-  async findSingleForSaleName (rns: string): Promise<IRnsForSaleItem> {
+  async findSingleForSaleName(rns: string): Promise<IRnsForSaleItem> {
     const trueRns = sanitizeRns(rns)
     return (await this.qH.rnsQuery.queryForsale({ name: trueRns })).value
       .forsale as IRnsForSaleItem
@@ -285,17 +305,22 @@ export default class RnsHandler implements IRnsHandler {
    * Finds paginated RNS listed on market
    * @returns {Promise<IPaginatedMap<IRnsForSaleHashMap>>}
    */
-  async findSomeForSaleNames(options?: IPagination): Promise<IPaginatedMap<IRnsForSaleHashMap>> {
+  async findSomeForSaleNames(
+    options?: IPagination
+  ): Promise<IPaginatedMap<IRnsForSaleHashMap>> {
     const data = await this.qH.rnsQuery.queryForsaleAll({
       pagination: {
         key: options?.nextPage,
         limit: options?.limit || 100
       }
     })
-    const condensed = data.value.forsale.reduce((acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
-      acc[curr.name] = curr
-      return acc
-    }, {})
+    const condensed = data.value.forsale.reduce(
+      (acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
+        acc[curr.name] = curr
+        return acc
+      },
+      {}
+    )
 
     return {
       data: condensed,
@@ -308,7 +333,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {number} blockTime - Block length in milliseconds.
    * @returns {Promise<IRnsExpandedForSaleHashMap>} - Object map of list items by RNS name.
    */
-  async findAllForSaleNames(blockTime?: number): Promise<IRnsExpandedForSaleHashMap> {
+  async findAllForSaleNames(
+    blockTime?: number
+  ): Promise<IRnsExpandedForSaleHashMap> {
     const extendData: Promise<IRnsExistsHashMap> = this.findAllNames()
     const data: IRnsForSaleItem[] = (
       await handlePagination(this.qH.rnsQuery, 'queryForsaleAll', {})
@@ -332,7 +359,6 @@ export default class RnsHandler implements IRnsHandler {
       },
       {}
     )
-
   }
 
   async findAllNames(): Promise<IRnsExistsHashMap> {
@@ -353,8 +379,13 @@ export default class RnsHandler implements IRnsHandler {
    * @param {number} blockTime - Block length in milliseconds.
    * @returns {Promise<IRnsExpandedForSaleHashMap>} - Object map of list items by RNS name.
    */
-  async findExpandedForSaleNames (blockTime?: number): Promise<IRnsExpandedForSaleHashMap> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findExpandedForSaleNames'))
+  async findExpandedForSaleNames(
+    blockTime?: number
+  ): Promise<IRnsExpandedForSaleHashMap> {
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('RnsHandler', 'findExpandedForSaleNames')
+      )
     const address = this.walletRef.getJackalAddress()
     const fullData = this.findAllNames()
     const data: IRnsForSaleItem[] = (
@@ -386,8 +417,9 @@ export default class RnsHandler implements IRnsHandler {
    * @param {number} blockTime - Block length in milliseconds.
    * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
    */
-  async findMyExistingNames (blockTime?: number): Promise<IRnsOwnedHashMap> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findMyExistingNames'))
+  async findMyExistingNames(blockTime?: number): Promise<IRnsOwnedHashMap> {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'findMyExistingNames'))
     const address = this.walletRef.getJackalAddress()
     return this.findYourExistingNames(address, blockTime)
   }
@@ -398,8 +430,12 @@ export default class RnsHandler implements IRnsHandler {
    * @param {number} blockTime - Block length in milliseconds.
    * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
    */
-  async findYourExistingNames (address: string, blockTime?: number): Promise<IRnsOwnedHashMap> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('RnsHandler', 'findYourExistingNames'))
+  async findYourExistingNames(
+    address: string,
+    blockTime?: number
+  ): Promise<IRnsOwnedHashMap> {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('RnsHandler', 'findYourExistingNames'))
     const data: IRnsItem[] = (
       await handlePagination(this.qH.rnsQuery, 'queryListOwnedNames', {
         address
@@ -427,7 +463,7 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS address to search.
    * @returns {Promise<IRnsItem>} - Data if found, defaults to item with empty values if no match found.
    */
-  async findSingleRns (rns: string): Promise<IRnsItem> {
+  async findSingleRns(rns: string): Promise<IRnsItem> {
     const trueRns = sanitizeRns(rns)
     return (await this.qH.rnsQuery.queryNames({ index: trueRns })).value
       .names as IRnsItem
@@ -438,7 +474,7 @@ export default class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS address to search.
    * @returns {Promise<string>} - Owner's address if found, defaults to empty string if no match found.
    */
-  async findMatchingAddress (rns: string): Promise<string> {
+  async findMatchingAddress(rns: string): Promise<string> {
     return (await this.findSingleRns(rns)).value || ''
   }
 }
@@ -448,7 +484,7 @@ export default class RnsHandler implements IRnsHandler {
  * @param {string} rns - RNS address to process.
  * @returns {string} - Source RNS address with ".jkl" included.
  */
-function sanitizeRns (rns: string): string {
+function sanitizeRns(rns: string): string {
   const allowedExtensions = /\.(jkl|ibc)$/
   return rns.match(allowedExtensions) ? rns : `${rns}.jkl`
 }
@@ -469,7 +505,7 @@ function sanitizeRns (rns: string): string {
  * @param {string} caller - Function calling sanitizeRnsData() in case error is logged.
  * @returns {string} - JSON.stringify safe string.
  */
-function sanitizeRnsData (data: string, caller: string) {
+function sanitizeRnsData(data: string, caller: string) {
   try {
     return typeof data === 'string'
       ? JSON.stringify(JSON.parse(data))
@@ -487,7 +523,7 @@ function sanitizeRnsData (data: string, caller: string) {
  * @param {number} expires - Blockheight of RNS expiration
  * @returns {string} - Localized date using 4 digit year, 2 digit day, and month name.
  */
-function parseExpires (blockTime: number, expires: number): string {
+function parseExpires(blockTime: number, expires: number): string {
   const dd = blockToDateFixed({
     /** Block time in milliseconds */
     blockTime: blockTime,

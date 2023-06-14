@@ -1,10 +1,16 @@
 import { IProtoHandler } from '@/interfaces/classes'
 import {
   IAllQuery,
-  IAllTx, ITxBank, ITxDistribution,
-  ITxFileTree, ITxGov,
+  IAllTx,
+  ITxBank,
+  ITxDistribution,
+  ITxFileTree,
+  ITxGov,
   ITxNotifications,
-  ITxOracle, ITxRns, ITxStaking, ITxStorage,
+  ITxOracle,
+  ITxRns,
+  ITxStaking,
+  ITxStorage,
   ProtoBuilder,
   TMasterBroadcaster
 } from 'jackal.js-protos'
@@ -14,7 +20,10 @@ import { DeliverTxResponse } from '@cosmjs/stargate'
 import { IProtoConfig } from '@/interfaces'
 import QueryHandler from '@/classes/queryHandler'
 
-export default class ProtoHandler extends QueryHandler implements IProtoHandler {
+export default class ProtoHandler
+  extends QueryHandler
+  implements IProtoHandler
+{
   private readonly masterBroadcaster: TMasterBroadcaster
   private readonly allTxClients: IAllTx
 
@@ -86,18 +95,17 @@ export default class ProtoHandler extends QueryHandler implements IProtoHandler 
       step: false
     }
   ): Promise<DeliverTxResponse> {
-    if (msgs.length < 1) throw new Error('Empty EncodeObject[] passed to debugBroadcaster()')
+    if (msgs.length < 1)
+      throw new Error('Empty EncodeObject[] passed to debugBroadcaster()')
     if (extra.step) {
       let resp
       for (let i = 0; i < msgs.length; i++) {
         console.log(msgs[i].typeUrl)
-        resp = await this.broadcaster(
-          [msgs[i]],
-          extra.memo,
-          extra.gas
-        ).catch((err) => {
-          throw err
-        })
+        resp = await this.broadcaster([msgs[i]], extra.memo, extra.gas).catch(
+          (err) => {
+            throw err
+          }
+        )
         console.dir(resp)
       }
       return resp as DeliverTxResponse

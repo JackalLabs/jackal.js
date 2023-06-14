@@ -78,7 +78,9 @@ const baseRate = 56
  * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
  * @returns {number} - Adjusted number of gas units collection is expected to require.
  */
-export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]): number {
+export function estimateGas(
+  msgArray: (EncodeObject | IWrappedEncodeObject)[]
+): number {
   const gas = msgArray.reduce((acc, curr) => {
     if (isIWrappedEncodeObject(curr)) {
       switch (true) {
@@ -103,7 +105,7 @@ export function estimateGas (msgArray: (EncodeObject | IWrappedEncodeObject)[]):
  * @returns {IGasRate} - Gas object with best estimate based on input.
  * @private
  */
-export function finalizeGas (
+export function finalizeGas(
   msgArray: (EncodeObject | IWrappedEncodeObject)[],
   gasOverride?: number | string
 ): IGasRate {
@@ -119,6 +121,8 @@ export function finalizeGas (
  * @param {EncodeObject | IWrappedEncodeObject} toCheck - Source value.
  * @returns {toCheck is IWrappedEncodeObject} - Boolean indicating if source is a IWrappedEncodeObject.
  */
-function isIWrappedEncodeObject(toCheck: EncodeObject | IWrappedEncodeObject): toCheck is IWrappedEncodeObject {
+function isIWrappedEncodeObject(
+  toCheck: EncodeObject | IWrappedEncodeObject
+): toCheck is IWrappedEncodeObject {
   return Object.keys(toCheck).includes('encodedObject')
 }

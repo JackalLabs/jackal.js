@@ -1,8 +1,17 @@
-import { AccountData, EncodeObject, isOfflineDirectSigner, OfflineSigner } from '@cosmjs/proto-signing'
+import {
+  AccountData,
+  EncodeObject,
+  isOfflineDirectSigner,
+  OfflineSigner
+} from '@cosmjs/proto-signing'
 import { decrypt, encrypt, PrivateKey } from 'eciesjs'
 import { Window as KeplrWindow } from '@keplr-wallet/types'
 import { LeapWindow } from '@/types/leap'
-import { defaultQueryAddr9091, defaultTxAddr26657, jackalMainnetChainId } from '@/utils/globals'
+import {
+  defaultQueryAddr9091,
+  defaultTxAddr26657,
+  jackalMainnetChainId
+} from '@/utils/globals'
 import {
   IAbciHandler,
   IFileIo,
@@ -19,8 +28,7 @@ import {
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import {
   IAdditionalWalletOptions,
-  ICoin,
-  /** TODO */
+  ICoin /** TODO */,
   // IEnabledSecrets,
   ISupportedWallets,
   IWalletConfig,
@@ -30,7 +38,8 @@ import {
 import ProtoHandler from '@/classes/protoHandler'
 import { Pubkey } from 'jackal.js-protos'
 import {
-  AbciHandler, deprecated,
+  AbciHandler,
+  deprecated,
   FileIo,
   GovHandler,
   NotificationHandler,
@@ -77,23 +86,23 @@ export default class WalletHandler implements IWalletHandler {
    * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports customWallet.
    * @returns {Promise<IWalletHandler>} - Signing WalletHandler.
    */
-  static async trackWallet(config: IWalletConfig, options?: IAdditionalWalletOptions): Promise<IWalletHandler> {
+  static async trackWallet(
+    config: IWalletConfig,
+    options?: IAdditionalWalletOptions
+  ): Promise<IWalletHandler> {
     if (!window) {
       throw new Error(
         'Jackal.js is only supported in the browser at this time!'
       )
     } else {
       const qH = await QueryHandler.trackQuery(config.queryAddr)
-      const { properties, traits } = await processWallet(config, options)
-        .catch(err => {
+      const { properties, traits } = await processWallet(config, options).catch(
+        (err) => {
           throw err
-        })
-
-      return new WalletHandler(
-        qH,
-        properties,
-        traits
+        }
       )
+
+      return new WalletHandler(qH, properties, traits)
     }
   }
 
@@ -109,11 +118,7 @@ export default class WalletHandler implements IWalletHandler {
       )
     } else {
       const qH = await QueryHandler.trackQuery(queryUrl)
-      return new WalletHandler(
-        qH,
-        null,
-        null
-      )
+      return new WalletHandler(qH, null, null)
     }
   }
 
@@ -134,7 +139,10 @@ export default class WalletHandler implements IWalletHandler {
     wallet: IWalletHandler,
     filetreeTxClient: any
   ): Promise<EncodeObject> {
-    deprecated('WalletHandler.initAccount()', 'v2.0.0', { aggressive: true, replacement: 'StorageHandler.makeStorageInitMsg()' })
+    deprecated('WalletHandler.initAccount()', 'v2.0.0', {
+      aggressive: true,
+      replacement: 'StorageHandler.makeStorageInitMsg()'
+    })
     const { msgInitAll } = await filetreeTxClient
     const initCall = msgInitAll({
       creator: wallet.getJackalAddress(),
@@ -160,11 +168,15 @@ export default class WalletHandler implements IWalletHandler {
    * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports customWallet.
    * @returns {Promise<void>}
    */
-  async convertToFullWallet (config: IWalletConfig, options?: IAdditionalWalletOptions): Promise<void> {
-    const { properties, traits } = await processWallet(config, options)
-      .catch(err => {
+  async convertToFullWallet(
+    config: IWalletConfig,
+    options?: IAdditionalWalletOptions
+  ): Promise<void> {
+    const { properties, traits } = await processWallet(config, options).catch(
+      (err) => {
         throw err
-      })
+      }
+    )
     this.properties = properties
     this.traits = traits
   }
@@ -173,7 +185,7 @@ export default class WalletHandler implements IWalletHandler {
    * Converts signing WalletHandler instance to query-only instance.
    * @returns {void}
    */
-  voidFullWallet (): void {
+  voidFullWallet(): void {
     this.properties = null
     this.traits = null
   }
@@ -183,7 +195,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {boolean} - Indicates if user's RNS has been initialized.
    */
   getRnsInitStatus(): boolean {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getRnsInitStatus'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getRnsInitStatus'))
     return this.properties.rnsInitComplete
   }
 
@@ -193,7 +206,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {Promise<void>}
    */
   setRnsInitStatus(status: boolean): void {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'setRnsInitStatus'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'setRnsInitStatus'))
     this.properties.rnsInitComplete = status
   }
 
@@ -202,7 +216,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {boolean} - Indicates if user's Storage has been initialized.
    */
   getStorageInitStatus(): boolean {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getStorageInitStatus'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getStorageInitStatus'))
     return this.properties.fileTreeInitComplete
   }
 
@@ -212,7 +227,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {Promise<void>}
    */
   setStorageInitStatus(status: boolean): void {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'setStorageInitStatus'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'setStorageInitStatus'))
     this.properties.fileTreeInitComplete = status
   }
 
@@ -221,7 +237,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {IProtoHandler}
    */
   getProtoHandler(): IProtoHandler {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getProtoHandler'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getProtoHandler'))
     return this.properties.pH
   }
 
@@ -238,7 +255,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {Promise<readonly AccountData[]>}
    */
   getAccounts(): Promise<readonly AccountData[]> {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getAccounts'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getAccounts'))
     return this.properties.signer.getAccounts()
   }
 
@@ -247,7 +265,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {OfflineSigner}
    */
   getSigner(): OfflineSigner {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getSigner'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getSigner'))
     return this.properties.signer
   }
 
@@ -256,7 +275,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {string} - Jkl address.
    */
   getJackalAddress(): string {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getJackalAddress'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getJackalAddress'))
     return this.properties.jackalAccount.address
   }
 
@@ -265,7 +285,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {Promise<string>} - Hashed and hexed jkl address.
    */
   async getHexJackalAddress(): Promise<string> {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getHexJackalAddress'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getHexJackalAddress'))
     return await hashAndHex(this.properties.jackalAccount.address)
   }
 
@@ -274,7 +295,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {Promise<ICoin[]>} - All tokens and balances held by Signer.
    */
   async getAllBalances(): Promise<ICoin[]> {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getAllBalances'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getAllBalances'))
     const res = await this.qH.bankQuery.queryAllBalances({
       address: this.properties.jackalAccount.address
     })
@@ -286,7 +308,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {Promise<ICoin>} - Balance in ujkl.
    */
   async getJackalBalance(): Promise<ICoin> {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getJackalBalance'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getJackalBalance'))
     const res = await this.qH.bankQuery.queryBalance({
       address: this.properties.jackalAccount.address,
       denom: 'ujkl'
@@ -299,7 +322,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {string} - Public key as hex value.
    */
   getPubkey(): string {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'getPubkey'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getPubkey'))
     return this.properties.keyPair.publicKey.toHex()
   }
 
@@ -319,7 +343,8 @@ export default class WalletHandler implements IWalletHandler {
    * @returns {ArrayBuffer} - Decrypted value.
    */
   asymmetricDecrypt(toDecrypt: string): ArrayBuffer {
-    if (!this.properties) throw new Error(signerNotEnabled('WalletHandler', 'asymmetricDecrypt'))
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'asymmetricDecrypt'))
     return new Uint8Array(
       decrypt(this.properties.keyPair.toHex(), Buffer.from(toDecrypt, 'hex'))
     )
@@ -347,7 +372,7 @@ export default class WalletHandler implements IWalletHandler {
    * Create AbciHandler instance and link to query or signing WalletHandler instance.
    * @returns {Promise<IAbciHandler>}
    */
-  async makeAbciHandler (): Promise<IAbciHandler> {
+  async makeAbciHandler(): Promise<IAbciHandler> {
     return await AbciHandler.trackAbci(this)
   }
 
@@ -355,15 +380,17 @@ export default class WalletHandler implements IWalletHandler {
    * Create FileIo instance and link to signing WalletHandler instance.
    * @returns {Promise<IFileIo | null>} - Query WalletHandler instance returns null instead.
    */
-  async makeFileIoHandler (versionFilter?: string | string[]): Promise<IFileIo | null> {
-    return (this.traits) ? await FileIo.trackIo(this, versionFilter) : null
+  async makeFileIoHandler(
+    versionFilter?: string | string[]
+  ): Promise<IFileIo | null> {
+    return this.traits ? await FileIo.trackIo(this, versionFilter) : null
   }
 
   /**
    * Create GovHandler instance and link to query or signing WalletHandler instance.
    * @returns {Promise<IGovHandler>}
    */
-  async makeGovHandler (): Promise<IGovHandler> {
+  async makeGovHandler(): Promise<IGovHandler> {
     return await GovHandler.trackGov(this)
   }
 
@@ -371,7 +398,7 @@ export default class WalletHandler implements IWalletHandler {
    * Create NotificationHandler instance and link to query or signing WalletHandler instance.
    * @returns {Promise<INotificationHandler>}
    */
-  async makeNotificationHandler (): Promise<INotificationHandler> {
+  async makeNotificationHandler(): Promise<INotificationHandler> {
     return await NotificationHandler.trackNotification(this)
   }
 
@@ -379,7 +406,7 @@ export default class WalletHandler implements IWalletHandler {
    * Create OracleHandler instance and link to query or signing WalletHandler instance.
    * @returns {Promise<IOracleHandler>}
    */
-  async makeOracleHandler (): Promise<IOracleHandler> {
+  async makeOracleHandler(): Promise<IOracleHandler> {
     return await OracleHandler.trackOracle(this)
   }
 
@@ -387,7 +414,7 @@ export default class WalletHandler implements IWalletHandler {
    * Create RnsHandler instance and link to query or signing WalletHandler instance.
    * @returns {Promise<IRnsHandler>}
    */
-  async makeRnsHandler (): Promise<IRnsHandler> {
+  async makeRnsHandler(): Promise<IRnsHandler> {
     return await RnsHandler.trackRns(this)
   }
   /** TODO */
@@ -399,7 +426,7 @@ export default class WalletHandler implements IWalletHandler {
    * Create SecretsHandler instance and link to query or signing WalletHandler instance.
    * @returns {Promise<ISecretsHandler>}
    */
-  async makeSecretsHandler (): Promise<ISecretsHandler> {
+  async makeSecretsHandler(): Promise<ISecretsHandler> {
     return await SecretsHandler.trackSecrets(this)
   }
 
@@ -407,7 +434,7 @@ export default class WalletHandler implements IWalletHandler {
    * Create StorageHandler instance and link to query or signing WalletHandler instance.
    * @returns {Promise<IStorageHandler>}
    */
-  async makeStorageHandler (): Promise<IStorageHandler> {
+  async makeStorageHandler(): Promise<IStorageHandler> {
     return await StorageHandler.trackStorage(this)
   }
 }
@@ -439,8 +466,18 @@ async function makeSecret(
  * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports customWallet.
  * @returns {Promise<{traits: IWalletHandlerPublicProperties, properties: IWalletHandlerPrivateProperties}>}
  */
-async function processWallet (config: IWalletConfig, options?: IAdditionalWalletOptions) {
-  const { selectedWallet, signerChain, enabledChains, queryAddr, txAddr, chainConfig } = config
+async function processWallet(
+  config: IWalletConfig,
+  options?: IAdditionalWalletOptions
+) {
+  const {
+    selectedWallet,
+    signerChain,
+    enabledChains,
+    queryAddr,
+    txAddr,
+    chainConfig
+  } = config
   const chainId = signerChain || jackalMainnetChainId
   let windowWallet: TWalletExtensions
   switch (selectedWallet) {
@@ -491,9 +528,7 @@ async function processWallet (config: IWalletConfig, options?: IAdditionalWallet
   })
   console.log('secret', secret)
   const fileTreeInitComplete = success && !!pubkey?.key
-  const secretAsHex = bufferToHex(
-    Buffer.from(secret, 'base64').subarray(0, 32)
-  )
+  const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
   const keyPair = PrivateKey.fromHex(secretAsHex)
   const isDirect = isOfflineDirectSigner(signer)
 

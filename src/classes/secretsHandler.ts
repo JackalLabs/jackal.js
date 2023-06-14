@@ -1,7 +1,11 @@
 import { ISecretsHandler, IWalletHandler } from '@/interfaces/classes'
 import { ISharedTracker } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
-import { readFileTreeEntry, removeFileTreeEntry, saveFileTreeEntry } from '@/utils/compression'
+import {
+  readFileTreeEntry,
+  removeFileTreeEntry,
+  saveFileTreeEntry
+} from '@/utils/compression'
 import { signerNotEnabled } from '@/utils/misc'
 
 export default class SecretsHandler implements ISecretsHandler {
@@ -14,7 +18,7 @@ export default class SecretsHandler implements ISecretsHandler {
   }
 
   static async trackSecrets(
-    wallet: IWalletHandler,
+    wallet: IWalletHandler
     // enable: IEnabledSecrets
   ): Promise<ISecretsHandler> {
     return new SecretsHandler(wallet)
@@ -25,7 +29,8 @@ export default class SecretsHandler implements ISecretsHandler {
     toAddress: string,
     shared: ISharedTracker
   ): Promise<EncodeObject> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'saveSharing'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('SecretsHandler', 'saveSharing'))
     return await saveFileTreeEntry(
       toAddress,
       `s/Sharing`,
@@ -36,7 +41,8 @@ export default class SecretsHandler implements ISecretsHandler {
     )
   }
   async readSharing(owner: string, rawPath: string): Promise<ISharedTracker> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'readSharing'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('SecretsHandler', 'readSharing'))
     const shared = await readFileTreeEntry(
       owner,
       rawPath,
@@ -50,7 +56,8 @@ export default class SecretsHandler implements ISecretsHandler {
     return shared as ISharedTracker
   }
   async stopSharing(rawPath: string): Promise<EncodeObject> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('SecretsHandler', 'stopSharing'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('SecretsHandler', 'stopSharing'))
     return await removeFileTreeEntry(rawPath, this.walletRef)
   }
 }

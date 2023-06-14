@@ -1,10 +1,17 @@
 import { IQueryHandler } from '@/interfaces/classes'
 import {
-  IAllQuery, IQueryABCI, IQueryBank, IQueryDistribution,
-  IQueryFileTree, IQueryGov,
+  IAllQuery,
+  IQueryABCI,
+  IQueryBank,
+  IQueryDistribution,
+  IQueryFileTree,
+  IQueryGov,
   IQueryJklMint,
   IQueryNotifications,
-  IQueryOracle, IQueryRns, IQueryStaking, IQueryStorage,
+  IQueryOracle,
+  IQueryRns,
+  IQueryStaking,
+  IQueryStorage,
   QueryBuilder
 } from 'jackal.js-protos'
 
@@ -16,9 +23,7 @@ export default class QueryHandler implements IQueryHandler {
    * @param {IAllQuery} allQueryClients
    * @protected
    */
-  protected constructor(
-    allQueryClients: IAllQuery
-  ) {
+  protected constructor(allQueryClients: IAllQuery) {
     this.allQueryClients = allQueryClients
   }
 

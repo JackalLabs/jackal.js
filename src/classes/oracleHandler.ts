@@ -1,4 +1,8 @@
-import { IOracleHandler, IQueryHandler, IWalletHandler } from '@/interfaces/classes'
+import {
+  IOracleHandler,
+  IQueryHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import { IOracleFeed } from '@/interfaces'
 
 export default class OracleHandler implements IOracleHandler {

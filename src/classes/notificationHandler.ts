@@ -1,4 +1,8 @@
-import { INotificationHandler, IQueryHandler, IWalletHandler } from '@/interfaces/classes'
+import {
+  INotificationHandler,
+  IQueryHandler,
+  IWalletHandler
+} from '@/interfaces/classes'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { handlePagination, signerNotEnabled } from '@/utils/misc'
 import {
@@ -28,7 +32,10 @@ export default class NotificationHandler implements INotificationHandler {
   }
 
   makeNotification(notification: string, address: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeNotification'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'makeNotification')
+      )
     const pH = this.walletRef.getProtoHandler()
     return pH.notificationsTx.msgCreateNotifications({
       creator: this.walletRef.getJackalAddress(),
@@ -41,7 +48,10 @@ export default class NotificationHandler implements INotificationHandler {
     notification: string,
     address: string
   ): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeNotificationUpdate'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'makeNotificationUpdate')
+      )
     const pH = this.walletRef.getProtoHandler()
     return pH.notificationsTx.msgUpdateNotifications({
       creator: this.walletRef.getJackalAddress(),
@@ -51,21 +61,28 @@ export default class NotificationHandler implements INotificationHandler {
     })
   }
   makeNotificationDeletion(): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeNotificationDeletion'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'makeNotificationDeletion')
+      )
     const pH = this.walletRef.getProtoHandler()
     return pH.notificationsTx.msgDeleteNotifications({
       creator: this.walletRef.getJackalAddress()
     })
   }
   makeCounter(): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeCounter'))
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('NotificationHandler', 'makeCounter'))
     const pH = this.walletRef.getProtoHandler()
     return pH.notificationsTx.msgSetCounter({
       creator: this.walletRef.getJackalAddress()
     })
   }
   makeBlockedSender(sender: string): EncodeObject {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeBlockedSender'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'makeBlockedSender')
+      )
     const pH = this.walletRef.getProtoHandler()
     return pH.notificationsTx.msgBlockSenders({
       creator: this.walletRef.getJackalAddress(),
@@ -74,14 +91,16 @@ export default class NotificationHandler implements INotificationHandler {
   }
 
   async broadcastMakeCounter(): Promise<void> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'broadcastMakeCounter'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'broadcastMakeCounter')
+      )
     const msg = this.makeCounter()
     const pH = this.walletRef.getProtoHandler()
-    pH.debugBroadcaster([msg], { memo: '', step: false })
-      .catch((err) => {
-        console.warn(err)
-        throw err
-      })
+    pH.debugBroadcaster([msg], { memo: '', step: false }).catch((err) => {
+      console.warn(err)
+      throw err
+    })
   }
 
   async getNotification(
@@ -150,7 +169,13 @@ export default class NotificationHandler implements INotificationHandler {
     type: string,
     address: string
   ): Promise<EncodeObject> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeStandardizedShareNotification'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled(
+          'NotificationHandler',
+          'makeStandardizedShareNotification'
+        )
+      )
     const pubKey = await this.walletRef.findPubKey(address)
     const baseNoti = { type }
     const bufNoti = new TextEncoder().encode(JSON.stringify(baseNoti))
@@ -160,21 +185,33 @@ export default class NotificationHandler implements INotificationHandler {
     )
   }
   async makeAddShareNoti(address: string): Promise<EncodeObject> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeAddShareNoti'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'makeAddShareNoti')
+      )
     return await this.makeStandardizedShareNotification('dbfs-add', address)
   }
   async makeUpdateShareNoti(address: string): Promise<EncodeObject> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeUpdateShareNoti'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'makeUpdateShareNoti')
+      )
     return await this.makeStandardizedShareNotification('dbfs-update', address)
   }
   async makeRemoveShareNoti(address: string): Promise<EncodeObject> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'makeRemoveShareNoti'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'makeRemoveShareNoti')
+      )
     return await this.makeStandardizedShareNotification('dbfs-remove', address)
   }
 
   /** Read Encrypted Notifications */
   async readMyShareNoti(index: number): Promise<IReadableNoti> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'readMyShareNoti'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'readMyShareNoti')
+      )
     const { notifications } = await this.getNotification(
       this.walletRef.getJackalAddress(),
       index
@@ -182,7 +219,10 @@ export default class NotificationHandler implements INotificationHandler {
     return processNotiRead(notifications as Notifications, this.walletRef)
   }
   async readAllMyShareNotis(): Promise<IReadableNoti[]> {
-    if (!this.walletRef.traits) throw new Error(signerNotEnabled('NotificationHandler', 'readAllMyShareNotis'))
+    if (!this.walletRef.traits)
+      throw new Error(
+        signerNotEnabled('NotificationHandler', 'readAllMyShareNotis')
+      )
     const data = await this.getSingleAddressNotifications(
       this.walletRef.getJackalAddress()
     )
@@ -192,9 +232,7 @@ export default class NotificationHandler implements INotificationHandler {
   }
 
   /** Private Methods */
-  async getBaseNotiCounter(
-    forAddress: string
-  ): Promise<IBaseNotiResponse> {
+  async getBaseNotiCounter(forAddress: string): Promise<IBaseNotiResponse> {
     return await this.qH.notificationsQuery.queryNotiCounter({
       address: forAddress
     })
