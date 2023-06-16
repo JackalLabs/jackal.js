@@ -473,7 +473,18 @@ export default class FileIo implements IFileIo {
       }
       throw new Error('All file fetch() attempts failed!')
     } else {
-      throw new Error('No available providers!')
+      if (isFolder) {
+        console.warn(`Critical folder recovery failure. Rebuilding: ${rawPath}`)
+        const pathArray = rawPath.split('/')
+        const myName = pathArray.pop() || ''
+        return await FolderHandler.trackNewFolder({
+          myName,
+          myParent: pathArray.join('/'),
+          myOwner: owner
+        })
+      } else {
+        throw new Error('No available providers!')
+      }
     }
   }
   async deleteHome(): Promise<void> {
