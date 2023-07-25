@@ -10,7 +10,7 @@ import {
   IQueryRns,
   IQueryStaking,
   IQueryStorage
-} from 'jackal.js-protos'
+} from '@jackallabs/jackal.js-protos'
 
 export default interface IQueryHandler {
   /** Custom */

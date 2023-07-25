@@ -43,7 +43,7 @@ export default defineConfig({
         'bip39',
         'bs58check',
         'eciesjs',
-        'jackal.js-protos',
+        '@jackallabs/jackal.js-protos',
         'make-random',
       ],
       plugins: [

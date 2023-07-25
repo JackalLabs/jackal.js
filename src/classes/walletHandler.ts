@@ -36,7 +36,7 @@ import {
   IWalletHandlerPublicProperties
 } from '@/interfaces'
 import ProtoHandler from '@/classes/protoHandler'
-import { Pubkey } from 'jackal.js-protos'
+import { Pubkey } from '@jackallabs/jackal.js-protos'
 import {
   AbciHandler,
   deprecated,

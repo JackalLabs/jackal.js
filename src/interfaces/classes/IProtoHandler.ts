@@ -9,7 +9,7 @@ import {
   ITxStaking,
   ITxStorage,
   TMasterBroadcaster
-} from 'jackal.js-protos'
+} from '@jackallabs/jackal.js-protos'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { DeliverTxResponse } from '@cosmjs/stargate'
 import IQueryHandler from '@/interfaces/classes/IQueryHandler'

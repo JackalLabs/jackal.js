@@ -5,7 +5,7 @@ import {
   QueryAllNotificationsResponse,
   QueryGetNotiCounterResponse,
   QueryGetNotificationsResponse
-} from 'jackal.js-protos'
+} from '@jackallabs/jackal.js-protos'
 import { IReadableNoti } from '@/interfaces'
 
 export default interface INotificationHandler {

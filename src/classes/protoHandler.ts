@@ -13,7 +13,7 @@ import {
   ITxStorage,
   ProtoBuilder,
   TMasterBroadcaster
-} from 'jackal.js-protos'
+} from '@jackallabs/jackal.js-protos'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import { finalizeGas } from '@/utils/gas'
 import { DeliverTxResponse } from '@cosmjs/stargate'
