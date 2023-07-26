@@ -36,7 +36,7 @@ import {
   IWalletHandlerPublicProperties
 } from '@/interfaces'
 import ProtoHandler from '@/classes/protoHandler'
-import { Pubkey } from 'jackal.js-protos'
+import { Pubkey } from '@jackallabs/jackal.js-protos'
 import {
   AbciHandler,
   deprecated,
@@ -502,10 +502,10 @@ async function processWallet(
     default:
       throw new Error('A valid wallet selection must be provided')
   }
+  await windowWallet.experimentalSuggestChain(chainConfig)
   await windowWallet.enable(enabledChains || defaultChains).catch((err) => {
     throw err
   })
-  await windowWallet.experimentalSuggestChain(chainConfig)
   const signer = await windowWallet.getOfflineSignerAuto(chainId, {})
   const queryUrl = (queryAddr || defaultQueryAddr9091).replace(/\/+$/, '')
   const rpcUrl = (txAddr || defaultTxAddr26657).replace(/\/+$/, '')

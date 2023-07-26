@@ -44,7 +44,7 @@ import {
   Files,
   QueryFindFileResponse,
   Strays
-} from 'jackal.js-protos'
+} from '@jackallabs/jackal.js-protos'
 import {
   buildPostFile,
   makePermsBlock,
@@ -203,9 +203,18 @@ export default class FileIo implements IFileIo {
     if (!this.walletRef.traits)
       throw new Error(signerNotEnabled('FileIo', 'verifyFoldersExist'))
     const toCreate = []
+    const owner = this.walletRef.getJackalAddress()
     for (let i = 0; i < toCheck.length; i++) {
-      const check = await this.checkFolderIsFileTree(`s/${toCheck[i]}`)
-      if (check) {
+      const check = await readFileTreeEntry(
+        owner,
+        `s/${toCheck[i]}`,
+        this.walletRef,
+        true
+      ).catch((err: Error) => {
+        console.warn(`verifyFoldersExist() s/${toCheck[i]}`, err)
+        throw err
+      })
+      if (Object.keys(check).length > 0) {
         console.info(`${toCheck[i]} exists`)
       } else {
         console.warn(`${toCheck[i]} does not exist`)
@@ -473,7 +482,18 @@ export default class FileIo implements IFileIo {
       }
       throw new Error('All file fetch() attempts failed!')
     } else {
-      throw new Error('No available providers!')
+      if (isFolder) {
+        console.warn(`Critical folder recovery failure. Rebuilding: ${rawPath}`)
+        const pathArray = rawPath.split('/')
+        const myName = pathArray.pop() || ''
+        return await FolderHandler.trackNewFolder({
+          myName,
+          myParent: pathArray.join('/'),
+          myOwner: owner
+        })
+      } else {
+        throw new Error('No available providers!')
+      }
     }
   }
   async deleteHome(): Promise<void> {

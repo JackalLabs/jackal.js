@@ -13,7 +13,7 @@ import {
   IQueryStaking,
   IQueryStorage,
   QueryBuilder
-} from 'jackal.js-protos'
+} from '@jackallabs/jackal.js-protos'
 
 export default class QueryHandler implements IQueryHandler {
   protected readonly allQueryClients: IAllQuery

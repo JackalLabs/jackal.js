@@ -21,7 +21,7 @@ import {
   ResponseOfferSnapshot,
   ResponseQuery,
   ResponseSetOption
-} from 'jackal.js-protos'
+} from '@jackallabs/jackal.js-protos'
 
 export default class AbciHandler implements IAbciHandler {
   private readonly qH: IQueryHandler

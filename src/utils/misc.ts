@@ -1,4 +1,4 @@
-import { PageResponse, QueryFileResponse } from 'jackal.js-protos'
+import { PageResponse, QueryFileResponse } from '@jackallabs/jackal.js-protos'
 import { IQueryHandler } from '@/interfaces/classes'
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 
