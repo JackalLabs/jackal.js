@@ -2,7 +2,7 @@ import { IChainConfig } from '@/interfaces'
 import { OfflineDirectSigner } from '@cosmjs/proto-signing'
 import { StdSignature } from '@cosmjs/amino'
 
-export default interface ICustomWallet {
+export default interface IMnemonicWallet {
   enable(chainIds: string | string[]): Promise<void>
 
   experimentalSuggestChain(chainConfig: IChainConfig): Promise<void>

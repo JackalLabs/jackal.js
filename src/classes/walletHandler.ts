@@ -445,6 +445,7 @@ export default class WalletHandler implements IWalletHandler {
  * @param {string} acct - The wallet address matching the chainId.
  * @param {Keplr | Leap} walletExtension - Browser wallet extension to use for signArbitrary() call.
  * @returns {Promise<string>} - Generated signature.
+ * @private
  */
 async function makeSecret(
   chainId: string,
@@ -454,7 +455,7 @@ async function makeSecret(
   const memo = 'Initiate Jackal Session'
   const signed = await walletExtension
     .signArbitrary(chainId, acct, memo)
-    .catch((err) => {
+    .catch((err: Error) => {
       throw err
     })
   return signed.signature
@@ -465,6 +466,7 @@ async function makeSecret(
  * @param {IWalletConfig} config - Config items needed to create a signing WalletHandler.
  * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports customWallet.
  * @returns {Promise<{traits: IWalletHandlerPublicProperties, properties: IWalletHandlerPrivateProperties}>}
+ * @private
  */
 async function processWallet(
   config: IWalletConfig,
@@ -493,17 +495,17 @@ async function processWallet(
       }
       windowWallet = window.leap
       break
-    case 'custom':
-      if (!options?.customWallet) {
+    case 'mnemonic':
+      if (!options?.mnemonicWallet) {
         throw new Error('Custom Wallet selected but unavailable')
       }
-      windowWallet = options.customWallet
+      windowWallet = options.mnemonicWallet
       break
     default:
       throw new Error('A valid wallet selection must be provided')
   }
   await windowWallet.experimentalSuggestChain(chainConfig)
-  await windowWallet.enable(enabledChains || defaultChains).catch((err) => {
+  await windowWallet.enable(enabledChains || defaultChains).catch((err: Error) => {
     throw err
   })
   const signer = await windowWallet.getOfflineSignerAuto(chainId, {})

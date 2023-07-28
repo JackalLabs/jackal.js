@@ -8,9 +8,9 @@ import {
   OfflineDirectSigner
 } from '@cosmjs/proto-signing'
 import { IChainConfig } from '@/interfaces'
-import { ICustomWallet } from '@/interfaces/classes'
+import { IMnemonicWallet } from '@/interfaces/classes'
 
-export default class CustomWallet implements ICustomWallet {
+export default class MnemonicWallet implements IMnemonicWallet {
   private directWallet: OfflineDirectSigner
   private aminoWallet: OfflineAminoSigner
 
@@ -31,7 +31,7 @@ export default class CustomWallet implements ICustomWallet {
   /**
    * Async wrapper to create a CustomWallet instance.
    * @param {string} mnemonic - Seed phrase to use to generate the wallet sessions.
-   * @returns {Promise<CustomWallet>} - Instance of CustomWallet.
+   * @returns {Promise<MnemonicWallet>} - Instance of CustomWallet.
    */
   static async create(mnemonic: string) {
     let directWallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
@@ -43,7 +43,7 @@ export default class CustomWallet implements ICustomWallet {
     /* Destroy mnemonic */
     mnemonic = ''
 
-    return new CustomWallet(directWallet, aminoWallet)
+    return new MnemonicWallet(directWallet, aminoWallet)
   }
 
   /**

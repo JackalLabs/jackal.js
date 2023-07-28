@@ -129,6 +129,61 @@ export async function stringToAes(
 }
 
 /**
+ * Converts raw File to Public-mode File.
+ * @param {File} workingFile - Source File.
+ * @returns {Promise<File>} - Public-mode File.
+ */
+export async function convertToPublicFile(workingFile: File): Promise<File> {
+  const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
+  const details = {
+      name: workingFile.name,
+      lastModified: workingFile.lastModified,
+      type: workingFile.type,
+      size: workingFile.size
+    }
+  const detailsBlob = new Blob([JSON.stringify(details)])
+  const publicArray: Blob[] = [
+    new Blob([(detailsBlob.size + 16).toString().padStart(8, '0')]),
+    detailsBlob
+  ]
+  for (let i = 0; i < workingFile.size; i += chunkSize) {
+    const blobChunk = workingFile.slice(i, i + chunkSize)
+    publicArray.push(
+      new Blob([(blobChunk.size + 16).toString().padStart(8, '0')]),
+      blobChunk
+    )
+  }
+  const finalName = `${await hashAndHex(
+    details.name + Date.now().toString()
+  )}.jkl`
+  return new File(publicArray, finalName, { type: 'text/plain' })
+}
+
+/**
+ * Converts raw Public-mode Blob to File.
+ * @param {Blob} source - Source raw Blob.
+ * @returns {Promise<File>} - Decrypted File.
+ */
+export async function convertFromPublicFile(source: Blob): Promise<File> {
+  let detailsBlob = new Blob([])
+  const blobParts: Blob[] = []
+  for (let i = 0; i < source.length; ) {
+    const offset = i + 8
+    const segSize = Number(source.slice(i, offset).toString())
+    const last = offset + segSize
+    const segment = source.slice(offset, last)
+    if (i === 0) {
+      detailsBlob = segment
+    } else {
+      blobParts.push(segment)
+    }
+    i = last
+  }
+  const details = JSON.parse(detailsBlob.toString())
+  return new File(blobParts, details.name, details)
+}
+
+/**
  * Converts raw File to encrypted File.
  * @param {File} workingFile - Source File.
  * @param {CryptoKey} key - AES-256 CryptoKey.

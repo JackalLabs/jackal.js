@@ -32,6 +32,10 @@ export default interface IFileIo {
     downloadDetails: IDownloadDetails,
     completion: { track: number }
   ): Promise<IFileDownloadHandler | IFolderHandler>
+  downloadFileByFid(
+    fid: string,
+    completion: { track: number }
+  ): Promise<IFileDownloadHandler>
   deleteHome(): Promise<void>
   deleteTargets(targets: string[], parent: IFolderHandler): Promise<void>
   rawDeleteTargets(

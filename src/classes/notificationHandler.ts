@@ -20,17 +20,33 @@ export default class NotificationHandler implements INotificationHandler {
   private readonly walletRef: IWalletHandler
   private readonly qH: IQueryHandler
 
+  /**
+   * Create a NotificationHandler instance.
+   * @param {IWalletHandler} wallet - Instance of WalletHandler.
+   * @private
+   */
   private constructor(wallet: IWalletHandler) {
     this.walletRef = wallet
     this.qH = wallet.getQueryHandler()
   }
 
+  /**
+   * Async wrapper to create a NotificationHandler instance.
+   * @param {IWalletHandler} wallet - Instance of WalletHandler.
+   * @returns {Promise<INotificationHandler>} - Instance of NotificationHandler.
+   */
   static async trackNotification(
     wallet: IWalletHandler
   ): Promise<INotificationHandler> {
     return new NotificationHandler(wallet)
   }
 
+  /**
+   * Create and send Notification to target user.
+   * @param {string} notification - Notification content.
+   * @param {string} address - Bech32 address of recipient.
+   * @returns {EncodeObject}
+   */
   makeNotification(notification: string, address: string): EncodeObject {
     if (!this.walletRef.traits)
       throw new Error(
@@ -43,6 +59,14 @@ export default class NotificationHandler implements INotificationHandler {
       address
     })
   }
+
+  /**
+   * Modify previously sent Notification. Does not re-notify receiver.
+   * @param {number} count - Index of Notification to update.
+   * @param {string} notification - New Notification content.
+   * @param {string} address - Bech32 address of recipient.
+   * @returns {EncodeObject}
+   */
   makeNotificationUpdate(
     count: number,
     notification: string,
@@ -60,6 +84,11 @@ export default class NotificationHandler implements INotificationHandler {
       address
     })
   }
+
+  /**
+   * Deletes all Notifications created by user.
+   * @returns {EncodeObject}
+   */
   makeNotificationDeletion(): EncodeObject {
     if (!this.walletRef.traits)
       throw new Error(
@@ -70,6 +99,11 @@ export default class NotificationHandler implements INotificationHandler {
       creator: this.walletRef.getJackalAddress()
     })
   }
+
+  /**
+   * Initializes Notification system for user.
+   * @returns {EncodeObject}
+   */
   makeCounter(): EncodeObject {
     if (!this.walletRef.traits)
       throw new Error(signerNotEnabled('NotificationHandler', 'makeCounter'))
@@ -78,6 +112,12 @@ export default class NotificationHandler implements INotificationHandler {
       creator: this.walletRef.getJackalAddress()
     })
   }
+
+  /**
+   * Blocks target address from sending Notifications to user.
+   * @param {string} sender - Bech32 address to block.
+   * @returns {EncodeObject}
+   */
   makeBlockedSender(sender: string): EncodeObject {
     if (!this.walletRef.traits)
       throw new Error(
@@ -90,6 +130,10 @@ export default class NotificationHandler implements INotificationHandler {
     })
   }
 
+  /**
+   * Initializes Notification system for user. Wraps makeCounter().
+   * @returns {Promise<void>}
+   */
   async broadcastMakeCounter(): Promise<void> {
     if (!this.walletRef.traits)
       throw new Error(
@@ -103,6 +147,12 @@ export default class NotificationHandler implements INotificationHandler {
     })
   }
 
+  /**
+   * Get target Notification for target receiver.
+   * @param {string} forAddress - Bech32 address of receiver of Notification.
+   * @param {number} index - Index of Notification to retrieve.
+   * @returns {Promise<QueryGetNotificationsResponse>}
+   */
   async getNotification(
     forAddress: string,
     index: number
@@ -114,6 +164,11 @@ export default class NotificationHandler implements INotificationHandler {
       })
     ).value
   }
+
+  /**
+   * Get all Notifications.
+   * @returns {Promise<QueryAllNotificationsResponse>}
+   */
   async getAllNotifications(): Promise<QueryAllNotificationsResponse> {
     return (
       await handlePagination(
@@ -126,6 +181,12 @@ export default class NotificationHandler implements INotificationHandler {
       return acc
     }, [])
   }
+
+  /**
+   * Get all Notifications for target receiver.
+   * @param {string} forAddress - Bech32 address of receiver of Notification.
+   * @returns {Promise<Notifications[]>}
+   */
   async getSingleAddressNotifications(
     forAddress: string
   ): Promise<Notifications[]> {
@@ -143,14 +204,31 @@ export default class NotificationHandler implements INotificationHandler {
       []
     )
   }
+
+  /**
+   * Check if makeCounter() or broadcastMakeCounter() has been run for target address.
+   * @param {string} forAddress - Bech32 address to check.
+   * @returns {Promise<boolean>}
+   */
   async checkNotificationInit(forAddress: string): Promise<boolean> {
     return (await this.getBaseNotiCounter(forAddress)).success
   }
+
+  /**
+   * Check Notification count for target address. Wrapper for getBaseNotiCounter().
+   * @param {string} forAddress - Bech32 address to check.
+   * @returns {Promise<QueryGetNotiCounterResponse>}
+   */
   async getNotificationCounter(
     forAddress: string
   ): Promise<QueryGetNotiCounterResponse> {
     return (await this.getBaseNotiCounter(forAddress)).value
   }
+
+  /**
+   * Check Notification count for all addresses.
+   * @returns {Promise<QueryAllNotiCounterResponse>}
+   */
   async getAllNotificationCounters(): Promise<QueryAllNotiCounterResponse> {
     return (
       await handlePagination(
@@ -165,6 +243,12 @@ export default class NotificationHandler implements INotificationHandler {
   }
 
   /** Standardized Messages */
+  /**
+   * Standardized general-purpose Notification Msg creator.
+   * @param {string} type - Notification identification code.
+   * @param {string} address - Bech32 address of Notification target.
+   * @returns {Promise<EncodeObject>}
+   */
   async makeStandardizedShareNotification(
     type: string,
     address: string
@@ -184,6 +268,12 @@ export default class NotificationHandler implements INotificationHandler {
       address
     )
   }
+
+  /**
+   * Create sharing added Notification entry. Wraps makeStandardizedShareNotification().
+   * @param {string} address - Bech32 address of Notification target.
+   * @returns {Promise<EncodeObject>}
+   */
   async makeAddShareNoti(address: string): Promise<EncodeObject> {
     if (!this.walletRef.traits)
       throw new Error(
@@ -191,6 +281,12 @@ export default class NotificationHandler implements INotificationHandler {
       )
     return await this.makeStandardizedShareNotification('dbfs-add', address)
   }
+
+  /**
+   * Create sharing updated Notification entry. Wraps makeStandardizedShareNotification().
+   * @param {string} address - Bech32 address of Notification target.
+   * @returns {Promise<EncodeObject>}
+   */
   async makeUpdateShareNoti(address: string): Promise<EncodeObject> {
     if (!this.walletRef.traits)
       throw new Error(
@@ -198,6 +294,12 @@ export default class NotificationHandler implements INotificationHandler {
       )
     return await this.makeStandardizedShareNotification('dbfs-update', address)
   }
+
+  /**
+   * Create sharing cancelled Notification entry. Wraps makeStandardizedShareNotification().
+   * @param {string} address - Bech32 address of Notification target.
+   * @returns {Promise<EncodeObject>}
+   */
   async makeRemoveShareNoti(address: string): Promise<EncodeObject> {
     if (!this.walletRef.traits)
       throw new Error(
@@ -207,6 +309,11 @@ export default class NotificationHandler implements INotificationHandler {
   }
 
   /** Read Encrypted Notifications */
+  /**
+   * Query user's Notification by index
+   * @param {number} index - Index of Notification to retrieve.
+   * @returns {Promise<IReadableNoti>}
+   */
   async readMyShareNoti(index: number): Promise<IReadableNoti> {
     if (!this.walletRef.traits)
       throw new Error(
@@ -218,6 +325,11 @@ export default class NotificationHandler implements INotificationHandler {
     )
     return processNotiRead(notifications as Notifications, this.walletRef)
   }
+
+  /**
+   * Query all of user's Notifications.
+   * @returns {Promise<IReadableNoti[]>}
+   */
   async readAllMyShareNotis(): Promise<IReadableNoti[]> {
     if (!this.walletRef.traits)
       throw new Error(
@@ -232,7 +344,13 @@ export default class NotificationHandler implements INotificationHandler {
   }
 
   /** Private Methods */
-  async getBaseNotiCounter(forAddress: string): Promise<IBaseNotiResponse> {
+  /**
+   * Check Notification count for target address.
+   * @param {string} forAddress - Bech32 address for target.
+   * @returns {Promise<IBaseNotiResponse>}
+   * @private
+   */
+  private async getBaseNotiCounter(forAddress: string): Promise<IBaseNotiResponse> {
     return await this.qH.notificationsQuery.queryNotiCounter({
       address: forAddress
     })
@@ -240,6 +358,13 @@ export default class NotificationHandler implements INotificationHandler {
 }
 
 /** Helpers */
+/**
+ * Decrypt encrypted Notification contents.
+ * @param {Notifications} noti - Contents to decrypt.
+ * @param {IWalletHandler} walletRef - WalletHandler instance for decryption methods.
+ * @returns {{contents: string, from: string, to: string}}
+ * @private
+ */
 function processNotiRead(noti: Notifications, walletRef: IWalletHandler) {
   const contents = new TextDecoder().decode(
     walletRef.asymmetricDecrypt(noti.notification)

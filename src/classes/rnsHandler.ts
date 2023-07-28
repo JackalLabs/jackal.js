@@ -483,17 +483,18 @@ export default class RnsHandler implements IRnsHandler {
  * Ensures RNS address ends with ".jkl".
  * @param {string} rns - RNS address to process.
  * @returns {string} - Source RNS address with ".jkl" included.
+ * @private
  */
 function sanitizeRns(rns: string): string {
   const allowedExtensions = /\.(jkl|ibc)$/
   return rns.match(allowedExtensions) ? rns : `${rns}.jkl`
 }
 
-/**
- * Strip ".jkl" and ".ibc" endings from RNS address.
- * @param {string} rns - RNS address to process.
- * @returns {string} - Source RNS address with ".jkl" and ".ibc" excluded.
- */
+// /**
+//  * Strip ".jkl" and ".ibc" endings from RNS address.
+//  * @param {string} rns - RNS address to process.
+//  * @returns {string} - Source RNS address with ".jkl" and ".ibc" excluded.
+//  */
 // function reverseSanitizeRns (rns: string): string {
 //   const strippedExtensions = /\.(jkl|ibc)$/
 //   return rns.replace(strippedExtensions, '')
@@ -504,6 +505,7 @@ function sanitizeRns(rns: string): string {
  * @param {string} data - Data to force to JSON.stringify compliant string.
  * @param {string} caller - Function calling sanitizeRnsData() in case error is logged.
  * @returns {string} - JSON.stringify safe string.
+ * @private
  */
 function sanitizeRnsData(data: string, caller: string) {
   try {
@@ -522,6 +524,7 @@ function sanitizeRnsData(data: string, caller: string) {
  * @param {number} blockTime - Duration of a block in milliseconds.
  * @param {number} expires - Blockheight of RNS expiration
  * @returns {string} - Localized date using 4 digit year, 2 digit day, and month name.
+ * @private
  */
 function parseExpires(blockTime: number, expires: number): string {
   const dd = blockToDateFixed({
