@@ -25,3 +25,5 @@ export { OfflineSigner } from '@cosmjs/proto-signing'
 
 /** Functions */
 export * from '@/utils/misc'
+
+export { signerNotEnabled } from '@/utils/misc'

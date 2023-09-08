@@ -28,6 +28,20 @@ export function getRandomIndex(limit: number) {
 }
 
 /**
+ * Accepts object and 1 or more keys to extract to create new object.
+ * @param {T} source - Object to extract from.
+ * @param {K} keys - N keys passed as individual parameters.
+ * @returns {Pick<T, K>} - New object with only specified keys.
+ */
+export function pluckFromObject<T extends {}, K extends keyof T>(source: T, ...keys: K[]) {
+  return Object.fromEntries(
+    keys
+      .filter(key => key in source)
+      .map(key => [key, source[key]])
+  ) as Pick<T, K>
+}
+
+/**
  * Notify that Signer has not been enabled.
  * @param {string} module - Name of parent Module.
  * @param {string} func - Name of function error occured in.

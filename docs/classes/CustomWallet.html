@@ -22,7 +22,7 @@
 <section class="tsd-panel">
 <h4>Implements</h4>
 <ul class="tsd-hierarchy">
-<li><a href="../interfaces/IMnemonicWallet.html" class="tsd-signature-type tsd-kind-interface">IMnemonicWallet</a></li></ul></section><aside class="tsd-sources">
+<li><a href="../interfaces/IMnemonicWallet.html" class="tsd-signature-type tsd-kind-interface">IBaseWallet</a></li></ul></section><aside class="tsd-sources">
 <ul>
 <li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/2774748/src/classes/mnemonicWallet.ts#L13">src/classes/mnemonicWallet.ts:13</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
@@ -53,7 +53,7 @@
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagPrivate">Private</code> <span>constructor</span><a href="#constructor" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><g stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" id="icon-anchor"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5"></path></g></svg></a></h3>
 <ul class="tsd-signatures tsd-is-private">
 <li class="tsd-signature tsd-anchor-link" id="constructor.new_CustomWallet"><span class="tsd-kind-constructor-signature">new <wbr/>Custom<wbr/>Wallet</span><span class="tsd-signature-symbol">(</span><span class="tsd-kind-parameter">directWallet</span>, <span class="tsd-kind-parameter">aminoWallet</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="CustomWallet.html" class="tsd-signature-type tsd-kind-class">CustomWallet</a><a href="#constructor.new_CustomWallet" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></li>
-<li class="tsd-description"><code class="tsd-tag ts-flagPrivate">Private</code> 
+<li class="tsd-description"><code class="tsd-tag ts-flagPrivate">Private</code>
 <div class="tsd-comment tsd-typography"><p>Receives properties from create() to instantiate CustomWallet for us in creating WalletHandler instance.</p>
 </div>
 <div class="tsd-parameters">
@@ -100,7 +100,7 @@
 <div class="tsd-comment tsd-typography"></div></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
-<p>Implementation of <a href="../interfaces/IMnemonicWallet.html">IMnemonicWallet</a>.<a href="../interfaces/IMnemonicWallet.html#enable">enable</a></p>
+<p>Implementation of <a href="../interfaces/IMnemonicWallet.html">IBaseWallet</a>.<a href="../interfaces/IMnemonicWallet.html#enable">enable</a></p>
 <ul>
 <li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/2774748/src/classes/mnemonicWallet.ts#L54">src/classes/mnemonicWallet.ts:54</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="experimentalSuggestChain" class="tsd-anchor"></a>
@@ -120,7 +120,7 @@
 <div class="tsd-comment tsd-typography"></div></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">void</span><span class="tsd-signature-symbol">&gt;</span></h4>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
-<p>Implementation of <a href="../interfaces/IMnemonicWallet.html">IMnemonicWallet</a>.<a href="../interfaces/IMnemonicWallet.html#experimentalSuggestChain">experimentalSuggestChain</a></p>
+<p>Implementation of <a href="../interfaces/IMnemonicWallet.html">IBaseWallet</a>.<a href="../interfaces/IMnemonicWallet.html#experimentalSuggestChain">experimentalSuggestChain</a></p>
 <ul>
 <li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/2774748/src/classes/mnemonicWallet.ts#L63">src/classes/mnemonicWallet.ts:63</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="getOfflineSignerAuto" class="tsd-anchor"></a>
@@ -140,7 +140,7 @@
 <div class="tsd-comment tsd-typography"></div></li></ul></div>
 <h4 class="tsd-returns-title">Returns <span class="tsd-signature-type ">Promise</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type ">OfflineDirectSigner</span><span class="tsd-signature-symbol">&gt;</span></h4>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
-<p>Implementation of <a href="../interfaces/IMnemonicWallet.html">IMnemonicWallet</a>.<a href="../interfaces/IMnemonicWallet.html#getOfflineSignerAuto">getOfflineSignerAuto</a></p>
+<p>Implementation of <a href="../interfaces/IMnemonicWallet.html">IBaseWallet</a>.<a href="../interfaces/IMnemonicWallet.html#getOfflineSignerAuto">getOfflineSignerAuto</a></p>
 <ul>
 <li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/2774748/src/classes/mnemonicWallet.ts#L72">src/classes/mnemonicWallet.ts:72</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="signArbitrary" class="tsd-anchor"></a>
@@ -173,7 +173,7 @@
 </ul>
 
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
-<p>Implementation of <a href="../interfaces/IMnemonicWallet.html">IMnemonicWallet</a>.<a href="../interfaces/IMnemonicWallet.html#signArbitrary">signArbitrary</a></p>
+<p>Implementation of <a href="../interfaces/IMnemonicWallet.html">IBaseWallet</a>.<a href="../interfaces/IMnemonicWallet.html#signArbitrary">signArbitrary</a></p>
 <ul>
 <li>Defined in <a href="https://github.com/JackalLabs/jackal.js/blob/2774748/src/classes/mnemonicWallet.ts#L83">src/classes/mnemonicWallet.ts:83</a></li></ul></aside></li></ul></section>
 <section class="tsd-panel tsd-member"><a id="create" class="tsd-anchor"></a>

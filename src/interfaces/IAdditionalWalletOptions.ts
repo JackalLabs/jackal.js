@@ -1,5 +1,6 @@
-import { IMnemonicWallet } from '@/interfaces/classes'
+import { IBaseWallet } from '@/interfaces/classes'
 
 export default interface IAdditionalWalletOptions {
-  mnemonicWallet: IMnemonicWallet
+  mnemonicWallet: IBaseWallet
+  snapWallet: IBaseWallet
 }

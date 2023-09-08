@@ -6,6 +6,7 @@ import {
   removeFileTreeEntry,
   saveFileTreeEntry
 } from '@/utils/compression'
+
 import { signerNotEnabled } from '@/utils/misc'
 
 export default class SecretsHandler implements ISecretsHandler {

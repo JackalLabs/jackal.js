@@ -45,12 +45,12 @@ import {
   NotificationHandler,
   OracleHandler,
   RnsHandler,
-  SecretsHandler,
+  SecretsHandler, signerNotEnabled,
   StorageHandler
 } from '@/index'
 import QueryHandler from '@/classes/queryHandler'
-import { signerNotEnabled } from '@/utils/misc'
 import { TWalletExtensions } from '@/types/TWalletExtensions'
+import { getSnap } from '@leapwallet/cosmos-snap-provider'
 
 declare global {
   interface Window extends KeplrWindow, LeapWindow {}
@@ -152,13 +152,31 @@ export default class WalletHandler implements IWalletHandler {
   }
 
   /**
-   * Detects wallet extensions installed by current browser. Supports Keplr and Leap.
+   * (Deprecated) Detects wallet extensions installed by current browser. Supports Keplr and Leap.
    * @returns {ISupportedWallets} - Object containing boolean status of supported wallet extensions.
+   * @deprecated
    */
   static detectAvailableWallets(): ISupportedWallets {
+    deprecated('WalletHandler.detectAvailableWallets()', 'v2.1.0', {
+      replacement: 'WalletHandler.detectMultiplatformAvailableWallets()'
+    })
     return {
       keplr: !!window.keplr,
-      leap: !!window.leap
+      leap: !!window.leap,
+      snap: false
+    }
+  }
+
+  /**
+   * Detects wallet extensions installed by current browser. Supports Keplr, Leap and Metamask Snaps.
+   * @returns {Promise<ISupportedWallets>} - Object containing boolean status of supported wallet extensions.
+   */
+  static async detectMultiplatformAvailableWallets(): Promise<ISupportedWallets> {
+    const isSnap = await getSnap()
+    return {
+      keplr: !!window.keplr,
+      leap: !!window.leap,
+      snap: !!isSnap
     }
   }
 
@@ -464,7 +482,7 @@ async function makeSecret(
 /**
  * Create the traits and properties used by a signing WalletHandler.
  * @param {IWalletConfig} config - Config items needed to create a signing WalletHandler.
- * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports customWallet.
+ * @param {IAdditionalWalletOptions} options - Additional options. Currently only supports BaseWallet instances.
  * @returns {Promise<{traits: IWalletHandlerPublicProperties, properties: IWalletHandlerPrivateProperties}>}
  * @private
  */
@@ -497,9 +515,15 @@ async function processWallet(
       break
     case 'mnemonic':
       if (!options?.mnemonicWallet) {
-        throw new Error('Custom Wallet selected but unavailable')
+        throw new Error('Mnemonic Wallet selected but unavailable')
       }
       windowWallet = options.mnemonicWallet
+      break
+    case 'snap':
+      if (!options?.snapWallet) {
+        throw new Error('Snap Wallet selected but unavailable')
+      }
+      windowWallet = options.snapWallet
       break
     default:
       throw new Error('A valid wallet selection must be provided')
@@ -528,7 +552,6 @@ async function processWallet(
   ).catch((err) => {
     throw err
   })
-  console.log('secret', secret)
   const fileTreeInitComplete = success && !!pubkey?.key
   const secretAsHex = bufferToHex(Buffer.from(secret, 'base64').subarray(0, 32))
   const keyPair = PrivateKey.fromHex(secretAsHex)

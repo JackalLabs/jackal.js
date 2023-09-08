@@ -30,6 +30,7 @@ export { default as IProviderVersionResponse } from '@/interfaces/IProviderVersi
 export { default as IQueueItemPostUpload } from '@/interfaces/IQueueItemPostUpload'
 export { default as IReadableNoti } from '@/interfaces/IReadableNoti'
 export { default as ISharedTracker } from '@/interfaces/ISharedTracker'
+export { default as ISmallChainConfig } from '@/interfaces/ISmallChainConfig'
 export { default as IStaggeredTracker } from '@/interfaces/IStaggeredTracker'
 export { default as IStorageClientFree } from '@/interfaces/IStorageClientFree'
 export { default as IStoragePaymentInfo } from '@/interfaces/IStoragePaymentInfo'
