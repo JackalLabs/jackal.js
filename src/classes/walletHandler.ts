@@ -28,8 +28,7 @@ import {
 import { bufferToHex, hashAndHex, hexFullPath, merkleMeBro } from '@/utils/hash'
 import {
   IAdditionalWalletOptions,
-  ICoin /** TODO */,
-  // IEnabledSecrets,
+  ICoin,
   ISupportedWallets,
   IWalletConfig,
   IWalletHandlerPrivateProperties,
@@ -45,7 +44,8 @@ import {
   NotificationHandler,
   OracleHandler,
   RnsHandler,
-  SecretsHandler, signerNotEnabled,
+  SecretsHandler,
+  signerNotEnabled,
   StorageHandler
 } from '@/index'
 import QueryHandler from '@/classes/queryHandler'
@@ -529,9 +529,11 @@ async function processWallet(
       throw new Error('A valid wallet selection must be provided')
   }
   await windowWallet.experimentalSuggestChain(chainConfig)
-  await windowWallet.enable(enabledChains || defaultChains).catch((err: Error) => {
-    throw err
-  })
+  await windowWallet
+    .enable(enabledChains || defaultChains)
+    .catch((err: Error) => {
+      throw err
+    })
   const signer = await windowWallet.getOfflineSignerAuto(chainId, {})
   const queryUrl = (queryAddr || defaultQueryAddr9091).replace(/\/+$/, '')
   const rpcUrl = (txAddr || defaultTxAddr26657).replace(/\/+$/, '')

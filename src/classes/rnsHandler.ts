@@ -20,7 +20,8 @@ import {
 } from '@/interfaces'
 import {
   blockToDateFixed,
-  handlePagination, signerNotEnabled
+  handlePagination,
+  signerNotEnabled
 } from '@/utils/misc'
 import IRnsExpandedItem from '@/interfaces/rns/IRnsExpandedItem'
 

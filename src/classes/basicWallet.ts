@@ -1,10 +1,5 @@
-import {
-  OfflineAminoSigner,
-  StdSignature
-} from '@cosmjs/amino'
-import {
-  OfflineDirectSigner
-} from '@cosmjs/proto-signing'
+import { OfflineAminoSigner, StdSignature } from '@cosmjs/amino'
+import { OfflineDirectSigner } from '@cosmjs/proto-signing'
 import { IChainConfig } from '@/interfaces'
 import { IBaseWallet } from '@/interfaces/classes'
 

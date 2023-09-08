@@ -1,10 +1,5 @@
 import { AccountData, OfflineSigner } from '@cosmjs/proto-signing'
-import {
-  ICoin,
-  IEnabledSecrets,
-  IWalletConfig,
-  IWalletHandlerPublicProperties
-} from '@/interfaces'
+import { ICoin, IEnabledSecrets, IWalletConfig, IWalletHandlerPublicProperties } from '@/interfaces'
 import {
   IAbciHandler,
   IFileIo,

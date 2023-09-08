@@ -1,16 +1,16 @@
+import { OfflineAminoSigner } from '@cosmjs/amino'
+import { OfflineDirectSigner } from '@cosmjs/proto-signing'
 import {
-  OfflineAminoSigner
-} from '@cosmjs/amino'
-import {
-  OfflineDirectSigner
-} from '@cosmjs/proto-signing'
-import { connectSnap, CosmjsOfflineSigner, getSnap, suggestChain } from '@leapwallet/cosmos-snap-provider'
+  connectSnap,
+  CosmjsOfflineSigner,
+  getSnap,
+  suggestChain
+} from '@leapwallet/cosmos-snap-provider'
 import { IBaseWallet } from '@/interfaces/classes'
 import BaseWallet from '@/classes/basicWallet'
 import { IChainConfig } from '@/interfaces'
 
 export default class SnapWallet extends BaseWallet implements IBaseWallet {
-
   /**
    * Receives properties from create() to instantiate SnapWallet for use in creating WalletHandler instance.
    * @param {OfflineDirectSigner} directWallet
@@ -38,7 +38,10 @@ export default class SnapWallet extends BaseWallet implements IBaseWallet {
       await connectSnap()
     }
 
-    return new SnapWallet(offlineSigner as OfflineDirectSigner, offlineSigner as OfflineAminoSigner)
+    return new SnapWallet(
+      offlineSigner as OfflineDirectSigner,
+      offlineSigner as OfflineAminoSigner
+    )
   }
 
   /**

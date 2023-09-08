@@ -1,9 +1,5 @@
 import PLZSU from '@karnthis/plzsu'
-import {
-  IEditorsViewers,
-  IMsgPartialPostFileBundle,
-  IPermsParts
-} from '@/interfaces'
+import { IEditorsViewers, IMsgPartialPostFileBundle, IPermsParts } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import {
   aesToString,

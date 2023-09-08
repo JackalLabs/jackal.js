@@ -3,7 +3,10 @@ import { convertFromEncryptedFile } from '@/utils/crypt'
 import { PrivateFileDownloadHandler } from '@/classes/privateFileDownloadHandler'
 import { deprecated } from '@/utils/misc'
 
-export default class FileDownloadHandler extends PrivateFileDownloadHandler implements IFileDownloadHandler {
+export default class FileDownloadHandler
+  extends PrivateFileDownloadHandler
+  implements IFileDownloadHandler
+{
   protected constructor(file: File) {
     super(file)
   }
@@ -20,7 +23,9 @@ export default class FileDownloadHandler extends PrivateFileDownloadHandler impl
     key: CryptoKey,
     iv: Uint8Array
   ): Promise<IFileDownloadHandler> {
-    deprecated('FileDownloadHandler', '2.0.7', { replacement: 'PrivateFileDownloadHandler' })
+    deprecated('FileDownloadHandler', '2.0.7', {
+      replacement: 'PrivateFileDownloadHandler'
+    })
     const decryptedFile: File = await convertFromEncryptedFile(file, key, iv)
     return new FileDownloadHandler(decryptedFile)
   }

@@ -1,9 +1,4 @@
-import {
-  IChildDirInfo,
-  IFileMeta,
-  IFileMetaHashMap,
-  IFolderFrame
-} from '@/interfaces'
+import { IChildDirInfo, IFileMeta, IFileMetaHashMap, IFolderFrame } from '@/interfaces'
 import { IWalletHandler } from '@/interfaces/classes/index'
 import { EncodeObject } from '@cosmjs/proto-signing'
 

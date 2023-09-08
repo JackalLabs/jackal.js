@@ -1,15 +1,12 @@
+import { OfflineAminoSigner, Secp256k1HdWallet } from '@cosmjs/amino'
 import {
-  OfflineAminoSigner,
-  Secp256k1HdWallet
-} from '@cosmjs/amino'
-import {
-  DirectSecp256k1HdWallet, OfflineDirectSigner
+  DirectSecp256k1HdWallet,
+  OfflineDirectSigner
 } from '@cosmjs/proto-signing'
 import { IBaseWallet } from '@/interfaces/classes'
 import BaseWallet from '@/classes/basicWallet'
 
 export default class MnemonicWallet extends BaseWallet implements IBaseWallet {
-
   /**
    * Receives properties from create() to instantiate MnemonicWallet for use in creating WalletHandler instance.
    * @param {OfflineDirectSigner} directWallet

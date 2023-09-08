@@ -350,7 +350,9 @@ export default class NotificationHandler implements INotificationHandler {
    * @returns {Promise<IBaseNotiResponse>}
    * @private
    */
-  private async getBaseNotiCounter(forAddress: string): Promise<IBaseNotiResponse> {
+  private async getBaseNotiCounter(
+    forAddress: string
+  ): Promise<IBaseNotiResponse> {
     return await this.qH.notificationsQuery.queryNotiCounter({
       address: forAddress
     })
