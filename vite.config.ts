@@ -2,18 +2,23 @@ import { defineConfig } from "vite"
 
 import typescript from "@rollup/plugin-typescript"
 import { resolve } from "path"
+import { copyFileSync } from "fs"
 import { typescriptPaths } from "rollup-plugin-typescript-paths"
 import tsconfigPaths from 'vite-tsconfig-paths'
 import dts from 'vite-plugin-dts'
-// @ts-ignore
-// import nodePolyfills from 'vite-plugin-node-stdlib-browser'
 
 export default defineConfig({
   base: './',
   plugins: [
     tsconfigPaths(),
-    // nodePolyfills(),
-    dts({ rollupTypes: true })
+    dts({
+      afterBuild: () => {
+        copyFileSync("dist/index.d.ts", "dist/index.d.mts")
+      },
+      include: ["src"],
+      rollupTypes: true,
+      logLevel: 'error'
+    })
   ],
   resolve: {
     preserveSymlinks: true,
@@ -22,34 +27,38 @@ export default defineConfig({
         find: "@",
         replacement: resolve(__dirname, "./src"),
       },
+      {
+        find: "function-bind",
+        replacement: resolve(__dirname, "./node_modules", "function-bind", "implementation.js"),
+      },
+      {
+        find: "symbol-observable/ponyfill",
+        replacement: resolve(__dirname, "./node_modules", "symbol-observable", "ponyfill.js"),
+      },
     ],
     extensions: ['.ts']
   },
   build: {
     manifest: true,
-    minify: true,
+    minify: false,
     reportCompressedSize: true,
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
       fileName: (format) => `index.${format}.js`,
+      formats: ['es'],
       name: 'Jackal.js'
     },
     rollupOptions: {
       external: [
         /@cosmjs.*/,
-        '@karnthis/plzsu',
-        'bech32',
-        'bip32',
-        'bip39',
-        'bs58check',
-        'eciesjs',
-        '@jackallabs/jackal.js-protos',
-        'make-random',
+        /cosmjs-types*/,
+        'grpc-web',
+        'protobufjs',
+        'ts-proto',
       ],
       plugins: [
         typescriptPaths({
           absolute: false,
-          // nonRelative: true,
         }),
         typescript({ tsconfig: './tsconfig.json' }),
       ],

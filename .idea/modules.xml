@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/jackaljs.iml" filepath="$PROJECT_DIR$/.idea/jackaljs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/jackal.js.iml" filepath="$PROJECT_DIR$/.idea/jackal.js.iml" />
     </modules>
   </component>
 </project>

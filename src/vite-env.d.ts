@@ -1,3 +1,7 @@
 /// <reference types="vite/client" />
 
-// declare module 'vite-plugin-node-stdlib-browser' {}
+import { Window as KeplrWindow } from '@keplr-wallet/types'
+
+declare global {
+  interface Window extends KeplrWindow, LeapWindow {}
+}
