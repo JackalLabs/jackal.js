@@ -1,1 +1,5 @@
-export * from '@/interfaces/classes/ISampleHandler'
+export * from '@/interfaces/classes/IClientHandler'
+export * from '@/interfaces/classes/IClientSetup'
+export * from '@/interfaces/classes/IMetaHandler'
+export * from '@/interfaces/classes/IMnemonicWallet'
+export * from '@/interfaces/classes/IStorageHandler'

@@ -18,7 +18,7 @@ export default defineConfig({
       include: ["src"],
       rollupTypes: true,
       logLevel: 'error'
-    })
+    }),
   ],
   resolve: {
     preserveSymlinks: true,
@@ -50,11 +50,19 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
+        /* Jackal.js-protos */
         /@cosmjs.*/,
         /cosmjs-types*/,
         'grpc-web',
         'protobufjs',
         'ts-proto',
+        /* Jackal.js */
+        'browserify-sign',
+        'browserify-aes',
+        'browserify-des',
+        'ripemd160',
+        'create-hash',
+        'for-each',
       ],
       plugins: [
         typescriptPaths({
