@@ -1,9 +1,5 @@
 import PLZSU from '@karnthis/plzsu'
-import {
-  IEditorsViewers,
-  IMsgPartialPostFileBundle,
-  IPermsParts
-} from '@/interfaces'
+import { IEditorsViewers, IMsgPartialPostFileBundle, IPermsParts } from '@/interfaces'
 import { EncodeObject } from '@cosmjs/proto-signing'
 import {
   aesToString,
@@ -17,9 +13,9 @@ import {
 import { hashAndHex, merkleMeBro } from '@/utils/hash'
 import { Files } from '@jackallabs/jackal.js-protos'
 import { IProtoHandler, IWalletHandler } from '@/interfaces/classes'
-import { getFileTreeData } from '@/utils/misc'
+import { getFileTreeData, stringToUint16 } from '@/utils/misc'
 
-const { crypto } = window ? window : globalThis
+const {crypto} = window ? window : globalThis
 const Plzsu = new PLZSU()
 
 /**
@@ -27,8 +23,28 @@ const Plzsu = new PLZSU()
  * @param {string} input - String to compress.
  * @returns {string} - Compressed string.
  */
-export function compressData(input: string): string {
+export function compressData (input: string): string {
   return `jklpc1${Plzsu.compress(input)}`
+}
+
+/**
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+export function sanitizeCompressionForAmino (input: string): string {
+  console.log('sanitizeCompressionForAmino', input)
+  console.log('sanitizeCompressionForAmino len', input.length)
+
+  // const safe = new Uint8Array(stringToUint16(input))
+  // return `jklpc2|${btoa(uint8ToString(safe))}`
+  const uint = stringToUint16(input)
+  // console.log('sanitizeCompressionForAmino uint len', uint.byteLength)
+  const finalBuf = new Uint8Array(uint.buffer)
+  // console.log('sanitizeCompressionForAmino other len', finalBuf.byteLength)
+
+  const bufAsString = String.fromCodePoint(...finalBuf)
+  return `jklpc2|${btoa(bufAsString)}`
 }
 
 /**
@@ -36,9 +52,11 @@ export function compressData(input: string): string {
  * @param {string} input - String to decompress.
  * @returns {string} - Decompressed string.
  */
-export function decompressData(input: string): string {
-  if (!input.startsWith('jklpc1'))
+export function decompressData (input: string): string {
+
+  if (!input.startsWith('jklpc1')) {
     throw new Error('Invalid Decompression String')
+  }
   return Plzsu.decompress(input.substring(6))
 }
 
@@ -52,7 +70,7 @@ export function decompressData(input: string): string {
  * @param {boolean} compress - Optional boolean to flag if rawContents should be compressed.
  * @returns {Promise<EncodeObject>} - FileTree msg to save entry.
  */
-export async function saveFileTreeEntry(
+export async function saveFileTreeEntry (
   toAddress: string,
   rawPath: string,
   rawTarget: string,
@@ -60,6 +78,8 @@ export async function saveFileTreeEntry(
   walletRef: IWalletHandler,
   compress?: boolean
 ): Promise<EncodeObject> {
+  console.log('walletRef.getIsLedger()', walletRef.getIsLedger())
+
   const aes = {
     iv: genIv(),
     key: await genKey()
@@ -80,7 +100,8 @@ export async function saveFileTreeEntry(
     msg.contents = await compressEncryptString(
       JSON.stringify(rawContents),
       aes.key,
-      aes.iv
+      aes.iv,
+      walletRef.getIsLedger()
     )
   } else {
     msg.contents = await cryptString(
@@ -101,11 +122,11 @@ export async function saveFileTreeEntry(
     usr: creator
   }
   msg.editors = JSON.stringify(
-    await makePermsBlock({ base: 'e', ...me }, walletRef)
+    await makePermsBlock({base: 'e', ...me}, walletRef)
   )
   if (toAddress === creator) {
     msg.viewers = JSON.stringify(
-      await makePermsBlock({ base: 'v', ...me }, walletRef)
+      await makePermsBlock({base: 'v', ...me}, walletRef)
     )
   } else {
     const destPubKey = await walletRef.findPubKey(toAddress)
@@ -115,8 +136,8 @@ export async function saveFileTreeEntry(
       usr: toAddress
     }
     msg.viewers = JSON.stringify({
-      ...(await makePermsBlock({ base: 'v', ...me }, walletRef)),
-      ...(await makePermsBlock({ base: 'v', ...them }, walletRef))
+      ...(await makePermsBlock({base: 'v', ...me}, walletRef)),
+      ...(await makePermsBlock({base: 'v', ...them}, walletRef))
     })
   }
   return buildPostFile(msg, walletRef.getProtoHandler())
@@ -130,7 +151,7 @@ export async function saveFileTreeEntry(
  * @param {boolean} decompress - Optional boolean to flag if retrieved data should be decompressed.
  * @returns {Promise<{[p: string]: any}>} - Stored data object.
  */
-export async function readFileTreeEntry(
+export async function readFileTreeEntry (
   owner: string,
   rawPath: string,
   walletRef: IWalletHandler,
@@ -146,7 +167,7 @@ export async function readFileTreeEntry(
     return {}
   } else {
     try {
-      const { contents, viewingAccess, trackingNumber } = result.value
+      const {contents, viewingAccess, trackingNumber} = result.value
         .files as Files
       const parsedVA = JSON.parse(viewingAccess)
       const viewName = await hashAndHex(
@@ -187,7 +208,7 @@ export async function readFileTreeEntry(
  * @param {IWalletHandler} walletRef
  * @returns {Promise<EncodeObject>}
  */
-export async function removeFileTreeEntry(
+export async function removeFileTreeEntry (
   rawPath: string,
   walletRef: IWalletHandler
 ): Promise<EncodeObject> {
@@ -206,7 +227,7 @@ export async function removeFileTreeEntry(
  * @param {IWalletHandler} walletRef - Wallet instance for accessing functions.
  * @returns {Promise<IEditorsViewers>} - Completed permissions block.
  */
-export async function makePermsBlock(
+export async function makePermsBlock (
   parts: IPermsParts,
   walletRef: IWalletHandler
 ): Promise<IEditorsViewers> {
@@ -222,7 +243,7 @@ export async function makePermsBlock(
  * @param {IProtoHandler} pH - ProtoHandler instance for accessing msgPostFile function.
  * @returns {Promise<EncodeObject>} - Encoded msgPostFile in correct order.
  */
-export async function buildPostFile(
+export async function buildPostFile (
   data: IMsgPartialPostFileBundle,
   pH: IProtoHandler
 ): Promise<EncodeObject> {

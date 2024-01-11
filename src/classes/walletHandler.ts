@@ -364,6 +364,12 @@ export default class WalletHandler implements IWalletHandler {
     }
   }
 
+  getIsLedger(): boolean {
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getIsLedger'))
+    return !this.traits?.isDirect
+  }
+
   /**
    * Handler Factories
    */

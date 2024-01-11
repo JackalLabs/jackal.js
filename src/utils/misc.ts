@@ -10,7 +10,7 @@ import { hashAndHex, merkleMeBro } from '@/utils/hash'
  * Aggressive: TRUE to trigger alert.
  * Replacement: the function name that should be used instead. Example: "replacementFunction()".
  */
-export function deprecated(
+export function deprecated (
   thing: string,
   version: string,
   opts?: { aggressive?: boolean; replacement?: string }
@@ -20,10 +20,12 @@ export function deprecated(
     notice += ` - Please use ${opts.replacement} instead`
   }
   console.error(notice)
-  if (opts?.aggressive) alert(notice)
+  if (opts?.aggressive) {
+    alert(notice)
+  }
 }
 
-export function getRandomIndex(limit: number) {
+export function getRandomIndex (limit: number) {
   return Math.floor(Math.random() * Number(limit) || 0)
 }
 
@@ -33,7 +35,7 @@ export function getRandomIndex(limit: number) {
  * @param {string} func - Name of function error occured in.
  * @returns {string} - String containing error message.
  */
-export function signerNotEnabled(module: string, func: string) {
+export function signerNotEnabled (module: string, func: string) {
   let notice = `[${module}] ${func}() - Signer has not been enabled. Please init ProtoHandler`
   console.error(notice)
   return notice
@@ -44,7 +46,7 @@ export function signerNotEnabled(module: string, func: string) {
  * @param {string[]} sortable - Array of string to organize.
  * @returns {string[]} - Array of sorted strings.
  */
-export function orderStrings(sortable: string[]): string[] {
+export function orderStrings (sortable: string[]): string[] {
   return sortable.sort((a: string, b: string) => {
     const lowerA = a.toLowerCase()
     const lowerB = b.toLowerCase()
@@ -63,7 +65,7 @@ export function orderStrings(sortable: string[]): string[] {
  * @param {string} value - Starting string.
  * @returns {string} - String without slashes.
  */
-export function stripper(value: string): string {
+export function stripper (value: string): string {
   return value.replace(/\/+/g, '')
 }
 
@@ -71,7 +73,7 @@ export function stripper(value: string): string {
  * Check chain response for insufficient gas.
  * @param response - @cosmjs/stargate DeliverTxResponse.
  */
-export function checkResults(response: any) {
+export function checkResults (response: any) {
   console.dir(response)
   if (response.gasUsed > response.gasWanted) {
     console.log('Out Of Gas')
@@ -84,7 +86,7 @@ export function checkResults(response: any) {
  * @param {number | string} base - Accepts number or number-like string.
  * @returns {string} - Whole TB as string for Msg compatibility.
  */
-export function numToWholeTB(base: number | string): string {
+export function numToWholeTB (base: number | string): string {
   return numTo3xTB(Math.floor(Number(base)) || 0)
 }
 
@@ -93,12 +95,16 @@ export function numToWholeTB(base: number | string): string {
  * @param {number | string} base - Accepts number or number-like string.
  * @returns {string} - Total TB as string for Msg compatibility.
  */
-export function numTo3xTB(base: number | string): string {
+export function numTo3xTB (base: number | string): string {
   let final = Math.max(Number(base), 0)
-  final *= 1000 /** KB */
-  final *= 1000 /** MB */
-  final *= 1000 /** GB */
-  final *= 1000 /** TB */
+  final *= 1000
+  /** KB */
+  final *= 1000
+  /** MB */
+  final *= 1000
+  /** GB */
+  final *= 1000
+  /** TB */
   final *= 3 /** Redundancy */
   return final.toString()
 }
@@ -108,7 +114,7 @@ export function numTo3xTB(base: number | string): string {
  * @param {string} value - String to check.
  * @returns {string | undefined | null} - Returns null or undefined if string matches, otherwise returns original string.
  */
-export function bruteForceString(value: string): string | undefined | null {
+export function bruteForceString (value: string): string | undefined | null {
   switch (value.toLowerCase()) {
     case 'null':
       return null
@@ -126,7 +132,7 @@ export function bruteForceString(value: string): string | undefined | null {
  * @param additionalParams - Non-pagination parameters required by queryTag function.
  * @returns {Promise<any[]>} - Merged pagination results.
  */
-export async function handlePagination(
+export async function handlePagination (
   handler: any,
   queryTag: string,
   additionalParams?: any
@@ -152,7 +158,7 @@ export async function handlePagination(
  * @param {number} duration - Duration of timer in ms.
  * @returns {Promise<void>}
  */
-export async function setDelay(duration: number): Promise<void> {
+export async function setDelay (duration: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, Number(duration)))
 }
 
@@ -161,11 +167,13 @@ export async function setDelay(duration: number): Promise<void> {
  * @param {IBlockTimeOptions} options - Values to use for calculating UTC date.
  * @returns {Promise<Date>} - Date object for future date matching input future chain height.
  */
-export async function blockToDate(options: IBlockTimeOptions): Promise<Date> {
-  if (!options.rpcUrl) throw new Error('RPC URL is required!')
+export async function blockToDate (options: IBlockTimeOptions): Promise<Date> {
+  if (!options.rpcUrl) {
+    throw new Error('RPC URL is required!')
+  }
   /** Block time in milliseconds */
   const blockTime = await getAverageBlockTime(options.rpcUrl, 20)
-  return blockToDateFixed({ ...options, blockTime })
+  return blockToDateFixed({...options, blockTime})
 }
 
 /**
@@ -173,8 +181,10 @@ export async function blockToDate(options: IBlockTimeOptions): Promise<Date> {
  * @param {IBlockTimeOptions} options - Values to use for calculating UTC date.
  * @returns {Date} - Date object for future date matching input future chain height.
  */
-export function blockToDateFixed(options: IBlockTimeOptions): Date {
-  if (!options.blockTime) throw new Error('Block Time is required!')
+export function blockToDateFixed (options: IBlockTimeOptions): Date {
+  if (!options.blockTime) {
+    throw new Error('Block Time is required!')
+  }
   const targetHeight = Number(options.targetBlockHeight) || 0
   const blockDiff = targetHeight - options.currentBlockHeight
   const diffMs = blockDiff * options.blockTime
@@ -188,7 +198,7 @@ export function blockToDateFixed(options: IBlockTimeOptions): Date {
  * @param {number} blocks - Number of blocks to use for average.
  * @returns {Promise<number>} - Time in ms per block of submitted window.
  */
-export async function getAverageBlockTime(
+export async function getAverageBlockTime (
   rpc: string,
   blocks: number
 ): Promise<number> {
@@ -197,7 +207,7 @@ export async function getAverageBlockTime(
     .catch((err) => {
       console.warn('getAvgBlockTime() latestBlockInfo fetch error:')
       console.error(err)
-      return { result: { block: { header: { height: blocks, time: 0 } } } }
+      return {result: {block: {header: {height: blocks, time: 0}}}}
     })
   const blockOffset =
     Number(latestBlockInfo.result.block.header.height - blocks) || 0
@@ -206,7 +216,7 @@ export async function getAverageBlockTime(
     .catch((err) => {
       console.warn('getAvgBlockTime() pastBlockInfo fetch error:')
       console.error(err)
-      return { result: { block: { header: { time: 0 } } } }
+      return {result: {block: {header: {time: 0}}}}
     })
   const latest = Date.parse(latestBlockInfo.result.block.header.time)
   const past = Date.parse(pastBlockInfo.result.block.header.time)
@@ -218,7 +228,7 @@ export async function getAverageBlockTime(
  * @param {Uint8Array} buf - Uint8Array to convert.
  * @returns {string} - Converted result.
  */
-export function uint8ToString(buf: Uint8Array): string {
+export function uint8ToString (buf: Uint8Array): string {
   return String.fromCharCode.apply(null, [...buf])
 }
 
@@ -227,10 +237,21 @@ export function uint8ToString(buf: Uint8Array): string {
  * @param {string} str - String to convert.
  * @returns {Uint8Array} - Converted result.
  */
-export function stringToUint8(str: string): Uint8Array {
+export function stringToUint8 (str: string): Uint8Array {
   const uintView = new Uint8Array(str.length)
   for (let i = 0; i < str.length; i++) {
     uintView[i] = str.charCodeAt(i)
+  }
+  return uintView
+}
+
+export function uint8StringToUint16 (str: string): Uint16Array {
+  const uintView = new Uint16Array(str.length / 2)
+  for (let i = 0; i < str.length; i++) {
+    const marker = i * 2
+    const aa = str.charCodeAt(marker)
+    const bb = str.charCodeAt(marker + 1)
+    uintView[i] = (bb << 8) | aa
   }
   return uintView
 }
@@ -240,7 +261,7 @@ export function stringToUint8(str: string): Uint8Array {
  * @param {Uint16Array} buf - Uint16Array to convert.
  * @returns {string} - Converted result.
  */
-export function uint16ToString(buf: Uint16Array): string {
+export function uint16ToString (buf: Uint16Array): string {
   return String.fromCharCode.apply(null, [...buf])
 }
 
@@ -249,7 +270,7 @@ export function uint16ToString(buf: Uint16Array): string {
  * @param {string} str - String to convert.
  * @returns {Uint16Array} - Converted result.
  */
-export function stringToUint16(str: string): Uint16Array {
+export function stringToUint16 (str: string): Uint16Array {
   const uintView = new Uint16Array(str.length)
   for (let i = 0; i < str.length; i++) {
     uintView[i] = str.charCodeAt(i)
@@ -264,7 +285,7 @@ export function stringToUint16(str: string): Uint16Array {
  * @param {IQueryHandler} qH - QueryHandler instance.
  * @returns {Promise<IFileResponse>} - Raw query response.
  */
-export async function getFileTreeData(
+export async function getFileTreeData (
   rawPath: string,
   owner: string,
   qH: IQueryHandler
@@ -286,6 +307,7 @@ interface IFileResponse {
   success: boolean
   value: QueryFileResponse
 }
+
 interface IBlockTimeOptions {
   blockTime?: number
   rpcUrl?: string

@@ -370,9 +370,11 @@ export default class FileIo implements IFileIo {
         readyToBroadcast.push(
           await parent.addChildFileReferences(fileNames, this.walletRef)
         )
-        const memo = `Processing batch of ${processValues.length} uploads`
+        const tmp = readyToBroadcast[1]
+        // tmp.value.payOnce = true
+        const memo = ``
         await pH
-          .debugBroadcaster(readyToBroadcast, { memo, step: false })
+          .debugBroadcaster([tmp], { memo, step: true })
           .catch((err) => {
             throw err
           })

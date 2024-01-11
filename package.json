@@ -1,6 +1,6 @@
 {
   "name": "@jackallabs/jackal.js",
-  "version": "2.0.6",
+  "version": "2.1.0-alpha.30",
   "description": "Javascript library for interacting with the Jackal Chain",
   "keywords": [
     "jackal",
@@ -56,13 +56,13 @@
     "@cosmjs/launchpad": "^0.27.1",
     "@cosmjs/proto-signing": "0.31.0",
     "@cosmjs/stargate": "0.31.0",
+    "@jackallabs/jackal.js-protos": "file:jackallabs-jackal.js-protos-1.4.0-alpha.27.tgz",
     "@karnthis/plzsu": "^1.0.0",
     "bech32": "^2.0.0",
     "bip32": "^3.0.1",
     "bip39": "3.1.0",
     "bs58check": "3.0.1",
     "eciesjs": "0.4.2",
-    "@jackallabs/jackal.js-protos": "^1.3.14",
     "make-random": "^3.0.2"
   },
   "devDependencies": {

@@ -39,6 +39,7 @@ export default interface IWalletHandler {
   asymmetricEncrypt(toEncrypt: ArrayBuffer, pubKey: string): string
   asymmetricDecrypt(toDecrypt: string): ArrayBuffer
   findPubKey(address: string): Promise<string>
+  getIsLedger(): boolean
 
   /**
    * Handler Factories
