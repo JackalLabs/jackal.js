@@ -365,6 +365,16 @@ export default class WalletHandler implements IWalletHandler {
   }
 
   /**
+   * Returns true if wallet is using a ledger (amino) signer.
+   * @returns {boolean}
+   */
+  getIsLedger(): boolean {
+    if (!this.properties)
+      throw new Error(signerNotEnabled('WalletHandler', 'getIsLedger'))
+    return !this.traits?.isDirect
+  }
+
+  /**
    * Handler Factories
    */
 

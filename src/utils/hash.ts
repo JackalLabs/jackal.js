@@ -1,4 +1,4 @@
-const { crypto } = window ? window : globalThis
+const {crypto} = window ? window : globalThis
 
 /**
  * Hash input using SHA-256, then convert to hex string.
@@ -6,7 +6,7 @@ const { crypto } = window ? window : globalThis
  * @returns {Promise<string>} - Resulting Hex string.
  * @private
  */
-export async function hashAndHex(input: string): Promise<string> {
+export async function hashAndHex (input: string): Promise<string> {
   const algo = 'SHA-256'
   const raw = await crypto.subtle.digest(algo, new TextEncoder().encode(input))
   return bufferToHex(new Uint8Array(raw))
@@ -19,7 +19,7 @@ export async function hashAndHex(input: string): Promise<string> {
  * @returns {Promise<string>} - Resulting Merkle Hex string.
  * @private
  */
-export async function hexFullPath(
+export async function hexFullPath (
   path: string,
   fileName: string
 ): Promise<string> {
@@ -32,7 +32,7 @@ export async function hexFullPath(
  * @returns {Promise<string>} - Resulting Merkle Hex string.
  * @private
  */
-export async function merkleMeBro(path: string): Promise<string> {
+export async function merkleMeBro (path: string): Promise<string> {
   const pathArray = path.split('/')
   let merkle = ''
   for (let i = 0; i < pathArray.length; i++) {
@@ -47,7 +47,7 @@ export async function merkleMeBro(path: string): Promise<string> {
  * @returns {string} - Hex string converted from source.
  * @private
  */
-export function bufferToHex(buf: Uint8Array): string {
+export function bufferToHex (buf: Uint8Array): string {
   return buf.reduce((acc: string, curr: number) => {
     return acc + hashMap[curr]
   }, '')

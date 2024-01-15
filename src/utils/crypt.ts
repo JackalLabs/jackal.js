@@ -1,18 +1,18 @@
 import { keyAlgo } from '@/utils/globals'
 import { hashAndHex } from '@/utils/hash'
-import { compressData, decompressData } from '@/utils/compression'
+import { compressData, decompressData, sanitizeCompressionForAmino } from '@/utils/compression'
 import { IWalletHandler } from '@/interfaces/classes'
 import { IAesBundle } from '@/interfaces'
 import { stringToUint16, uint16ToString } from '@/utils/misc'
 
-const { crypto } = window ? window : globalThis
+const {crypto} = window ? window : globalThis
 
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
  * @param {CryptoKey} key - CryptoKey to convert.
  * @returns {Promise<Uint8Array>} - CryptoKey as Uint8Array.
  */
-export async function exportJackalKey(key: CryptoKey): Promise<Uint8Array> {
+export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
 }
 
@@ -21,7 +21,7 @@ export async function exportJackalKey(key: CryptoKey): Promise<Uint8Array> {
  * @param {Uint8Array} rawExport - Uint8Array to recover to CryptoKey.
  * @returns {Promise<CryptoKey>} - Recovered CryptoKey.
  */
-export function importJackalKey(rawExport: Uint8Array): Promise<CryptoKey> {
+export function importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, [
     'encrypt',
     'decrypt'
@@ -32,7 +32,7 @@ export function importJackalKey(rawExport: Uint8Array): Promise<CryptoKey> {
  * Generate a new CryptoKey from scratch. Compatible with AES-256 and exportJackalKey(). Supports encrypt and decrypt.
  * @returns {Promise<CryptoKey>} - Fresh random CryptoKey.
  */
-export function genKey(): Promise<CryptoKey> {
+export function genKey (): Promise<CryptoKey> {
   return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])
 }
 
@@ -40,7 +40,7 @@ export function genKey(): Promise<CryptoKey> {
  * Generate a new iv from scratch. Compatible with AES-256.
  * @returns {Uint8Array} - Fresh random iv.
  */
-export function genIv(): Uint8Array {
+export function genIv (): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(16))
 }
 
@@ -49,10 +49,10 @@ export function genIv(): Uint8Array {
  * @param {Blob} data - Source to encrypt or decrypt.
  * @param {CryptoKey} key - Key to use. Decryption key must match encryption key that was used.
  * @param {Uint8Array} iv - Iv to use. Decryption iv must match encryption iv that was used.
- * @param {"encrypt" | "decrypt"} mode - Toggle between encryption and decryption.
+ * @param {'encrypt' | 'decrypt'} mode - Toggle between encryption and decryption.
  * @returns {Promise<Blob>} - Processed result.
  */
-export async function aesCrypt(
+export async function aesCrypt (
   data: Blob,
   key: CryptoKey,
   iv: Uint8Array,
@@ -95,7 +95,7 @@ export async function aesCrypt(
  * @param {IAesBundle} aes - AES iv/CryptoKey set to encrypt.
  * @returns {Promise<string>} - Encrypted string with pipe "|" delimiter.
  */
-export async function aesToString(
+export async function aesToString (
   wallet: IWalletHandler,
   pubKey: string,
   aes: IAesBundle
@@ -112,7 +112,7 @@ export async function aesToString(
  * @param {string} source - String containing encrypted AES iv/CryptoKey set with pipe "|" delimiter.
  * @returns {Promise<IAesBundle>} - Decrypted AES iv/CryptoKey set.
  */
-export async function stringToAes(
+export async function stringToAes (
   wallet: IWalletHandler,
   source: string
 ): Promise<IAesBundle> {
@@ -133,14 +133,14 @@ export async function stringToAes(
  * @param {File} workingFile - Source File.
  * @returns {Promise<File>} - Public-mode File.
  */
-export async function convertToPublicFile(workingFile: File): Promise<File> {
-  const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
+export async function convertToPublicFile (workingFile: File): Promise<File> {
+  const chunkSize = 32 * Math.pow(1024, 2) /* in bytes */
   const details = {
-      name: workingFile.name,
-      lastModified: workingFile.lastModified,
-      type: workingFile.type,
-      size: workingFile.size
-    }
+    name: workingFile.name,
+    lastModified: workingFile.lastModified,
+    type: workingFile.type,
+    size: workingFile.size
+  }
   const detailsBlob = new Blob([JSON.stringify(details)])
   const publicArray: Blob[] = [
     new Blob([(detailsBlob.size + 16).toString().padStart(8, '0')]),
@@ -156,7 +156,7 @@ export async function convertToPublicFile(workingFile: File): Promise<File> {
   const finalName = `${await hashAndHex(
     details.name + Date.now().toString()
   )}.jkl`
-  return new File(publicArray, finalName, { type: 'text/plain' })
+  return new File(publicArray, finalName, {type: 'text/plain'})
 }
 
 /**
@@ -164,10 +164,10 @@ export async function convertToPublicFile(workingFile: File): Promise<File> {
  * @param {Blob} source - Source raw Blob.
  * @returns {Promise<File>} - Decrypted File.
  */
-export async function convertFromPublicFile(source: Blob): Promise<File> {
+export async function convertFromPublicFile (source: Blob): Promise<File> {
   let detailsBlob = new Blob([])
   const blobParts: Blob[] = []
-  for (let i = 0; i < source.length; ) {
+  for (let i = 0; i < source.length;) {
     const offset = i + 8
     const segSize = Number(source.slice(i, offset).toString())
     const last = offset + segSize
@@ -190,12 +190,12 @@ export async function convertFromPublicFile(source: Blob): Promise<File> {
  * @param {Uint8Array} iv - AES-256 iv.
  * @returns {Promise<File>} - Encrypted File.
  */
-export async function convertToEncryptedFile(
+export async function convertToEncryptedFile (
   workingFile: File,
   key: CryptoKey,
   iv: Uint8Array
 ): Promise<File> {
-  const chunkSize = 32 * Math.pow(1024, 2) /** in bytes */
+  const chunkSize = 32 * Math.pow(1024, 2) /* in bytes */
   const details = {
     name: workingFile.name,
     lastModified: workingFile.lastModified,
@@ -217,7 +217,7 @@ export async function convertToEncryptedFile(
   const finalName = `${await hashAndHex(
     details.name + Date.now().toString()
   )}.jkl`
-  return new File(encryptedArray, finalName, { type: 'text/plain' })
+  return new File(encryptedArray, finalName, {type: 'text/plain'})
 }
 
 /**
@@ -227,14 +227,14 @@ export async function convertToEncryptedFile(
  * @param {Uint8Array} iv - AES-256 iv.
  * @returns {Promise<File>} - Decrypted File.
  */
-export async function convertFromEncryptedFile(
+export async function convertFromEncryptedFile (
   source: Blob,
   key: CryptoKey,
   iv: Uint8Array
 ): Promise<File> {
   let detailsBlob = new Blob([])
   const blobParts: Blob[] = []
-  for (let i = 0; i < source.size; ) {
+  for (let i = 0; i < source.size;) {
     const offset = i + 8
     const segSize = Number(await source.slice(i, offset).text())
     const last = offset + segSize
@@ -257,17 +257,16 @@ export async function convertFromEncryptedFile(
  * @param {string} input - Source string.
  * @param {CryptoKey} key - AES-256 CryptoKey.
  * @param {Uint8Array} iv - AES-256 iv.
+ * @param {boolean} isLedger - Flag declaring string must be Ledger Amino safe.
  * @returns {Promise<string>} - Compressed and encrypted string.
  */
-export async function compressEncryptString(
+export async function compressEncryptString (
   input: string,
   key: CryptoKey,
-  iv: Uint8Array
+  iv: Uint8Array,
+  isLedger?: boolean
 ): Promise<string> {
-  const compString = compressData(input)
-  const data = await cryptString(compString, key, iv, 'encrypt')
-  console.log(data)
-  return data
+  return await cryptString(compressData(input), key, iv, 'encrypt', isLedger)
 }
 
 /**
@@ -277,13 +276,17 @@ export async function compressEncryptString(
  * @param {Uint8Array} iv - AES-256 iv.
  * @returns {Promise<string>} - Decrypted and decompressed string.
  */
-export async function decryptDecompressString(
+export async function decryptDecompressString (
   input: string,
   key: CryptoKey,
   iv: Uint8Array
 ): Promise<string> {
-  console.log(input)
-  // const decryptBlob = await cryptString(input, key, iv, 'decrypt')
+  if (input.startsWith('jklpc2|')) {
+    const wasBase64 = atob(input.substring(7))
+    const asArray = [...wasBase64].map((str) => str.codePointAt(0) || 0)
+    const safe = Uint8Array.from(asArray)
+    input = uint16ToString(new Uint16Array(safe.buffer))
+  }
   return decompressData(await cryptString(input, key, iv, 'decrypt'))
 }
 
@@ -292,16 +295,23 @@ export async function decryptDecompressString(
  * @param {string} input - Source string to encrypt or decrypt.
  * @param {CryptoKey} key - CryptoKey to use. Decryption CryptoKey must match encryption CryptoKey that was used.
  * @param {Uint8Array} iv - Iv to use. Decryption iv must match encryption iv that was used.
- * @param {"encrypt" | "decrypt"} mode - Toggle between encryption and decryption.
+ * @param {'encrypt' | 'decrypt'} mode - Toggle between encryption and decryption.
+ * @param {boolean} isLedger
  * @returns {Promise<string>} - Processed result.
  */
-export async function cryptString(
+export async function cryptString (
   input: string,
   key: CryptoKey,
   iv: Uint8Array,
-  mode: 'encrypt' | 'decrypt'
+  mode: 'encrypt' | 'decrypt',
+  isLedger?: boolean
 ): Promise<string> {
   const uint16 = stringToUint16(input)
   const result = await aesCrypt(new Blob([uint16]), key, iv, mode)
-  return uint16ToString(new Uint16Array(await result.arrayBuffer()))
+  const processed = uint16ToString(new Uint16Array(await result.arrayBuffer()))
+  if (mode === 'encrypt' && isLedger) {
+    return sanitizeCompressionForAmino(processed)
+  } else {
+    return processed
+  }
 }

@@ -370,10 +370,11 @@ export default class FileIo implements IFileIo {
         readyToBroadcast.push(
           await parent.addChildFileReferences(fileNames, this.walletRef)
         )
-        const memo = `Processing batch of ${processValues.length} uploads`
+
+        const memo = ''
         await pH
           .debugBroadcaster(readyToBroadcast, { memo, step: false })
-          .catch((err) => {
+          .catch((err: Error) => {
             throw err
           })
         for (let key of processingNames) {
@@ -776,7 +777,7 @@ export default class FileIo implements IFileIo {
     const memo = ``
     await pH
       .debugBroadcaster(readyToBroadcast, { memo, step: false })
-      .catch((err) => {
+      .catch((err: Error) => {
         console.error('generateInitialDirs() -', err)
       })
   }
@@ -821,7 +822,7 @@ export default class FileIo implements IFileIo {
     const memo = ``
     await pH
       .debugBroadcaster(readyToBroadcast, { memo, step: false })
-      .catch((err) => {
+      .catch((err: Error) => {
         console.error('convertFolderType() -', err)
       })
     return await this.downloadFolder(rawPath)
