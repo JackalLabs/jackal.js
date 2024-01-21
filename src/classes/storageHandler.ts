@@ -1,34 +1,31 @@
 import { parseMsgResponse } from '@jackallabs/jackal.js-protos'
+import { PrivateKey } from 'eciesjs'
 import {
   extractFileMetaData,
   hexToInt,
   stringToUint8Array,
   timestampToBlockHeight,
 } from '@/utils/converters'
-import { tidyString, warnError } from '@/utils/misc'
+import { signerNotEnabled, tidyString, warnError } from '@/utils/misc'
 import {
   createEditAccess,
   createViewAccess,
+  encodeFileTreePostFile,
   loadFileTreeMetaData,
 } from '@/utils/filetree'
 import { MetaHandler } from '@/classes/metaHandler'
-import { encryptionChunkSize } from '@/utils/globalDefaults'
+import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
+import { aesBlobCrypt, genIv, genKey } from '@/utils/crypt'
 import {
-  aesBlobCrypt,
-  compressEncryptString,
-  genIv,
-  genKey,
-} from '@/utils/crypt'
-import {
+  bufferToHex,
   hashAndHex,
   merkleParentAndChild,
   merkleParentAndIndex,
 } from '@/utils/hash'
-import {
+import type {
   DDeliverTxResponse,
   DEncodeObject,
   DMsgBuyStorage,
-  DMsgFileTreePostFile,
   DMsgProvisionFileTree,
   DMsgStorageDeleteFile,
   DMsgStoragePostFile,
@@ -71,6 +68,8 @@ export class StorageHandler implements IStorageHandler {
 
   protected constructor(
     client: IClientHandler,
+    signingClient: IJackalSigningStargateClient,
+    privateKey: string,
     storageAddress: string,
     basePath: string,
     loadedFolder: TLoadedFolder,
@@ -78,9 +77,9 @@ export class StorageHandler implements IStorageHandler {
     const [indexCount, children]: TLoadedFolder = loadedFolder
 
     this.basePath = basePath
-    this.privateKey = client.getPrivateKey()
+    this.privateKey = privateKey
     this.jackalClient = client
-    this.signingClient = client.getSigningClient()
+    this.signingClient = signingClient
     this.proofInterval = client.getProofWindow()
     this.userAddress = client.getJackalAddress()
     this.uploadsInProgress = false
@@ -103,10 +102,57 @@ export class StorageHandler implements IStorageHandler {
     client: IClientHandler,
     basePath: string = 's/Home',
   ): Promise<IStorageHandler> {
+    const signingClient = client.getSigningClient()
+    if (!signingClient) {
+      throw new Error(signerNotEnabled('StorageHandler', 'init'))
+    }
+
+    const jklAddress = client.getJackalAddress()
+    const chainId = client.getChainId()
+    const selectedWallet = client.getSelectedWallet()
+    let keyPair: PrivateKey | null = null
+    switch (selectedWallet) {
+      case 'keplr':
+        if (!window.keplr) {
+          throw new Error('Keplr Wallet selected but unavailable')
+        } else {
+          const { signature } = await window.keplr
+            .signArbitrary(chainId, jklAddress, signatureSeed)
+            .catch((err: Error) => {
+              throw warnError('StorageHandler init() keplr', err)
+            })
+          const signatureAsHex = bufferToHex(
+            stringToUint8Array(atob(signature)).slice(0, 32),
+          )
+          keyPair = PrivateKey.fromHex(signatureAsHex)
+        }
+        break
+      case 'leap':
+        if (!window.leap) {
+          throw new Error('Leap Wallet selected but unavailable')
+        } else {
+          const { signature } = await window.leap
+            .signArbitrary(chainId, jklAddress, signatureSeed)
+            .catch((err: Error) => {
+              throw warnError('StorageHandler init() leap', err)
+            })
+          const signatureAsHex = bufferToHex(
+            stringToUint8Array(atob(signature)).slice(0, 32),
+          )
+          keyPair = PrivateKey.fromHex(signatureAsHex)
+        }
+        break
+      default:
+        throw new Error(
+          'No wallet selected but one is required to init StorageHandler',
+        )
+    }
+    const privateKey = keyPair.toHex()
+
     const storageAddress = ''
     const loadedFolder: TLoadedFolder = await this.loadFolder(
-      client.getSigningClient(),
-      client.getPrivateKey(),
+      signingClient,
+      privateKey,
       client.getJackalAddress(),
       storageAddress,
       basePath,
@@ -115,6 +161,8 @@ export class StorageHandler implements IStorageHandler {
     })
     return new StorageHandler(
       client,
+      signingClient,
+      privateKey,
       storageAddress,
       basePath,
       loadedFolder,
@@ -257,6 +305,37 @@ export class StorageHandler implements IStorageHandler {
 
   /**
    *
+   * @returns {Promise<void>}
+   * @protected
+   */
+  protected async refreshActiveFolder(): Promise<void> {
+    const [indexCount, children] = await StorageHandler.loadFolder(
+      this.signingClient,
+      this.privateKey,
+      this.userAddress,
+      this.currentPath,
+      this.basePath,
+    ).catch((err) => {
+      throw warnError('storageHandler refreshActiveFolder()', err)
+    })
+    this.indexCount = indexCount
+    this.children = children
+  }
+
+  /**
+   *
+   * @param {string} path
+   * @returns {Promise<string>}
+   */
+  async changeActiveDirectory(path: string): Promise<string> {
+    await this.stageQueue()
+    this.currentPath = this.sanitizePath(path)
+    await this.refreshActiveFolder()
+    return this.currentPath
+  }
+
+  /**
+   *
    * @param {number} mod
    * @returns {Promise<DDeliverTxResponse>}
    */
@@ -273,7 +352,7 @@ export class StorageHandler implements IStorageHandler {
         this.signingClient.txLibrary.fileTree.msgProvisionFileTree(forInit),
       modifier: mod,
     }
-    return await this.jackalClient.broadcastsMsgs([wrappedInitMsg])
+    return await this.jackalClient.broadcastsMsgs(wrappedInitMsg)
   }
 
   /**
@@ -296,16 +375,23 @@ export class StorageHandler implements IStorageHandler {
       encodedObject: this.signingClient.txLibrary.storage.msgBuyStorage(toBuy),
       modifier: 0,
     }
-    return await this.jackalClient.broadcastsMsgs([wrappedBuyMsg])
+    return await this.jackalClient.broadcastsMsgs(wrappedBuyMsg)
   }
 
+  /**
+   *
+   * @param {IStagedUploadPackage} bundle
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   */
   async saveFolder(
     bundle: IStagedUploadPackage,
   ): Promise<IWrappedEncodeObject[]> {
     const msgs: IWrappedEncodeObject[] = []
-    const blockHeight = await this.jackalClient.getLatestBlockHeight().catch((err) => {
-      throw warnError('storageHandler saveFolder()', err)
-    })
+    const blockHeight = await this.jackalClient
+      .getLatestBlockHeight()
+      .catch((err) => {
+        throw warnError('storageHandler saveFolder()', err)
+      })
     let matchedCount = 0
     let foundMatch = false
     const childrenFilesLen = Object.keys(bundle.children.files).length
@@ -368,8 +454,8 @@ export class StorageHandler implements IStorageHandler {
       foundMatch = false
     }
 
-    // TODO - fix this later
-    bundle.folderMeta.setRefIndex(0)
+    const folderIndex = await this.getExistingRefIndex(bundle.folderMeta)
+    bundle.folderMeta.setRefIndex(folderIndex)
     const folderMsgs = await this.folderToMsgs({
       meta: bundle.folderMeta,
     }).catch((err) => {
@@ -377,6 +463,30 @@ export class StorageHandler implements IStorageHandler {
     })
     msgs.unshift(...folderMsgs)
     return msgs
+  }
+
+  /**
+   *
+   * @param {IMetaHandler} rawMeta
+   * @returns {Promise<number>}
+   * @protected
+   */
+  protected async getExistingRefIndex(rawMeta: IMetaHandler): Promise<number> {
+    const refMeta = rawMeta.getRefMeta()
+    const parsed = await loadFileTreeMetaData(
+      this.signingClient,
+      this.privateKey,
+      this.userAddress,
+      '',
+      refMeta.location,
+    )
+    const { pointsTo } = parsed as IRefMetaData
+    const pathArray = pointsTo.split('/')
+    if (pathArray.length < 2) {
+      throw new Error(warnError('getExistingRefIndex()', 'PointsTo too short'))
+    }
+    const index = pathArray.pop() || ''
+    return hexToInt(index)
   }
 
   /**
@@ -526,47 +636,18 @@ export class StorageHandler implements IStorageHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreePostFile(
+  protected async storageEncodeFileTree(
     location: TMerkleParentChild,
     meta: TMetaDataSets,
     aes?: IAesBundle,
   ): Promise<DEncodeObject> {
-    const [hashParent, hashChild] = location
-    const forFileTree: DMsgFileTreePostFile = {
-      creator: this.userAddress,
-      account: await hashAndHex(this.userAddress),
-      hashParent,
-      hashChild,
-      contents: '',
-      viewers: '',
-      editors: '',
-      trackingNumber: '',
-    }
-    const trackingNumber = crypto.randomUUID()
-    const stringedMeta = JSON.stringify(meta)
-    if (aes) {
-      forFileTree.contents = await compressEncryptString(stringedMeta, aes)
-      forFileTree.viewers = await createViewAccess(
-        trackingNumber,
-        [this.userAddress],
-        this.jackalClient,
-        aes,
-      )
-      forFileTree.editors = await createEditAccess(trackingNumber, [
-        this.userAddress,
-      ])
-      forFileTree.trackingNumber = trackingNumber
-    } else {
-      forFileTree.contents = stringedMeta
-      forFileTree.viewers = await createViewAccess(trackingNumber, [
-        this.userAddress,
-      ])
-      forFileTree.editors = await createEditAccess(trackingNumber, [
-        this.userAddress,
-      ])
-      forFileTree.trackingNumber = trackingNumber
-    }
-    return this.signingClient.txLibrary.fileTree.msgPostFile(forFileTree)
+    return encodeFileTreePostFile(
+      this.jackalClient,
+      this.userAddress,
+      location,
+      meta,
+      aes,
+    )
   }
 
   /**
@@ -583,7 +664,7 @@ export class StorageHandler implements IStorageHandler {
       item.meta.getPath(),
       item.meta.getRefIndex(),
     )
-    return this.encodeFileTreePostFile(parentAndChild, meta, item.aes)
+    return this.storageEncodeFileTree(parentAndChild, meta, item.aes)
   }
 
   /**
@@ -600,7 +681,7 @@ export class StorageHandler implements IStorageHandler {
       item.meta.getPath(),
       item.meta.getRefIndex(),
     )
-    return this.encodeFileTreePostFile(parentAndChild, meta, item.aes)
+    return this.storageEncodeFileTree(parentAndChild, meta, item.aes)
   }
 
   /**
@@ -614,7 +695,7 @@ export class StorageHandler implements IStorageHandler {
   ): Promise<DEncodeObject> {
     const meta = item.meta.getRefMeta()
     const parentAndChild = await merkleParentAndChild(meta.location)
-    return this.encodeFileTreePostFile(parentAndChild, meta, item.aes)
+    return this.storageEncodeFileTree(parentAndChild, meta, item.aes)
   }
 
   /**
@@ -666,37 +747,6 @@ export class StorageHandler implements IStorageHandler {
 
   /**
    *
-   * @returns {Promise<void>}
-   * @protected
-   */
-  protected async refreshActiveFolder(): Promise<void> {
-    const [indexCount, children] = await StorageHandler.loadFolder(
-      this.signingClient,
-      this.privateKey,
-      this.userAddress,
-      this.currentPath,
-      this.basePath,
-    ).catch((err) => {
-      throw warnError('storageHandler refreshActiveFolder()', err)
-    })
-    this.indexCount = indexCount
-    this.children = children
-  }
-
-  /**
-   *
-   * @param {string} path
-   * @returns {Promise<string>}
-   */
-  async changeActiveDirectory(path: string): Promise<string> {
-    await this.stageQueue()
-    this.currentPath = this.sanitizePath(path)
-    await this.refreshActiveFolder()
-    return this.currentPath
-  }
-
-  /**
-   *
    * @param {File} toProcess
    * @param {number} duration
    * @returns {Promise<IUploadPackage>}
@@ -704,7 +754,7 @@ export class StorageHandler implements IStorageHandler {
    */
   protected async processPrivate(
     toProcess: File,
-    duration: number = 0,
+    duration: number,
   ): Promise<IUploadPackage> {
     const aes: IAesBundle = {
       key: await genKey(),
@@ -732,12 +782,12 @@ export class StorageHandler implements IStorageHandler {
   /**
    *
    * @param {File | File[]} toQueue
-   * @param {number} duration
+   * @param {number} [duration]
    * @returns {Promise<number>}
    */
   async queuePrivate(
     toQueue: File | File[],
-    duration?: number,
+    duration: number = 0,
   ): Promise<number> {
     if (toQueue instanceof Array) {
       for (let file of toQueue) {
@@ -759,7 +809,7 @@ export class StorageHandler implements IStorageHandler {
    */
   protected async processPublic(
     toProcess: File,
-    duration: number = 0,
+    duration: number,
   ): Promise<IUploadPackage> {
     const fileMeta = extractFileMetaData(toProcess)
     const baseMeta = await MetaHandler.create(this.readActivePath(), {
@@ -772,12 +822,12 @@ export class StorageHandler implements IStorageHandler {
   /**
    *
    * @param {File | File[]} toQueue
-   * @param {number} duration
+   * @param {number} [duration]
    * @returns {Promise<number>}
    */
   async queuePublic(
     toQueue: File | File[],
-    duration?: number,
+    duration: number = 0,
   ): Promise<number> {
     if (toQueue instanceof Array) {
       for (let file of toQueue) {
@@ -819,62 +869,25 @@ export class StorageHandler implements IStorageHandler {
 
   /**
    *
-   * @returns {Promise<number>}
-   * @protected
+   * @returns {Promise<DDeliverTxResponse>}
    */
-  protected async loadLastBlockHeight(): Promise<number> {
-    const tm = this.signingClient.baseTmClient()
-    if (!tm) {
-      throw new Error(
-        warnError(
-          'storageHandler loadLastBlockHeight()',
-          'Invalid baseTmClient()',
-        ),
-      )
-    }
-    const { lastBlockHeight } = await tm.abciInfo()
-    if (!lastBlockHeight) {
-      throw new Error(
-        warnError(
-          'storageHandler loadLastBlockHeight()',
-          'Invalid lastBlockHeight',
-        ),
-      )
-    }
-    return lastBlockHeight
-  }
-
-  /*
-get merkletree root - done
-storagepostfile - done
-filetreepostfile - done
-parse response - done
-upload to providers - done
- */
-
-  async wip(): Promise<DDeliverTxResponse> {
+  async processAllQueues(): Promise<DDeliverTxResponse> {
     await this.stageQueue()
     const msgs: IWrappedEncodeObject[] = []
     for (let folderName in this.stagedUploads) {
       const readyMsgs = await this.saveFolder(this.stagedUploads[folderName])
       msgs.push(...readyMsgs)
     }
-
-    const meh: DDeliverTxResponse = await this.jackalClient.broadcastsMsgs(msgs)
-
+    const msgResponses: DDeliverTxResponse =
+      await this.jackalClient.broadcastsMsgs(msgs)
     const activeUploads: Promise<IProviderUploadResponse>[] = []
-
     for (let i = 0; i < msgs.length; i++) {
       const { file, merkle } = msgs[i]
-      if (file && merkle && meh.data) {
-        console.log('meh.data')
-        console.log(meh.data)
-        const dat = parseMsgResponse(meh.data[i]) as DMsgStoragePostFileResponse
-        console.log('dat')
-        console.log(dat)
+      if (file && merkle && msgResponses.data) {
+        const dat = parseMsgResponse(
+          msgResponses.data[i],
+        ) as DMsgStoragePostFileResponse
         const { providerIps, startBlock } = dat
-        console.log('upload providerIps')
-        console.log(providerIps)
         for (let provider of providerIps) {
           this.uploadsInProgress = true
           activeUploads.push(
@@ -883,22 +896,15 @@ upload to providers - done
         }
       }
     }
-
     await Promise.all(activeUploads)
       .then(() => {
         this.uploadsInProgress = false
       })
       .catch((err) => {
-        throw warnError('storageHandler wip()', err)
+        throw warnError('storageHandler processAllQueues()', err)
       })
-
-    for (let item of activeUploads) {
-      console.log(await item)
-    }
-
     await this.refreshActiveFolder()
-
-    return meh
+    return msgResponses
   }
 
   /**
@@ -939,16 +945,11 @@ upload to providers - done
     fileDetails: IFileMetaData,
     trackers: IDownloadTracker,
   ): Promise<File> {
-    console.log('fileDetails.merkleRoot')
-    console.log(fileDetails.merkleRoot)
     const { providerIps } = await this.signingClient.queries.storage.findFile({
       merkle: fileDetails.merkleRoot,
     })
-    console.log('providerIps:', providerIps)
     const provider = providerIps[Math.floor(Math.random() * providerIps.length)]
-    // const hexMerkle = bufferToHex(fileDetails.merkleRoot)
     const url = `${provider}/download/${fileDetails.merkleLocation}`
-    console.log('url:', url)
     return await fetch(url, { method: 'GET' })
       .then(async (resp): Promise<File> => {
         const contentLength = resp.headers.get('Content-Length')

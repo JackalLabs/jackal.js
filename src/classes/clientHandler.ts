@@ -2,19 +2,19 @@ import {
   JackalSigningStargateClient,
   JackalStargateClient,
 } from '@jackallabs/jackal.js-protos'
-import { PrivateKey } from 'eciesjs'
 import {
   jackalTestnetChainConfig,
   jackalTestnetChainId,
   jackalTestnetRpc,
-  signatureSeed,
 } from '@/utils/globalDefaults'
-import { bufferToHex } from '@/utils/hash'
 import { signerNotEnabled, warnError } from '@/utils/misc'
-import { stringToUint8Array } from '@/utils/converters'
-import { MnemonicWallet } from '@/classes/mnemonicWallet'
+import {
+  MnemonicWallet,
+  StorageHandler,
+  RnsHandler,
+  OracleHandler,
+} from '@/classes'
 import { finalizeGas } from '@/utils/gas'
-import { StorageHandler } from '@/classes/storageHandler'
 import type {
   DDeliverTxResponse,
   IJackalSigningStargateClient,
@@ -29,6 +29,8 @@ import type {
   IStorageHandler,
   IAvailableWallets,
   IWrappedEncodeObject,
+  IRnsHandler,
+  IOracleHandler,
 } from '@/interfaces'
 
 export class ClientHandler implements IClientHandler {
@@ -36,22 +38,33 @@ export class ClientHandler implements IClientHandler {
   protected readonly signingClient: IJackalSigningStargateClient | null
   protected readonly address: string
   protected readonly proofWindow: number
-  protected readonly keyPair: PrivateKey | null
+  protected readonly chainId: string
+  protected readonly selectedWallet: string
+  protected readonly isLedger: boolean
 
   protected constructor(
     queryClient: IJackalStargateClient,
     signingClient: IJackalSigningStargateClient | null,
     address: string,
     proofWindow: number,
-    keyPair: PrivateKey | null,
+    chainId: string,
+    selectedWallet: string,
+    isLedger: boolean,
   ) {
     this.queryClient = queryClient
     this.signingClient = signingClient
     this.address = address
     this.proofWindow = proofWindow
-    this.keyPair = keyPair
+    this.chainId = chainId
+    this.selectedWallet = selectedWallet
+    this.isLedger = isLedger
   }
 
+  /**
+   *
+   * @param {IClientSetup} [setup]
+   * @returns {Promise<IClientHandler>}
+   */
   static async connect(setup: IClientSetup = {}): Promise<IClientHandler> {
     const {
       endpoint = jackalTestnetRpc,
@@ -63,20 +76,18 @@ export class ClientHandler implements IClientHandler {
     const queryClient = await JackalStargateClient.connect(endpoint)
     let signingClient: JackalSigningStargateClient | null = null
     let address = ''
-    let keyPair: PrivateKey | null = null
     let proofWindow: number = 0
+    let isLedger = false
 
     switch (selectedWallet) {
       case 'keplr':
         if (!window.keplr) {
           throw new Error('Keplr Wallet selected but unavailable')
-        }
-        await window.keplr.experimentalSuggestChain(chainConfig)
-        await window.keplr.enable([chainId]).catch((err: Error) => {
-          throw err
-        })
-        {
-          // const signer = window.keplr.getOfflineSigner(chainId)
+        } else {
+          await window.keplr.experimentalSuggestChain(chainConfig)
+          await window.keplr.enable([chainId]).catch((err: Error) => {
+            throw err
+          })
           const signer = (await window.keplr.getOfflineSignerAuto(
             chainId,
           )) as TSigner
@@ -85,27 +96,18 @@ export class ClientHandler implements IClientHandler {
             signer,
           )
           address = (await signer.getAccounts())[0].address
-          const { signature } = await window.keplr
-            .signArbitrary(chainId, address, signatureSeed)
-            .catch((err: Error) => {
-              throw warnError('clientHandler connect() keplr', err)
-            })
-          const signatureAsHex = bufferToHex(
-            stringToUint8Array(atob(signature)).slice(0, 32),
-          )
-          keyPair = PrivateKey.fromHex(signatureAsHex)
+          const details = await window.keplr.getKey(chainId)
+          isLedger = details.isNanoLedger
         }
         break
       case 'leap':
         if (!window.leap) {
           throw new Error('Leap Wallet selected but unavailable')
-        }
-        await window.leap.experimentalSuggestChain(chainConfig)
-        await window.leap.enable([chainId]).catch((err: Error) => {
-          throw err
-        })
-        {
-          // const signer = window.leap.getOfflineSigner(chainId, {})
+        } else {
+          await window.leap.experimentalSuggestChain(chainConfig)
+          await window.leap.enable([chainId]).catch((err: Error) => {
+            throw err
+          })
           const signer = (await window.leap.getOfflineSignerAuto(
             chainId,
             {},
@@ -116,42 +118,24 @@ export class ClientHandler implements IClientHandler {
               signer,
             )
             address = (await signer.getAccounts())[0].address
-            const { signature } = await window.leap
-              .signArbitrary(chainId, address, signatureSeed)
-              .catch((err: Error) => {
-                throw warnError('clientHandler connect() leap', err)
-              })
-            const signatureAsHex = bufferToHex(
-              stringToUint8Array(atob(signature)).slice(0, 32),
-            )
-            keyPair = PrivateKey.fromHex(signatureAsHex)
+            const details = await window.leap.getKey(chainId)
+            isLedger = details.isNanoLedger
           } else {
-            throw new Error('Leap wallet amino failure')
+            throw new Error('Leap Wallet amino failure')
           }
         }
         break
       case 'mnemonic':
-        // throw new Error('Mnemonic Wallet is not yet implemented')
         if (!mnemonic) {
           throw new Error('Mnemonic Wallet selected but mnemonic not provided')
-        }
-        {
+        } else {
           const wallet = await MnemonicWallet.init(mnemonic)
           const signer = wallet.getOfflineSigner()
-          address = wallet.getAddress()
           signingClient = await JackalSigningStargateClient.connectWithSigner(
             endpoint,
             signer,
           )
-          const { signature } = await wallet
-            .signArbitrary(signatureSeed)
-            .catch((err: Error) => {
-              throw warnError('clientHandler connect() mnemonic', err)
-            })
-          const signatureAsHex = bufferToHex(
-            stringToUint8Array(atob(signature)).slice(0, 32),
-          )
-          keyPair = PrivateKey.fromHex(signatureAsHex)
+          address = wallet.getAddress()
         }
         break
       default:
@@ -161,7 +145,7 @@ export class ClientHandler implements IClientHandler {
     }
 
     if (signingClient) {
-      proofWindow = (await signingClient.queries.storage.params({})).params
+      proofWindow = (await signingClient.queries.storage.params()).params
         .proofWindow
     }
 
@@ -170,7 +154,9 @@ export class ClientHandler implements IClientHandler {
       signingClient,
       address,
       proofWindow,
-      keyPair,
+      chainId,
+      selectedWallet,
+      isLedger,
     )
   }
 
@@ -185,10 +171,58 @@ export class ClientHandler implements IClientHandler {
     }
   }
 
+  /**
+   *
+   * @returns {Promise<IStorageHandler>}
+   */
   async createStorageHandler(): Promise<IStorageHandler> {
-    return StorageHandler.init(
-      this,
-    )
+    return StorageHandler.init(this).catch((err: Error) => {
+      throw warnError('ClientHandler createStorageHandler()', err)
+    })
+  }
+
+  /**
+   *
+   * @returns {Promise<IRnsHandler>}
+   */
+  async createRnsHandler(): Promise<IRnsHandler> {
+    return RnsHandler.init(this).catch((err: Error) => {
+      throw warnError('ClientHandler createRnsHandler()', err)
+    })
+  }
+
+  /**
+   *
+   * @returns {Promise<IOracleHandler>}
+   */
+  async createOracleHandler(): Promise<IOracleHandler> {
+    return OracleHandler.init(this).catch((err: Error) => {
+      throw warnError('ClientHandler createOracleHandler()', err)
+    })
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  getChainId(): string {
+    return this.chainId
+  }
+
+  /**
+   *
+   * @returns {boolean}
+   */
+  getIsLedger(): boolean {
+    return this.isLedger
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  getSelectedWallet(): string {
+    return this.selectedWallet
   }
 
   /**
@@ -233,13 +267,14 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {IJackalSigningStargateClient}
    */
-  getSigningClient(): IJackalSigningStargateClient {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('ClientHandler', 'getSigningClient'))
-    }
+  getSigningClient(): IJackalSigningStargateClient | null {
     return this.signingClient
   }
 
+  /**
+   *
+   * @returns {TQueryExtensions}
+   */
   getQueries(): TQueryExtensions {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('ClientHandler', 'getQueries'))
@@ -247,6 +282,10 @@ export class ClientHandler implements IClientHandler {
     return this.signingClient.queries
   }
 
+  /**
+   *
+   * @returns {ITxLibrary}
+   */
   getTxs(): ITxLibrary {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('ClientHandler', 'getTxs'))
@@ -266,45 +305,24 @@ export class ClientHandler implements IClientHandler {
   }
 
   /**
-   * Expose signing ClientHandler instance public key as hex value.
-   * @returns {string} - Public key as hex value.
-   */
-  getPubKey(): string {
-    if (!this.keyPair) {
-      throw new Error(signerNotEnabled('ClientHandler', 'getPubKey'))
-    }
-    return this.keyPair.publicKey.toHex()
-  }
-
-  /**
-   * Expose signing ClientHandler instance private key as hex value.
-   * @returns {string} - Private key as hex value.
-   */
-  getPrivateKey(): string {
-    if (!this.keyPair) {
-      throw new Error(signerNotEnabled('ClientHandler', 'getPrivateKey'))
-    }
-    return this.keyPair.toHex()
-  }
-
-  /**
    * Retrieve asymmetric keypair public key from chain for specified jkl address.
    * @param {string} address - Jkl address to check.
    * @returns {Promise<string>} - Target address' public key as hex value.
    */
   async findPubKey(address: string): Promise<string> {
-    if (address === this.address) {
-      return this.getPubKey()
-    } else {
-      const result = await this.queryClient.queries.fileTree
-        .pubKey({ address })
-        .catch((err: Error) => {
-          throw warnError('clientHandler findPubKey()', err)
-        })
-      return result.pubKey.key
-    }
+    const result = await this.queryClient.queries.fileTree
+      .pubKey({ address })
+      .catch((err: Error) => {
+        throw warnError('clientHandler findPubKey()', err)
+      })
+    return result.pubKey.key
   }
 
+  /**
+   *
+   * @param {IWrappedEncodeObject | IWrappedEncodeObject[]} wrappedMsgs
+   * @returns {Promise<DDeliverTxResponse>}
+   */
   broadcastsMsgs(
     wrappedMsgs: IWrappedEncodeObject | IWrappedEncodeObject[],
   ): Promise<DDeliverTxResponse> {

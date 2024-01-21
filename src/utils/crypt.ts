@@ -1,11 +1,12 @@
 import { keyAlgo } from '@/utils/globalDefaults'
 import { IAesBundle } from '@/interfaces'
 import {
+  prepDecompressionForAmino,
   safeCompressData,
-  safeDecompressData,
+  safeDecompressData, sanitizeCompressionForAmino,
   stringToUint16Array,
   stringToUint8Array,
-  uintArrayToString
+  uintArrayToString,
 } from '@/utils/converters'
 import { warnError } from '@/utils/misc'
 import { decrypt, encrypt } from 'eciesjs'
@@ -178,15 +179,17 @@ export async function stringToAes(
  * Compresses source string using PLZSU and then encrypts it using AES-256 (AEG-GCM).
  * @param {string} input - Source string.
  * @param {IAesBundle} aes - AES iv/CryptoKey set.
+ * @param {boolean} isLedger
  * @returns {Promise<string>} - Compressed and encrypted string.
  * @private
  */
 export async function compressEncryptString(
   input: string,
-  aes: IAesBundle
+  aes: IAesBundle,
+  isLedger: boolean
 ): Promise<string> {
   const compressedString = safeCompressData(input)
-  return await cryptString(compressedString, aes, 'encrypt')
+  return await cryptString(compressedString, aes, 'encrypt', isLedger)
     .catch((err) => {
       warnError('compressEncryptString(encrypt)', err)
       throw err
@@ -204,7 +207,8 @@ export async function decryptDecompressString(
   input: string,
   aes: IAesBundle
 ): Promise<string> {
-  const ready = await cryptString(input, aes, 'decrypt')
+  const safe = prepDecompressionForAmino(input)
+  const ready = await cryptString(safe, aes, 'decrypt')
     .catch((err) => {
       warnError('decryptDecompressString(decrypt)', err)
       throw err
@@ -217,13 +221,15 @@ export async function decryptDecompressString(
  * @param {string} input - Source string to encrypt or decrypt.
  * @param {IAesBundle} aes - AES iv/CryptoKey set. Must match encryption AES set that was used.
  * @param {"encrypt" | "decrypt"} mode - Toggle between encryption and decryption.
+ * @param {boolean} isLedger
  * @returns {Promise<string>} - Processed result.
  * @private
  */
 export async function cryptString(
   input: string,
   aes: IAesBundle,
-  mode: 'encrypt' | 'decrypt'
+  mode: 'encrypt' | 'decrypt',
+  isLedger?: boolean
 ): Promise<string> {
   const uint16 = stringToUint16Array(input)
   const result = await aesCrypt(uint16.buffer, aes, mode)
@@ -231,5 +237,10 @@ export async function cryptString(
       warnError('cryptString()', err)
       throw err
     })
-  return uintArrayToString(new Uint16Array(result))
+  const processed = uintArrayToString(new Uint16Array(result))
+  if (mode === 'encrypt' && isLedger) {
+    return sanitizeCompressionForAmino(processed)
+  } else {
+    return processed
+  }
 }

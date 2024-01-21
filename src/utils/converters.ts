@@ -48,6 +48,33 @@ export function unsafeDecompressData(input: string): string {
 
 /**
  *
+ * @param {string} input
+ * @returns {string}
+ */
+export function sanitizeCompressionForAmino (input: string): string {
+  const uint = stringToUint16Array(input)
+  const finalBuf = new Uint8Array(uint.buffer)
+  const bufAsString = String.fromCodePoint(...finalBuf)
+  return `jklpc2|${btoa(bufAsString)}`
+}
+
+/**
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+export function prepDecompressionForAmino (input: string): string {
+  if (input.startsWith('jklpc2|')) {
+    const wasBase64 = atob(input.substring(7))
+    const asArray = [...wasBase64].map((str) => str.codePointAt(0) || 0)
+    return uintArrayToString(Uint8Array.from(asArray))
+  } else {
+    return input
+  }
+}
+
+/**
+ *
  * @param {File} input
  * @returns {IFileMeta}
  */

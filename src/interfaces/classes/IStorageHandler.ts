@@ -30,6 +30,6 @@ export interface IStorageHandler {
     trackers: IDownloadTracker,
   ): Promise<File>
 
-  wip(): Promise<DDeliverTxResponse>
+  processAllQueues(): Promise<DDeliverTxResponse>
   debug(): IChildMetaDataMap
 }

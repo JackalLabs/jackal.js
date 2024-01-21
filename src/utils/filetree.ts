@@ -1,19 +1,27 @@
 import {
+  hashAndHex,
   hashAndHexOwner,
   hashAndHexUserAccess,
   merklePath,
   merklePathPlusIndex,
 } from '@/utils/hash'
 import { tidyString, warnError } from '@/utils/misc'
-import { aesToString, cryptString, stringToAes } from '@/utils/crypt'
-import { intToHex, safeDecompressData } from '@/utils/converters'
-import type {
+import {
+  aesToString,
+  compressEncryptString,
+  cryptString,
+  stringToAes,
+} from '@/utils/crypt'
+import { intToHex, prepDecompressionForAmino, safeDecompressData } from '@/utils/converters'
+import {
+  DEncodeObject,
   DFile,
+  DMsgFileTreePostFile,
   DQueryFileTreeFile,
   IJackalSigningStargateClient,
 } from '@jackallabs/jackal.js-protos'
 import type { IAesBundle, IClientHandler } from '@/interfaces'
-import type { TMetaDataSets } from '@/types'
+import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 
 /**
  *
@@ -76,10 +84,7 @@ export async function createViewAccess(
   for (let viewer of viewers) {
     const entry = await hashAndHexUserAccess('v', trackingNumber, viewer)
     if (aes && client) {
-      const pubKey =
-        viewer === client.getJackalAddress()
-          ? client.getPubKey()
-          : await client.findPubKey(viewer)
+      const pubKey = await client.findPubKey(viewer)
       viewAccess[entry] = await aesToString(pubKey, aes)
     } else {
       viewAccess[entry] = 'public'
@@ -112,7 +117,6 @@ export async function extractViewAccess(
       throw warnError('extractViewAccess()', 'Not an authorized Viewer')
     }
   } catch (err) {
-    // warnError('extractViewAccess()', `Unrecognized viewingAccess format:\n\n${viewingAccess}`)
     throw warnError('extractViewAccess()', err)
   }
 }
@@ -131,13 +135,14 @@ export async function decryptAndParseContents(
   userAddress: string,
 ): Promise<TMetaDataSets> {
   const { viewingAccess, trackingNumber, contents } = fileTreeData
+  const safe = prepDecompressionForAmino(contents)
   const aes = await extractViewAccess(
     key,
     viewingAccess,
     trackingNumber,
     userAddress,
   )
-  let decrypted = await cryptString(contents, aes, 'decrypt').catch((err) => {
+  let decrypted = await cryptString(safe, aes, 'decrypt').catch((err) => {
     throw warnError('decryptAndParseContents()', err)
   })
   warnError('decryptAndParseContents()', 'decrypted 1')
@@ -178,18 +183,18 @@ export async function loadFileTreeMetaData(
   ).catch((err: Error) => {
     throw warnError('loadFileTreeMetaData()', err)
   })
-  console.log('directoryLookup:', directoryLookup)
+  // console.log('directoryLookup:', directoryLookup)
   const { file } = await client.queries.fileTree
     .file(directoryLookup)
     .catch((err: Error) => {
       throw warnError('loadFileTreeMetaData()', err)
     })
   if (file.contents.includes('metaDataType')) {
-    warnError('loadFileTreeMetaData()', 'JSON parsing')
-    warnError('loadFileTreeMetaData()', file.contents)
+    // warnError('loadFileTreeMetaData()', 'JSON parsing')
+    // warnError('loadFileTreeMetaData()', file.contents)
     return JSON.parse(file.contents)
   } else if (file.contents.length > 0) {
-    warnError('loadFileTreeMetaData()', 'decrypting and parsing')
+    // warnError('loadFileTreeMetaData()', 'decrypting and parsing')
     return await decryptAndParseContents(key, file, userAddress).catch(
       (err) => {
         throw warnError('loadFileTreeMetaData()', err)
@@ -200,4 +205,43 @@ export async function loadFileTreeMetaData(
       warnError('loadFileTreeMetaData()', `Empty contents for ${basePath}`),
     )
   }
+}
+
+export async function encodeFileTreePostFile(
+  jackalClient: IClientHandler,
+  userAddress: string,
+  location: TMerkleParentChild,
+  meta: TMetaDataSets,
+  aes?: IAesBundle,
+): Promise<DEncodeObject> {
+  const [hashParent, hashChild] = location
+  const forFileTree: DMsgFileTreePostFile = {
+    creator: userAddress,
+    account: await hashAndHex(userAddress),
+    hashParent,
+    hashChild,
+    contents: '',
+    viewers: '',
+    editors: '',
+    trackingNumber: '',
+  }
+  const trackingNumber = crypto.randomUUID()
+  const stringedMeta = JSON.stringify(meta)
+  if (aes) {
+    forFileTree.contents = await compressEncryptString(stringedMeta, aes, jackalClient.getIsLedger())
+    forFileTree.viewers = await createViewAccess(
+      trackingNumber,
+      [userAddress],
+      jackalClient,
+      aes,
+    )
+    forFileTree.editors = await createEditAccess(trackingNumber, [userAddress])
+    forFileTree.trackingNumber = trackingNumber
+  } else {
+    forFileTree.contents = stringedMeta
+    forFileTree.viewers = await createViewAccess(trackingNumber, [userAddress])
+    forFileTree.editors = await createEditAccess(trackingNumber, [userAddress])
+    forFileTree.trackingNumber = trackingNumber
+  }
+  return jackalClient.getTxs().fileTree.msgPostFile(forFileTree)
 }

@@ -4,21 +4,30 @@ import type {
   ITxLibrary,
   TQueryExtensions,
 } from '@jackallabs/jackal.js-protos'
-import type { IStorageHandler, IWrappedEncodeObject } from '@/interfaces'
+import type {
+  IOracleHandler,
+  IRnsHandler,
+  IStorageHandler,
+  IWrappedEncodeObject,
+} from '@/interfaces'
 
 export interface IClientHandler {
   createStorageHandler(): Promise<IStorageHandler>
+  createRnsHandler(): Promise<IRnsHandler>
+  createOracleHandler(): Promise<IOracleHandler>
+
+  getChainId(): string
+  getIsLedger(): boolean
+  getSelectedWallet(): string
   getProofWindow(): number
   getLatestBlockHeight(): Promise<number>
-  getSigningClient(): IJackalSigningStargateClient
+  getSigningClient(): IJackalSigningStargateClient | null
   getQueries(): TQueryExtensions
   getTxs(): ITxLibrary
 
   getJackalAddress(): string
-  getPubKey(): string
-  getPrivateKey(): string
   findPubKey(address: string): Promise<string>
   broadcastsMsgs(
-    wrappedMsgs: IWrappedEncodeObject[],
+    wrappedMsgs: IWrappedEncodeObject | IWrappedEncodeObject[],
   ): Promise<DDeliverTxResponse>
 }
