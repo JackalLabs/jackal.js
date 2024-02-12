@@ -367,6 +367,9 @@ export default class FileIo implements IFileIo {
           return acc
         }, {} as IFileMetaHashMap)
         const readyToBroadcast = await this.rawAfterUpload(processValues)
+          .catch(err => {
+            throw err
+          })
         readyToBroadcast.push(
           await parent.addChildFileReferences(fileNames, this.walletRef)
         )
@@ -398,9 +401,13 @@ export default class FileIo implements IFileIo {
     const pH = this.walletRef.getProtoHandler()
     const creator = this.walletRef.getJackalAddress()
     const needingReset: EncodeObject[] = []
+    let abort = false
     const ready = await Promise.all(
       ids.flatMap(async (item: IQueueItemPostUpload) => {
         const { cid, fid } = item.handler.getIds()
+        if (!cid) {
+          abort = true
+        }
         const common = {
           aes: await item.handler.getEnc(),
           num: crypto.randomUUID(),
@@ -440,6 +447,9 @@ export default class FileIo implements IFileIo {
         return [msgPost, msgSign]
       })
     )
+    if (abort) {
+      throw new Error('Provider returned bad CID, please try again')
+    }
     ready.unshift(ready.pop() as EncodeObject[])
     return [...needingReset, ...ready.flat()]
   }
