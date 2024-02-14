@@ -901,6 +901,37 @@ export default class FileIo implements IFileIo {
   }
 
   /**
+   * Detect if a Folder exists.
+   * @param {string} rawPath - Full path to the target Folder.
+   * @returns {Promise<boolean>}
+   */
+  async detectFolder(rawPath: string): Promise<boolean> {
+    if (!this.walletRef.traits)
+      throw new Error(signerNotEnabled('FileIo', 'detectFolder'))
+    const owner = this.walletRef.getJackalAddress()
+    try {
+      const data = await readFileTreeEntry(
+        owner,
+        rawPath,
+        this.walletRef,
+        true
+      ).catch((err: Error) => {
+        throw err
+      })
+      const detect = await FolderHandler.trackFolder(data as IFolderFrame).catch(
+        (err: Error) => {
+          console.error(err)
+          return false
+        }
+      )
+      return !!detect
+    } catch (err) {
+      console.warn('detectFolder()', err)
+      return false
+    }
+  }
+
+  /**
    * Generate FolderHandler for target new folder. Used by rawGenerateInitialDirs().
    * @param {string} pathName - Name of Folder.
    * @param {string} parentPath - Full path to parent Folder.
