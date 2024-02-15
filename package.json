@@ -1,6 +1,6 @@
 {
   "name": "@jackallabs/jackal.js",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Javascript library for interacting with the Jackal Chain",
   "keywords": [
     "jackal",
@@ -41,6 +41,10 @@
     {
       "name": "Daniel Ahn",
       "email": "danny@jackallabs.io"
+    },
+    {
+      "name": "Marston Connell",
+      "email": "marston@jackallabs.io"
     }
   ],
   "license": "MIT",
