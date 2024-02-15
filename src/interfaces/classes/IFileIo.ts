@@ -26,7 +26,7 @@ export default interface IFileIo {
     sourceHashMap: IUploadList,
     parent: IFolderHandler,
     tracker: IStaggeredTracker,
-    payOnce: boolean,
+    payOnce?: boolean,
   ): Promise<void>
   downloadFolder(rawPath: string): Promise<IFolderHandler>
   downloadFile(
