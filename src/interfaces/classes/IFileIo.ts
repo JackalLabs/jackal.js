@@ -25,7 +25,8 @@ export default interface IFileIo {
   staggeredUploadFiles(
     sourceHashMap: IUploadList,
     parent: IFolderHandler,
-    tracker: IStaggeredTracker
+    tracker: IStaggeredTracker,
+    payOnce: boolean,
   ): Promise<void>
   downloadFolder(rawPath: string): Promise<IFolderHandler>
   downloadFile(

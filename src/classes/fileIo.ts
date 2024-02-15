@@ -310,7 +310,8 @@ export default class FileIo implements IFileIo {
   async staggeredUploadFiles(
     sourceHashMap: IUploadList,
     parent: IFolderHandler,
-    tracker: IStaggeredTracker
+    tracker: IStaggeredTracker,
+    payonce: boolean,
   ): Promise<void> {
     if (!this.walletRef.traits)
       throw new Error(signerNotEnabled('FileIo', 'staggeredUploadFiles'))
@@ -366,7 +367,7 @@ export default class FileIo implements IFileIo {
           acc[curr.handler.getWhoAmI()] = curr.handler.getMeta()
           return acc
         }, {} as IFileMetaHashMap)
-        const readyToBroadcast = await this.rawAfterUpload(processValues)
+        const readyToBroadcast = await this.rawAfterUpload(processValues, payonce)
           .catch(err => {
             throw err
           })
@@ -394,7 +395,8 @@ export default class FileIo implements IFileIo {
    * @private
    */
   private async rawAfterUpload(
-    ids: IQueueItemPostUpload[]
+    ids: IQueueItemPostUpload[],
+    payonce: boolean,
   ): Promise<EncodeObject[]> {
     if (!this.walletRef.traits)
       throw new Error(signerNotEnabled('FileIo', 'rawAfterUpload'))
@@ -442,7 +444,7 @@ export default class FileIo implements IFileIo {
         const msgSign: EncodeObject = pH.storageTx.msgSignContract({
           creator,
           cid,
-          payOnce: false
+          payOnce: payonce
         })
         return [msgPost, msgSign]
       })
