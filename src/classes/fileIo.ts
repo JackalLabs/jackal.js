@@ -47,7 +47,7 @@ import {
 import {
   buildPostFile,
   makePermsBlock,
-  readFileTreeEntry,
+  readFileTreeEntry, readFileTreeFolder,
   removeFileTreeEntry
 } from '@/utils/compression'
 import IFileMetaHashMap from '@/interfaces/file/IFileMetaHashMap'
@@ -911,26 +911,14 @@ export default class FileIo implements IFileIo {
     if (!this.walletRef.traits)
       throw new Error(signerNotEnabled('FileIo', 'detectFolder'))
     const owner = this.walletRef.getJackalAddress()
-    try {
-      const data = await readFileTreeEntry(
-        owner,
-        rawPath,
-        this.walletRef,
-        true
-      ).catch((err: Error) => {
-        throw err
-      })
-      const detect = await FolderHandler.trackFolder(data as IFolderFrame).catch(
-        (err: Error) => {
-          console.error(err)
-          return false
-        }
-      )
-      return !!detect
-    } catch (err) {
-      console.warn('detectFolder()', err)
+    return await readFileTreeFolder(
+      owner,
+      rawPath,
+      this.walletRef
+    ).catch((err: Error) => {
+      console.warn(err)
       return false
-    }
+    })
   }
 
   /**

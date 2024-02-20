@@ -194,6 +194,35 @@ export async function readFileTreeEntry (
 }
 
 /**
+ * Read FileTree path looking for folder.
+ * @param {string} owner - Jkl address of owner.
+ * @param {string} rawPath - Path to stored data.
+ * @param {IWalletHandler} walletRef - Wallet instance for accessing functions.
+ * @returns {Promise<boolean>}
+ */
+export async function readFileTreeFolder (
+  owner: string,
+  rawPath: string,
+  walletRef: IWalletHandler
+): Promise<boolean> {
+  const result = await getFileTreeData(
+    rawPath,
+    owner,
+    walletRef.getQueryHandler()
+  ).catch(err => {
+    throw err
+  })
+  if (!result.success) {
+    const warn = `Folder Data Not Found for: ${rawPath}`
+    console.warn(warn)
+    throw Error(warn)
+  } else {
+    const data = result.value.files as Files
+    return data.contents.length > 0
+  }
+}
+
+/**
  *
  * @param {string} rawPath - Path to FileTree entry to remove.
  * @param {IWalletHandler} walletRef
