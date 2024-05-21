@@ -6,6 +6,7 @@ import { copyFileSync } from "fs"
 import { typescriptPaths } from "rollup-plugin-typescript-paths"
 import tsconfigPaths from 'vite-tsconfig-paths'
 import dts from 'vite-plugin-dts'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 export default defineConfig({
   base: './',
@@ -19,6 +20,7 @@ export default defineConfig({
       rollupTypes: true,
       logLevel: 'error'
     }),
+    nodePolyfills({ include: ['crypto'] })
   ],
   resolve: {
     preserveSymlinks: true,

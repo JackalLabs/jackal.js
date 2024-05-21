@@ -1,7 +1,7 @@
 import PLZSU from '@karnthis/plzsu'
 import { warnError } from '@/utils/misc'
 import { assumedBlockTime } from '@/utils/globalDefaults'
-import type { IFileMeta } from '@/interfaces'
+import type { IBlockTimeOptions, IFileMeta } from '@/interfaces'
 
 const Plzsu = new PLZSU()
 const OneSecondMs = 1000
@@ -21,8 +21,9 @@ export function safeCompressData(input: string): string {
  * @returns {string} - Decompressed string.
  */
 export function safeDecompressData(input: string): string {
-  if (!input.startsWith('jklpc1'))
+  if (!input.startsWith('jklpc1')) {
     throw new Error('Invalid Decompression String')
+  }
   return Plzsu.decompress(input.substring(6))
 }
 
@@ -51,7 +52,7 @@ export function unsafeDecompressData(input: string): string {
  * @param {string} input
  * @returns {string}
  */
-export function sanitizeCompressionForAmino (input: string): string {
+export function sanitizeCompressionForAmino(input: string): string {
   const uint = stringToUint16Array(input)
   const finalBuf = new Uint8Array(uint.buffer)
   const bufAsString = String.fromCodePoint(...finalBuf)
@@ -63,7 +64,7 @@ export function sanitizeCompressionForAmino (input: string): string {
  * @param {string} input
  * @returns {string}
  */
-export function prepDecompressionForAmino (input: string): string {
+export function prepDecompressionForAmino(input: string): string {
   if (input.startsWith('jklpc2|')) {
     const wasBase64 = atob(input.substring(7))
     const asArray = [...wasBase64].map((str) => str.codePointAt(0) || 0)
@@ -88,7 +89,9 @@ export function extractFileMetaData(input: File): IFileMeta {
  * @param {Uint8Array | Uint16Array | Uint32Array} buf - Data View to convert.
  * @returns {string} - Converted result.
  */
-export function uintArrayToString(buf: Uint8Array | Uint16Array | Uint32Array): string {
+export function uintArrayToString(
+  buf: Uint8Array | Uint16Array | Uint32Array,
+): string {
   return String.fromCharCode.apply(null, [...buf])
 }
 
@@ -142,7 +145,7 @@ export function hexToInt(value: string): number {
  * @param {number} seconds - Number of seconds to convert.
  * @returns {number}
  */
-export function secondToMS (seconds: number): number {
+export function secondToMS(seconds: number): number {
   return seconds * OneSecondMs
 }
 
@@ -155,7 +158,10 @@ export function blockCountUntilTimestamp(unixTimestamp: number): number {
   const oneMonth = 30 * 24 * 60 * 60 * 1000
   const timeDiff = unixTimestamp - Date.now()
   if (timeDiff < oneMonth) {
-    warnError('blockCountUntilTimestamp()', 'unixTimestamp must be more than 30 days in the future')
+    warnError(
+      'blockCountUntilTimestamp()',
+      'unixTimestamp must be more than 30 days in the future',
+    )
     return 0
   }
   return timeDiff * assumedBlockTime
@@ -167,10 +173,29 @@ export function blockCountUntilTimestamp(unixTimestamp: number): number {
  * @param {number} currentHeight
  * @returns {number}
  */
-export function timestampToBlockHeight(unixTimestamp: number, currentHeight: number): number {
+export function timestampToBlockHeight(
+  unixTimestamp: number,
+  currentHeight: number,
+): number {
   if (unixTimestamp === 0) {
     return 0
   } else {
     return blockCountUntilTimestamp(unixTimestamp) + currentHeight
   }
+}
+
+/**
+ * Converts chain block height to UTC Date using provided block time value.
+ * @param {IBlockTimeOptions} options - Values to use for calculating UTC date.
+ * @returns {Date} - Date object for future date matching input future chain height.
+ */
+export function blockToDateFixed(options: IBlockTimeOptions): Date {
+  if (!options.blockTime) {
+    throw new Error('Block Time is required!')
+  }
+  const targetHeight = Number(options.targetBlockHeight) || 0
+  const blockDiff = targetHeight - options.currentBlockHeight
+  const diffMs = blockDiff * options.blockTime
+  const now = Date.now()
+  return new Date(now + diffMs)
 }

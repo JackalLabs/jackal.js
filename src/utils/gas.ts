@@ -1,4 +1,5 @@
-import { IGasRate, IWrappedEncodeObject } from '@/interfaces'
+import { IFinalGas, IWrappedEncodeObject } from '@/interfaces'
+import { DEncodeObject } from '@jackallabs/jackal.js-protos'
 
 const gasMultiplier = 1100
 const gasBaselineRate = 56
@@ -35,39 +36,61 @@ USING MODIFIERS
  * @returns {number} - Adjusted number of gas units collection is expected to require.
  */
 export function estimateGas(msgArray: IWrappedEncodeObject[]): number {
-  let gas = gasBaselineRate
-  for (let item of msgArray) {
-    if (!isIWrappedEncodeObject(item)) {
-      throw new Error('Only wrapped EncodeObjects are accepted')
-    } else {
-      switch (true) {
-        case item.encodedObject.typeUrl.includes('filetree.MsgProvisionFileTree'):
-          gas += calculateModifier(18, item.modifier)
-          break
-        default:
-          gas += gasMap[item.encodedObject.typeUrl] || gasFallbackTxCost
-      }
-    }
-  }
-  return gas * gasMultiplier
+  return calculateGas(msgArray)[0]
 }
 
 /**
  * Return a Gas object for use in a masterBroadcaster()-like call.
  * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
  * @param {number} gasOverride - Value to replace calculated gas value.
- * @returns {IGasRate} - Gas object with best estimate based on input.
+ * @returns {IFinalGas} - Gas object with best estimate based on input.
  * @private
  */
 export function finalizeGas(
   msgArray: IWrappedEncodeObject[],
-  gasOverride?: number
-): IGasRate {
-  const totalGas = Number(gasOverride) || estimateGas(msgArray)
+  gasOverride?: number,
+): IFinalGas {
+  const [gas, msgs] = calculateGas(msgArray)
+  const totalGas = Number(gasOverride) || gas
   return {
-    amount: [{ denom: 'ujkl', amount: Math.ceil(totalGas * .002).toString() }],
-    gas: totalGas.toString()
+    fee: {
+      amount: [
+        { denom: 'ujkl', amount: Math.ceil(totalGas * 0.002).toString() },
+      ],
+      gas: totalGas.toString(),
+    },
+    msgs,
   }
+}
+
+/**
+ * Calculate gas and unwrap msgs to prepare for broadcasting.
+ * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @returns {[number, DEncodeObject[]]} - Tuple of adjusted number of gas units collection is expected to require and unwrapped msg array.
+ * @private
+ */
+function calculateGas(
+  msgArray: IWrappedEncodeObject[],
+): [number, DEncodeObject[]] {
+  const objects: DEncodeObject[] = []
+  let gas = gasBaselineRate
+  for (let item of msgArray) {
+    if (!isIWrappedEncodeObject(item)) {
+      throw new Error('Only wrapped EncodeObjects are accepted')
+    } else {
+      switch (true) {
+        case item.encodedObject.typeUrl.includes(
+          'filetree.MsgProvisionFileTree',
+        ):
+          gas += calculateModifier(18, item.modifier)
+          break
+        default:
+          gas += gasMap[item.encodedObject.typeUrl] || gasFallbackTxCost
+      }
+      objects.push(item.encodedObject)
+    }
+  }
+  return [gas * gasMultiplier, objects]
 }
 
 /**
@@ -77,7 +100,7 @@ export function finalizeGas(
  * @private
  */
 function isIWrappedEncodeObject(
-  toCheck: any | IWrappedEncodeObject
+  toCheck: any | IWrappedEncodeObject,
 ): toCheck is IWrappedEncodeObject {
   return 'encodedObject' in toCheck
 }
@@ -91,5 +114,5 @@ function isIWrappedEncodeObject(
  */
 function calculateModifier(buffer: number, modifier: number): number {
   const sanitizedModifier = Number(modifier) || 0
-  return buffer + (sanitizedModifier * 0.04)
+  return buffer + sanitizedModifier * 0.04
 }

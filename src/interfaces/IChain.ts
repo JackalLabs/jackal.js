@@ -34,3 +34,8 @@ export interface IChainCurrency {
     high: number
   }
 }
+
+export interface ISocketConfig {
+  chainId: string
+  endpoint: string
+}

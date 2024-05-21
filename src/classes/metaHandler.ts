@@ -2,13 +2,17 @@ import { Merkletree } from '@jackallabs/dogwood-tree'
 import { chunkSize } from '@/utils/globalDefaults'
 import { hexToInt, intToHex, uintArrayToString } from '@/utils/converters'
 import { warnError } from '@/utils/misc'
+import { hexToBuffer } from '@/utils/hash'
 import type {
   IFileMetaData,
-  IRefMetaData,
   IFolderMetaData,
   IMetaDataSource,
   IMetaHandler,
   INullMetaData,
+  IRefMetaData,
+  IShareFolderMetaData,
+  IShareMetaData,
+  IShareRefMetaData,
 } from '@/interfaces'
 import type { TFoundationalMetaData } from '@/types'
 
@@ -35,7 +39,7 @@ export class MetaHandler implements IMetaHandler {
     const whoAmI = pathParts.pop() as string
     const base: TFoundationalMetaData = {
       location: source.fileMeta ? `${path}/${source.fileMeta.name}` : path,
-      pointsTo: '',
+      pointsTo: source.pointsTo || '',
       merkleLocation: '',
       removed: true,
       count: intToHex(source.count),
@@ -48,6 +52,13 @@ export class MetaHandler implements IMetaHandler {
         size: 0,
         type: '',
       },
+      label: source.label || whoAmI,
+      owner: source.owner || '',
+    }
+    if (source.legacyMerkle) {
+      base.merkleRoot = hexToBuffer(source.legacyMerkle)
+      base.merkleLocation = source.legacyMerkle
+      base.merkleMem = uintArrayToString(base.merkleRoot)
     }
     if (source.file) {
       const seed = await source.file.arrayBuffer()
@@ -70,9 +81,15 @@ export class MetaHandler implements IMetaHandler {
   setRefIndex(refIndex: number): void {
     this.refIndex = intToHex(refIndex)
   }
+
   getPath(): string {
     return this.path
   }
+
+  getCount(): number {
+    return hexToInt(this.meta.count)
+  }
+
   getRefIndex(): string {
     return this.refIndex
   }
@@ -136,23 +153,55 @@ export class MetaHandler implements IMetaHandler {
     }
   }
 
-  getRefMeta(refIndex?: number): IRefMetaData {
-    let index = ''
-    if (Number(refIndex) > -1) {
-      index = intToHex(refIndex)
-    } else if (hexToInt(this.refIndex) > -1) {
-      index = this.refIndex
+  getShareFolderMeta(): IShareFolderMetaData {
+    if (this.meta.whoAmI) {
+      const filtered = [
+        ...this.baseKeys,
+        'whoAmI',
+        'count',
+        'pointsTo',
+        'label',
+      ].reduce((obj, key) => ({ ...obj, [key]: this.meta[key] }), {})
+      const ret = filtered as IShareFolderMetaData
+      ret.location = `${this.path}/${this.refIndex}`
+      ret.pointsTo = this.meta.location
+      ret.metaDataType = 'sharefolder'
+      return ret
     } else {
-      throw new Error(warnError('MetaHandler getRefMeta()', 'Invalid refIndex'))
+      throw new Error(
+        warnError(
+          'MetaHandler getShareFolderMeta()',
+          'Requested MetaData type "Folder" unavailable',
+        ),
+      )
     }
+  }
 
+  getShareMeta(): IShareMetaData {
+    const filtered = [...this.baseKeys, 'pointsTo', 'owner'].reduce(
+      (obj, key) => ({ ...obj, [key]: this.meta[key] }),
+      {},
+    )
+    const ret = filtered as IShareMetaData
+    ret.metaDataType = 'share'
+    return ret
+  }
+
+  getRefMeta(): IRefMetaData {
     const filtered = [...this.baseKeys, 'pointsTo'].reduce(
       (obj, key) => ({ ...obj, [key]: this.meta[key] }),
       {},
     )
     const ret = filtered as IRefMetaData
-    ret.pointsTo = `${this.path}/${index}`
+    ret.location = `${this.path}/${this.refIndex}`
+    ret.pointsTo = this.meta.location
     ret.metaDataType = 'ref'
     return ret
+  }
+
+  getShareRefMeta(): IShareRefMetaData {
+    const meta = this.getRefMeta()
+    meta.metaDataType = 'shareref'
+    return meta
   }
 }

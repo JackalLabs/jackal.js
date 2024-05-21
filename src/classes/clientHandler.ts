@@ -1,63 +1,96 @@
 import {
-  JackalSigningStargateClient,
-  JackalStargateClient,
+  connectHostQueryClient,
+  connectHostSigningClient,
+  connectJackalQueryClient,
+  connectJackalSigningClient,
+  IIbcEngageBundle,
+  ITxLibrary, THostQueryClient, THostSigningClient,
+  TJackalQueryClient,
+  TJackalSigningClient,
+  TMergedSigner,
+  TQueryExtensions,
+  TxEvent,
 } from '@jackallabs/jackal.js-protos'
 import {
   jackalTestnetChainConfig,
   jackalTestnetChainId,
   jackalTestnetRpc,
 } from '@/utils/globalDefaults'
-import { signerNotEnabled, warnError } from '@/utils/misc'
+import {
+  makeConnectionBundles,
+  setDelay,
+  signerNotEnabled,
+  warnError,
+} from '@/utils/misc'
 import {
   MnemonicWallet,
-  StorageHandler,
-  RnsHandler,
   OracleHandler,
+  RnsHandler,
+  StorageHandler,
+  WasmHandler,
 } from '@/classes'
 import { finalizeGas } from '@/utils/gas'
 import type {
-  DDeliverTxResponse,
-  IJackalSigningStargateClient,
-  IJackalStargateClient,
-  ITxLibrary,
-  TQueryExtensions,
-  TSigner,
-} from '@jackallabs/jackal.js-protos'
-import type {
+  IAvailableWallets,
+  IBroadcastOptions,
+  IBroadcastResults,
   IClientHandler,
   IClientSetup,
-  IStorageHandler,
-  IAvailableWallets,
-  IWrappedEncodeObject,
-  IRnsHandler,
   IOracleHandler,
+  IRnsHandler,
+  IStorageHandler, IWasmHandler,
+  IWrappedEncodeObject,
 } from '@/interfaces'
+import type { TSockets } from '@/types'
 
 export class ClientHandler implements IClientHandler {
-  protected readonly queryClient: IJackalStargateClient
-  protected readonly signingClient: IJackalSigningStargateClient | null
-  protected readonly address: string
+  protected readonly jklQuery: TJackalQueryClient
+  protected readonly hostQuery: THostQueryClient
+  protected readonly jklSigner: TJackalSigningClient | null
+  protected readonly hostSigner: THostSigningClient | null
+  protected readonly jklAddress: string
+  protected readonly hostAddress: string
+  protected readonly jklChainId: string
+  protected readonly hostChainId: string
   protected readonly proofWindow: number
-  protected readonly chainId: string
   protected readonly selectedWallet: string
   protected readonly isLedger: boolean
+  protected readonly networks: TSockets[]
+
+  protected myCosmwasm: IWasmHandler | null
+  protected myContractAddress: string | null
+  protected myIcaAddress: string | null
 
   protected constructor(
-    queryClient: IJackalStargateClient,
-    signingClient: IJackalSigningStargateClient | null,
-    address: string,
+    jklQuery: TJackalQueryClient,
+    hostQuery: THostQueryClient,
+    jklSigner: TJackalSigningClient | null,
+    hostSigner: THostSigningClient | null,
+    jklAddress: string,
+    hostAddress: string,
+    jklChainId: string,
+    hostChainId: string,
     proofWindow: number,
-    chainId: string,
     selectedWallet: string,
     isLedger: boolean,
+    networks: TSockets[]
   ) {
-    this.queryClient = queryClient
-    this.signingClient = signingClient
-    this.address = address
+    this.jklQuery = jklQuery
+    this.hostQuery = hostQuery
+    this.jklSigner = jklSigner
+    this.hostSigner = hostSigner
+    this.jklAddress = jklAddress
+    this.hostAddress = hostAddress
+    this.jklChainId = jklChainId
+    this.hostChainId = hostChainId
     this.proofWindow = proofWindow
-    this.chainId = chainId
     this.selectedWallet = selectedWallet
     this.isLedger = isLedger
+    this.networks = networks
+
+    this.myCosmwasm = null
+    this.myContractAddress = null
+    this.myIcaAddress = null
   }
 
   /**
@@ -66,98 +99,152 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<IClientHandler>}
    */
   static async connect(setup: IClientSetup = {}): Promise<IClientHandler> {
-    const {
-      endpoint = jackalTestnetRpc,
-      chainConfig = jackalTestnetChainConfig,
-      chainId = jackalTestnetChainId,
-      mnemonic = '' /* options = {}, */,
-      selectedWallet = 'leap',
-    } = setup
-    const queryClient = await JackalStargateClient.connect(endpoint)
-    let signingClient: JackalSigningStargateClient | null = null
-    let address = ''
-    let proofWindow: number = 0
-    let isLedger = false
+    try {
+      const {
+        host,
+        endpoint = jackalTestnetRpc,
+        chainConfig = jackalTestnetChainConfig,
+        chainId = jackalTestnetChainId,
+        mnemonic = '' /* options = {}, */,
+        selectedWallet = 'leap',
+        networks = ['jackal']
+      } = setup
+      const jklQuery = connectJackalQueryClient(endpoint, {})
+      const hostQuery = (!host) ? jklQuery : connectHostQueryClient(host.endpoint, {})
+      let jklSigner: TJackalSigningClient | null = null
+      let hostSigner: THostSigningClient | null = null
+      let jklAddress = ''
+      let hostAddress = ''
+      let proofWindow: number = 7200
+      let isLedger = false
 
-    switch (selectedWallet) {
-      case 'keplr':
-        if (!window.keplr) {
-          throw new Error('Keplr Wallet selected but unavailable')
-        } else {
-          await window.keplr.experimentalSuggestChain(chainConfig)
-          await window.keplr.enable([chainId]).catch((err: Error) => {
-            throw err
-          })
-          const signer = (await window.keplr.getOfflineSignerAuto(
-            chainId,
-          )) as TSigner
-          signingClient = await JackalSigningStargateClient.connectWithSigner(
-            endpoint,
-            signer,
-          )
-          address = (await signer.getAccounts())[0].address
-          const details = await window.keplr.getKey(chainId)
-          isLedger = details.isNanoLedger
-        }
-        break
-      case 'leap':
-        if (!window.leap) {
-          throw new Error('Leap Wallet selected but unavailable')
-        } else {
-          await window.leap.experimentalSuggestChain(chainConfig)
-          await window.leap.enable([chainId]).catch((err: Error) => {
-            throw err
-          })
-          const signer = (await window.leap.getOfflineSignerAuto(
-            chainId,
-            {},
-          )) as TSigner
-          if ('signAmino' in signer) {
-            signingClient = await JackalSigningStargateClient.connectWithSigner(
+      switch (selectedWallet) {
+        case 'keplr':
+          if (!window.keplr) {
+            throw new Error('Keplr Wallet selected but unavailable')
+          } else {
+            await window.keplr.experimentalSuggestChain(chainConfig)
+            await window.keplr.enable([chainId])
+            const signer = (await window.keplr.getOfflineSignerAuto(
+              chainId,
+            )) as TMergedSigner
+            jklSigner = await connectJackalSigningClient(
               endpoint,
               signer,
+              {},
             )
-            address = (await signer.getAccounts())[0].address
-            const details = await window.leap.getKey(chainId)
+            jklAddress = (await signer.getAccounts())[0].address
+            const details = await window.keplr.getKey(chainId)
             isLedger = details.isNanoLedger
-          } else {
-            throw new Error('Leap Wallet amino failure')
+
+            if (host) {
+              await window.keplr.experimentalSuggestChain(host.chainConfig)
+              await window.keplr.enable([host.chainId])
+              const tmpSigner = (await window.keplr.getOfflineSignerAuto(
+                host.chainId,
+              )) as TMergedSigner
+              hostSigner = await connectHostSigningClient(
+                host.endpoint,
+                tmpSigner,
+                {},
+              )
+              hostAddress = (await tmpSigner.getAccounts())[0].address
+            } else {
+              hostSigner = jklSigner
+              hostAddress = jklAddress
+            }
           }
-        }
-        break
-      case 'mnemonic':
-        if (!mnemonic) {
-          throw new Error('Mnemonic Wallet selected but mnemonic not provided')
-        } else {
-          const wallet = await MnemonicWallet.init(mnemonic)
-          const signer = wallet.getOfflineSigner()
-          signingClient = await JackalSigningStargateClient.connectWithSigner(
-            endpoint,
-            signer,
+          break
+        case 'leap':
+          if (!window.leap) {
+            throw new Error('Leap Wallet selected but unavailable')
+          } else {
+            await window.leap.experimentalSuggestChain(chainConfig)
+            await window.leap.enable([chainId])
+            const signer = (await window.leap.getOfflineSignerAuto(
+              chainId,
+              {},
+            )) as TMergedSigner
+            if ('signAmino' in signer) {
+              jklSigner = await connectJackalSigningClient(
+                endpoint,
+                signer,
+                {},
+              )
+              jklAddress = (await signer.getAccounts())[0].address
+              const details = await window.leap.getKey(chainId)
+              isLedger = details.isNanoLedger
+
+              if (host) {
+                await window.leap.experimentalSuggestChain(host.chainConfig)
+                await window.leap.enable([host.chainId])
+                const tmpSigner = (await window.leap.getOfflineSignerAuto(
+                  host.chainId,
+                  {},
+                )) as TMergedSigner
+                if ('signAmino' in tmpSigner) {
+                  hostSigner = await connectHostSigningClient(
+                    host.endpoint,
+                    tmpSigner,
+                    {},
+                  )
+                  hostAddress = (await tmpSigner.getAccounts())[0].address
+                } else {
+                  hostSigner = jklSigner
+                  hostAddress = jklAddress
+                }
+              }
+            } else {
+              throw new Error('Leap Wallet amino failure')
+            }
+          }
+          break
+        case 'mnemonic':
+          if (!mnemonic) {
+            throw new Error(
+              'Mnemonic Wallet selected but mnemonic not provided',
+            )
+          } else {
+            const wallet = await MnemonicWallet.init(mnemonic)
+            const signer = wallet.getOfflineSigner()
+            jklSigner = await connectJackalSigningClient(
+              endpoint,
+              signer,
+              {},
+            )
+            jklAddress = wallet.getAddress()
+            hostSigner = jklSigner
+            hostAddress = jklAddress
+          }
+          break
+        default:
+          console.warn(
+            'No wallet provider selected. Continuing in query-only mode.',
           )
-          address = wallet.getAddress()
-        }
-        break
-      default:
-        console.warn(
-          'No wallet provider selected. Continuing in query-only mode.',
-        )
-    }
+      }
 
-    if (signingClient) {
-      proofWindow = (await signingClient.queries.storage.params()).params
-        .proofWindow
-    }
+      if (jklSigner) {
+        proofWindow = (await jklSigner.queries.storage.params()).params
+          .proofWindow
+      }
 
-    return new ClientHandler(
-      queryClient,
-      signingClient,
-      address,
-      proofWindow,
-      chainId,
-      selectedWallet,
-      isLedger,
-    )
+      return new ClientHandler(
+        await jklQuery,
+        await hostQuery,
+        jklSigner,
+        hostSigner,
+        jklAddress,
+        hostAddress,
+        chainId,
+        host?.chainId || chainId,
+        proofWindow,
+        selectedWallet,
+        isLedger,
+        networks
+      )
+    } catch (err) {
+      throw warnError('ClientHandler connect()', err)
+    }
   }
 
   /**
@@ -176,9 +263,31 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<IStorageHandler>}
    */
   async createStorageHandler(): Promise<IStorageHandler> {
-    return StorageHandler.init(this).catch((err: Error) => {
+    try {
+      return await StorageHandler.init(this)
+    } catch (err) {
       throw warnError('ClientHandler createStorageHandler()', err)
-    })
+    }
+  }
+
+  /**
+   *
+   * @returns {Promise<IWasmHandler>}
+   */
+  async createWasmStorageHandler(): Promise<IStorageHandler> {
+    try {
+      this.myCosmwasm = await WasmHandler.init(this)
+      this.myContractAddress = await this.myCosmwasm.getICAContractAddress()
+      if (!this.myContractAddress) {
+        await this.myCosmwasm.instantiateICA()
+        this.myContractAddress = await this.myCosmwasm.getICAContractAddress()
+      }
+      this.myIcaAddress = await this.myCosmwasm.getJackalAddressFromContract(this.myContractAddress)
+      return await StorageHandler.init(this, { accountAddress: this.myIcaAddress })
+    } catch (err) {
+      console.warn(err)
+      throw warnError('ClientHandler createWasmStorageHandler()', err)
+    }
   }
 
   /**
@@ -186,9 +295,11 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<IRnsHandler>}
    */
   async createRnsHandler(): Promise<IRnsHandler> {
-    return RnsHandler.init(this).catch((err: Error) => {
+    try {
+      return await RnsHandler.init(this)
+    } catch (err) {
       throw warnError('ClientHandler createRnsHandler()', err)
-    })
+    }
   }
 
   /**
@@ -196,9 +307,11 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<IOracleHandler>}
    */
   async createOracleHandler(): Promise<IOracleHandler> {
-    return OracleHandler.init(this).catch((err: Error) => {
+    try {
+      return await OracleHandler.init(this)
+    } catch (err) {
       throw warnError('ClientHandler createOracleHandler()', err)
-    })
+    }
   }
 
   /**
@@ -206,7 +319,15 @@ export class ClientHandler implements IClientHandler {
    * @returns {string}
    */
   getChainId(): string {
-    return this.chainId
+    return this.jklChainId
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  getHostChainId(): string {
+    return this.hostChainId
   }
 
   /**
@@ -238,37 +359,27 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<number>}
    * @protected
    */
-  async getLatestBlockHeight(): Promise<number> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('ClientHandler', 'getLatestBlockHeight'))
+  async getJackalBlockHeight(): Promise<number> {
+    if (!this.jklSigner) {
+      throw new Error(signerNotEnabled('ClientHandler', 'getJackalBlockHeight'))
     }
-    const tm = this.signingClient.baseTmClient()
-    if (!tm) {
-      throw new Error(
-        warnError(
-          'ClientHandler getLatestBlockHeight()',
-          'Invalid baseTmClient()',
-        ),
-      )
-    }
-    const { lastBlockHeight } = await tm.abciInfo()
-    if (!lastBlockHeight) {
-      throw new Error(
-        warnError(
-          'ClientHandler getLatestBlockHeight()',
-          'Invalid lastBlockHeight',
-        ),
-      )
-    }
-    return lastBlockHeight
+    return await this.jklSigner.getHeight()
   }
 
   /**
    *
-   * @returns {IJackalSigningStargateClient}
+   * @returns {TJackalSigningClient}
    */
-  getSigningClient(): IJackalSigningStargateClient | null {
-    return this.signingClient
+  getJackalSigner(): TJackalSigningClient | null {
+    return this.jklSigner
+  }
+
+  /**
+   *
+   * @returns {TJackalSigningClient}
+   */
+  getHostSigner(): THostSigningClient | null {
+    return this.hostSigner
   }
 
   /**
@@ -276,10 +387,7 @@ export class ClientHandler implements IClientHandler {
    * @returns {TQueryExtensions}
    */
   getQueries(): TQueryExtensions {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('ClientHandler', 'getQueries'))
-    }
-    return this.signingClient.queries
+    return this.jklQuery.queries as TQueryExtensions
   }
 
   /**
@@ -287,10 +395,10 @@ export class ClientHandler implements IClientHandler {
    * @returns {ITxLibrary}
    */
   getTxs(): ITxLibrary {
-    if (!this.signingClient) {
+    if (!this.jklSigner) {
       throw new Error(signerNotEnabled('ClientHandler', 'getTxs'))
     }
-    return this.signingClient.txLibrary
+    return this.jklSigner.txLibrary as unknown as ITxLibrary
   }
 
   /**
@@ -298,10 +406,32 @@ export class ClientHandler implements IClientHandler {
    * @returns {string} - Jkl address.
    */
   getJackalAddress(): string {
-    if (!this.signingClient) {
+    if (!this.jklSigner) {
       throw new Error(signerNotEnabled('ClientHandler', 'getJackalAddress'))
     }
-    return this.address
+    return this.jklAddress
+  }
+
+  /**
+   * Expose signing ClientHandler instance host wallet address.
+   * @returns {string} - Host address.
+   */
+  getHostAddress(): string {
+    if (!this.jklSigner) {
+      throw new Error(signerNotEnabled('ClientHandler', 'getHostAddress'))
+    }
+    return this.hostAddress
+  }
+
+  /**
+   * Expose WASM ICA Contract instance jkl address.
+   * @returns {string} - Jkl address.
+   */
+  getICAJackalAddress(): string {
+    if (!this.myIcaAddress) {
+      throw new Error(signerNotEnabled('ClientHandler', 'getICAJackalAddress'))
+    }
+    return this.myIcaAddress
   }
 
   /**
@@ -310,33 +440,96 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<string>} - Target address' public key as hex value.
    */
   async findPubKey(address: string): Promise<string> {
-    const result = await this.queryClient.queries.fileTree
-      .pubKey({ address })
-      .catch((err: Error) => {
-        throw warnError('clientHandler findPubKey()', err)
-      })
-    return result.pubKey.key
+    try {
+      const result = await this.jklQuery.queries.fileTree.pubKey({ address })
+      return result.pubKey.key
+    } catch (err) {
+      throw warnError('clientHandler findPubKey()', err)
+    }
+  }
+
+  async myPubKeyIsPublished(): Promise<boolean> {
+    try {
+      const key = await this.findPubKey(this.myIcaAddress || this.hostAddress)
+      return key.length > 0
+    } catch (err) {
+      throw warnError('clientHandler pubKeyIsPublished()', err)
+    }
   }
 
   /**
    *
    * @param {IWrappedEncodeObject | IWrappedEncodeObject[]} wrappedMsgs
-   * @returns {Promise<DDeliverTxResponse>}
+   * @param {IBroadcastOptions} [options]
+   * @returns {Promise<IBroadcastResults>}
    */
-  broadcastsMsgs(
+  async broadcastAndMonitorMsgs(
     wrappedMsgs: IWrappedEncodeObject | IWrappedEncodeObject[],
-  ): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('ClientHandler', 'broadcastsMsgs'))
+    options: IBroadcastOptions = {},
+  ): Promise<IBroadcastResults> {
+    if (!this.hostSigner) {
+      throw new Error(
+        signerNotEnabled('ClientHandler', 'broadcastAndMonitorMsgs'),
+      )
     }
-    const ready: IWrappedEncodeObject[] = []
-    if (wrappedMsgs instanceof Array) {
-      ready.push(...wrappedMsgs)
-    } else {
-      ready.push(wrappedMsgs)
+    try {
+      const {
+        gasOverride,
+        memo,
+        broadcastTimeoutHeight,
+        monitorTimeout = 30
+      } = options
+      const events: TxEvent[] = []
+      const ready: IWrappedEncodeObject[] =
+        wrappedMsgs instanceof Array ? [...wrappedMsgs] : [wrappedMsgs]
+      let { fee, msgs } = finalizeGas(ready, gasOverride)
+
+      const connectionBundles: IIbcEngageBundle<TxEvent>[] = makeConnectionBundles(this.networks, events, msgs, this.myIcaAddress || this.hostAddress)
+      console.log('connectionBundles:', connectionBundles)
+      this.hostSigner.monitor(connectionBundles)
+
+      if (this.myContractAddress && this.myCosmwasm) {
+        msgs = this.myCosmwasm.wrapEncodeObjectsForBroadcast(this.myContractAddress, msgs)
+      }
+      const broadcastResult = this.hostSigner.selfSignAndBroadcast(msgs, {
+        fee,
+        memo,
+        timeoutHeight: broadcastTimeoutHeight
+      })
+
+      return new Promise((resolve, reject) => {
+        (async () => {
+          let eventsAreFinished = false
+          let rejected = false
+          const broadcastTimeout = setTimeout(async () => {
+            rejected = true
+            reject({
+              error: true,
+              errorText: 'Event Timeout',
+              txResponse: await broadcastResult,
+              txEvents: events,
+            })
+          }, monitorTimeout * 1000)
+
+          while (!eventsAreFinished && !rejected) {
+            // console.log('waiting')
+            await setDelay(0.5)
+            eventsAreFinished = events.length >= 1
+          }
+          if (eventsAreFinished) {
+            clearTimeout(broadcastTimeout)
+            // console.log('resolving')
+            resolve({
+              error: false,
+              errorText: '',
+              txResponse: await broadcastResult,
+              txEvents: events,
+            })
+          }
+        })()
+      })
+    } catch (err) {
+      throw warnError('clientHandler broadcastAndMonitorMsgs()', err)
     }
-    const fee = finalizeGas(ready)
-    const strippedMsgs = ready.map((el) => el.encodedObject)
-    return this.signingClient.selfSignAndBroadcast(strippedMsgs, { fee })
   }
 }

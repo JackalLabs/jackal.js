@@ -1,8 +1,10 @@
-import { OfflineDirectSigner } from '@cosmjs/proto-signing'
-import { OfflineAminoSigner, StdSignature } from '@cosmjs/amino'
+import type { StdSignature } from '@cosmjs/amino'
+import type { TMergedSigner } from '@jackallabs/jackal.js-protos'
 
 export interface IMnemonicWallet {
-  getOfflineSigner(): OfflineAminoSigner & OfflineDirectSigner
+  getOfflineSigner(): TMergedSigner
+
   getAddress(): string
+
   signArbitrary(address: string, message: string): Promise<StdSignature>
 }

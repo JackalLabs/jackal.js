@@ -7,7 +7,7 @@ import type {
   DEncodeObject,
   DForsale,
   DName,
-  IJackalSigningStargateClient,
+  TJackalSigningClient,
   TQueryAllBidsResponseStrict,
   TQueryAllForSaleResponseStrict,
   TQueryAllNamesResponseStrict,
@@ -15,8 +15,8 @@ import type {
 } from '@jackallabs/jackal.js-protos'
 import type {
   IClientHandler,
-  IRnsData,
   IPageRequest,
+  IRnsData,
   IRnsHandler,
   IWrappedEncodeObject,
 } from '@/interfaces'
@@ -24,11 +24,11 @@ import type { TAddressPrefix } from '@/types'
 
 export class RnsHandler implements IRnsHandler {
   protected readonly jackalClient: IClientHandler
-  protected readonly signingClient: IJackalSigningStargateClient | null
+  protected readonly signingClient: TJackalSigningClient | null
 
   protected constructor(client: IClientHandler) {
     this.jackalClient = client
-    this.signingClient = client.getSigningClient()
+    this.signingClient = client.getJackalSigner()
   }
 
   /**
@@ -46,13 +46,14 @@ export class RnsHandler implements IRnsHandler {
    * @returns {Promise<DBid>}
    */
   async getBidForSingleName(name: string): Promise<DBid> {
-    const result = await this.jackalClient
-      .getQueries()
-      .rns.bid({ name: this.sanitizeRns(name) })
-      .catch((err) => {
-        throw err
-      })
-    return result.bids
+    try {
+      const result = await this.jackalClient
+        .getQueries()
+        .rns.bid({ name: this.sanitizeRns(name) })
+      return result.bids
+    } catch (err) {
+      throw err
+    }
   }
 
   /**
@@ -63,12 +64,13 @@ export class RnsHandler implements IRnsHandler {
   async getBidsForAllNames(
     pagination?: IPageRequest,
   ): Promise<TQueryAllBidsResponseStrict> {
-    return await this.jackalClient
-      .getQueries()
-      .rns.allBids({ pagination })
-      .catch((err) => {
-        throw err
-      })
+    try {
+      return await this.jackalClient
+        .getQueries()
+        .rns.allBids({ pagination })
+    } catch (err) {
+      throw err
+    }
   }
 
   /**
@@ -77,13 +79,14 @@ export class RnsHandler implements IRnsHandler {
    * @returns {Promise<DForsale>}
    */
   async getNameForSale(name: string): Promise<DForsale> {
-    const result = await this.jackalClient
-      .getQueries()
-      .rns.forSale({ name: this.sanitizeRns(name) })
-      .catch((err) => {
-        throw err
-      })
-    return result.forSale
+    try {
+      const result = await this.jackalClient
+        .getQueries()
+        .rns.forSale({ name: this.sanitizeRns(name) })
+      return result.forSale
+    } catch (err) {
+      throw err
+    }
   }
 
   /**
@@ -94,12 +97,13 @@ export class RnsHandler implements IRnsHandler {
   async getAllNamesForSale(
     pagination?: IPageRequest,
   ): Promise<TQueryAllForSaleResponseStrict> {
-    return await this.jackalClient
-      .getQueries()
-      .rns.allForSale({ pagination })
-      .catch((err) => {
-        throw err
-      })
+    try {
+      return await this.jackalClient
+        .getQueries()
+        .rns.allForSale({ pagination })
+    } catch (err) {
+      throw err
+    }
   }
 
   /**
@@ -110,12 +114,13 @@ export class RnsHandler implements IRnsHandler {
   async getAllNames(
     pagination?: IPageRequest,
   ): Promise<TQueryAllNamesResponseStrict> {
-    return await this.jackalClient
-      .getQueries()
-      .rns.allNames({ pagination })
-      .catch((err) => {
-        throw err
-      })
+    try {
+      return await this.jackalClient
+        .getQueries()
+        .rns.allNames({ pagination })
+    } catch (err) {
+      throw err
+    }
   }
 
   /**
@@ -126,12 +131,14 @@ export class RnsHandler implements IRnsHandler {
   async getAllMyNames(
     pagination?: IPageRequest,
   ): Promise<TQueryListOwnedNamesResponseStrict> {
-    return await this.getAllNamesInWallet(
-      this.jackalClient.getJackalAddress(),
-      pagination,
-    ).catch((err) => {
+    try {
+      return await this.getAllNamesInWallet(
+        this.jackalClient.getJackalAddress(),
+        pagination,
+      )
+    } catch (err) {
       throw err
-    })
+    }
   }
 
   /**
@@ -144,12 +151,13 @@ export class RnsHandler implements IRnsHandler {
     address: string,
     pagination?: IPageRequest,
   ): Promise<TQueryListOwnedNamesResponseStrict> {
-    return await this.jackalClient
-      .getQueries()
-      .rns.listOwnedNames({ address, pagination })
-      .catch((err) => {
-        throw err
-      })
+    try {
+      return await this.jackalClient
+        .getQueries()
+        .rns.listOwnedNames({ address, pagination })
+    } catch (err) {
+      throw err
+    }
   }
 
   /**
@@ -158,23 +166,308 @@ export class RnsHandler implements IRnsHandler {
    * @returns {Promise<DName>}
    */
   async getNameDetails(name: string): Promise<DName> {
-    const result = await this.jackalClient
-      .getQueries()
-      .rns.name({ name: this.sanitizeRns(name) })
-      .catch((err) => {
-        throw err
-      })
-    return result.name
+    try {
+      const result = await this.jackalClient
+        .getQueries()
+        .rns.name({ name: this.sanitizeRns(name) })
+      return result.name
+    } catch (err) {
+      throw err
+    }
   }
 
   async rnsToAddress(name: string, prefix?: TAddressPrefix): Promise<string> {
-    const details = await this.getNameDetails(name)
-    if (prefix) {
-      return bech32.swapPrefixAsync(prefix, details.value).catch((err) => {
-        throw err
-      })
-    } else {
-      return details.value
+    try {
+      const details = await this.getNameDetails(name)
+      if (prefix) {
+        return bech32.swapPrefixAsync(prefix, details.value)
+      } else {
+        return details.value
+      }
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Submit an offer on another user's RNS.
+   * @param {string} rns - RNS to submit offer on.
+   * @param {DCoin} bid - Value of offer as DCoin instance.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async bid(rns: string, bid: DCoin): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'bid'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeBidMsg(rns, bid),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Accept a bid on the user's RNS.
+   * @param {string} rns -  The RNS to accept the bid for.
+   * @param {string} from - The Jackal address to accept the bid from.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async acceptBid(rns: string, from: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'acceptBid'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeAcceptBidMsg(rns, from),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Retract offer on another user's RNS.
+   * @param {string} rns - RNS to retract offer from.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async cancelBid(rns: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'cancelBid'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeCancelBidMsg(rns),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Add user's RNS to the market.
+   * @param {string} rns - RNS to list on market.
+   * @param {DCoin} price - Value to buy as DCoin instance.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async list(rns: string, price: DCoin): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'list'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeListMsg(rns, price),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Remove user's RNS from the market.
+   * @param {string} rns - RNS to remove.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async delist(rns: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'delist'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeDelistMsg(rns),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Purchase RNS listed on market.
+   * @param {string} rns
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async buy(rns: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'buy'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeBuyMsg(rns),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Activate user in the RNS system and to generate free account RNS.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async init(): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'init'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeInitMsg(),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Register new RNS.
+   * @param {string} rns - RNS address to register.
+   * @param {number} yearsToRegister - Duration to register for in years.
+   * @param {IRnsData} [data] - Optional object to include in data field.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async register(
+    rns: string,
+    yearsToRegister: number,
+    data?: IRnsData,
+  ): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'register'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeRegisterMsg(rns, yearsToRegister, data),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Update RNS metadata.
+   * @param {string} rns - RNS address to update.
+   * @param {IRnsData} [data] - Optional object to replace existing contents of data field.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async update(rns: string, data?: IRnsData): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'update'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeUpdateMsg(rns, data),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Transfer user's RNS to another user.
+   * @param {string} rns - RNS to transfer.
+   * @param {string} receiver - Jackal address to transfer to.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async transfer(rns: string, receiver: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'transfer'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeTransferMsg(rns, receiver),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Add a subdomain entry to an RNS.
+   * @param {string} rns - RNS to transfer.
+   * @param {string} linkedWallet - Jackal address to link new sub RNS to.
+   * @param {string} subRns - Sub RNS to create.
+   * @param {IRnsData} [data] - Optional object to include in sub RNS data field.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async addSubRns(
+    rns: string,
+    linkedWallet: string,
+    subRns: string,
+    data?: IRnsData,
+  ): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'addSubRns'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeAddRecordMsg(rns, linkedWallet, subRns, data),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Delete an RNS subdomain entry.
+   * @param {string} rns - Full RNS to remove.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async removeSubRns(rns: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'removeSubRns'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeDelRecordMsg(rns),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
     }
   }
 
@@ -197,25 +490,6 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Submit an offer on another user's RNS.
-   * @param {string} rns - RNS to submit offer on.
-   * @param {DCoin} bid - Value of offer as DCoin instance.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async bid(rns: string, bid: DCoin): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'bid'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeBidMsg(rns, bid),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
-    })
-  }
-
-  /**
    * Create Msg for accepting a bid on the user's RNS.
    * @param {string} rns -  The RNS to accept the bid for.
    * @param {string} from - The Jackal address to accept the bid from.
@@ -234,25 +508,6 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Accept a bid on the user's RNS.
-   * @param {string} rns -  The RNS to accept the bid for.
-   * @param {string} from - The Jackal address to accept the bid from.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async acceptBid(rns: string, from: string): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'acceptBid'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeAcceptBidMsg(rns, from),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
-    })
-  }
-
-  /**
    * Create Msg to retract offer on another user's RNS.
    * @param {string} rns - RNS to retract offer from.
    * @returns {DEncodeObject}
@@ -265,24 +520,6 @@ export class RnsHandler implements IRnsHandler {
     return this.signingClient.txLibrary.rns.msgCancelBid({
       creator: this.jackalClient.getJackalAddress(),
       name: this.sanitizeRns(rns),
-    })
-  }
-
-  /**
-   * Retract offer on another user's RNS.
-   * @param {string} rns - RNS to retract offer from.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async cancelBid(rns: string): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'cancelBid'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeCancelBidMsg(rns),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
     })
   }
 
@@ -305,25 +542,6 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Add user's RNS to the market.
-   * @param {string} rns - RNS to list on market.
-   * @param {DCoin} price - Value to buy as DCoin instance.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async list(rns: string, price: DCoin): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'list'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeListMsg(rns, price),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
-    })
-  }
-
-  /**
    * Create Msg to remove user's RNS from the market.
    * @param {string} rns - RNS to remove.
    * @returns {DEncodeObject}
@@ -336,24 +554,6 @@ export class RnsHandler implements IRnsHandler {
     return this.signingClient.txLibrary.rns.msgDelist({
       creator: this.jackalClient.getJackalAddress(),
       name: this.sanitizeRns(rns),
-    })
-  }
-
-  /**
-   * Remove user's RNS from the market.
-   * @param {string} rns - RNS to remove.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async delist(rns: string): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'delist'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeDelistMsg(rns),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
     })
   }
 
@@ -374,24 +574,6 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Purchase RNS listed on market.
-   * @param {string} rns
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async buy(rns: string): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'buy'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeBuyMsg(rns),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
-    })
-  }
-
-  /**
    * Create Msg to activate user in the RNS system and to generate free account RNS.
    * @returns {DEncodeObject}
    * @protected
@@ -402,23 +584,6 @@ export class RnsHandler implements IRnsHandler {
     }
     return this.signingClient.txLibrary.rns.msgInit({
       creator: this.jackalClient.getJackalAddress(),
-    })
-  }
-
-  /**
-   * Activate user in the RNS system and to generate free account RNS.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async init(): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'init'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeInitMsg(),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
     })
   }
 
@@ -447,30 +612,6 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Register new RNS.
-   * @param {string} rns - RNS address to register.
-   * @param {number} yearsToRegister - Duration to register for in years.
-   * @param {IRnsData} [data] - Optional object to include in data field.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async register(
-    rns: string,
-    yearsToRegister: number,
-    data?: IRnsData,
-  ): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'register'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeRegisterMsg(rns, yearsToRegister, data),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
-    })
-  }
-
-  /**
    * Create Msg to update RNS metadata.
    * @param {string} rns - RNS address to update.
    * @param {IRnsData} [data] - Optional object to replace existing contents of data field.
@@ -489,25 +630,6 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Update RNS metadata.
-   * @param {string} rns - RNS address to update.
-   * @param {IRnsData} [data] - Optional object to replace existing contents of data field.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async update(rns: string, data?: IRnsData): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'update'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeUpdateMsg(rns, data),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
-    })
-  }
-
-  /**
    * Create Msg to transfer user's RNS to another user.
    * @param {string} rns - RNS to transfer.
    * @param {string} receiver - Jackal address to transfer to.
@@ -522,25 +644,6 @@ export class RnsHandler implements IRnsHandler {
       creator: this.jackalClient.getJackalAddress(),
       name: this.sanitizeRns(rns),
       receiver,
-    })
-  }
-
-  /**
-   * Transfer user's RNS to another user.
-   * @param {string} rns - RNS to transfer.
-   * @param {string} receiver - Jackal address to transfer to.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async transfer(rns: string, receiver: string): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'transfer'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeTransferMsg(rns, receiver),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
     })
   }
 
@@ -572,32 +675,6 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Add a subdomain entry to an RNS.
-   * @param {string} rns - RNS to transfer.
-   * @param {string} linkedWallet - Jackal address to link new sub RNS to.
-   * @param {string} subRns - Sub RNS to create.
-   * @param {IRnsData} [data] - Optional object to include in sub RNS data field.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async addSubRns(
-    rns: string,
-    linkedWallet: string,
-    subRns: string,
-    data?: IRnsData,
-  ): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'addSubRns'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeAddRecordMsg(rns, linkedWallet, subRns, data),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
-    })
-  }
-
-  /**
    * Create Msg to delete an RNS subdomain entry.
    * @param {string} rns - Full RNS to remove.
    * @returns {DEncodeObject}
@@ -610,24 +687,6 @@ export class RnsHandler implements IRnsHandler {
     return this.signingClient.txLibrary.rns.msgDelRecord({
       creator: this.jackalClient.getJackalAddress(),
       name: this.sanitizeRns(rns),
-    })
-  }
-
-  /**
-   * Delete an RNS subdomain entry.
-   * @param {string} rns - Full RNS to remove.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async removeSubRns(rns: string): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('RnsHandler', 'removeSubRns'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeDelRecordMsg(rns),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
     })
   }
 

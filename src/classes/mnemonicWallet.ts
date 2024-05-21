@@ -1,21 +1,20 @@
-import { OfflineAminoSigner, Secp256k1HdWallet, StdSignature } from '@cosmjs/amino'
-import { DirectSecp256k1HdWallet, OfflineDirectSigner } from '@cosmjs/proto-signing'
-import { IMnemonicWallet } from '@/interfaces/classes'
+import type { StdSignature } from '@cosmjs/amino'
+import { Secp256k1HdWallet } from '@cosmjs/amino'
+import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
+import type { IMnemonicWallet } from '@/interfaces/classes'
+import { TMergedSigner } from '@jackallabs/jackal.js-protos'
 
 export class MnemonicWallet implements IMnemonicWallet {
-  private readonly mergedSigner: OfflineAminoSigner & OfflineDirectSigner
+  private readonly mergedSigner: TMergedSigner
   private readonly address: string
 
   /**
    * Receives properties from init() to instantiate MnemonicWallet for use in creating a CustomWallet instance.
-   * @param {OfflineAminoSigner & OfflineDirectSigner} mergedSigner
+   * @param {TMergedSigner} mergedSigner
    * @param {string} address
    * @private
    */
-  private constructor(
-    mergedSigner: OfflineAminoSigner & OfflineDirectSigner,
-    address: string
-  ) {
+  private constructor(mergedSigner: TMergedSigner, address: string) {
     this.mergedSigner = mergedSigner
     this.address = address
   }
@@ -27,25 +26,28 @@ export class MnemonicWallet implements IMnemonicWallet {
    */
   static async init(mnemonic: string): Promise<MnemonicWallet> {
     let directWallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
-      prefix: 'jkl'
+      prefix: 'jkl',
     })
     let aminoWallet = await Secp256k1HdWallet.fromMnemonic(mnemonic, {
-      prefix: 'jkl'
+      prefix: 'jkl',
     })
 
     /* Destroy mnemonic */
     mnemonic = ''
 
-    const mergedSigner = {...aminoWallet, ...directWallet} as OfflineAminoSigner & OfflineDirectSigner
+    const mergedSigner = {
+      ...aminoWallet,
+      ...directWallet,
+    } as TMergedSigner
     const { address } = (await mergedSigner.getAccounts())[0]
     return new MnemonicWallet(mergedSigner, address)
   }
 
   /**
    * Expose Signer for use in ClientHandler.
-   * @returns {OfflineAminoSigner & OfflineDirectSigner}
+   * @returns {TMergedSigner}
    */
-  getOfflineSigner(): OfflineAminoSigner & OfflineDirectSigner {
+  getOfflineSigner(): TMergedSigner {
     return this.mergedSigner
   }
 
@@ -62,27 +64,25 @@ export class MnemonicWallet implements IMnemonicWallet {
    * @param {string} message - Value to use as signature base.
    * @returns {Promise<StdSignature>} - Resulting AminoSignResponse.signature.
    */
-  async signArbitrary(
-    message: string
-  ): Promise<StdSignature> {
+  async signArbitrary(message: string): Promise<StdSignature> {
     const signed = await this.mergedSigner.signAmino(this.address, {
       chain_id: '',
       account_number: '0',
       sequence: '0',
       fee: {
         gas: '0',
-        amount: []
+        amount: [],
       },
       msgs: [
         {
           type: 'sign/MsgSignData',
           value: {
             signer: this.address,
-            data: btoa(message)
-          }
-        }
+            data: btoa(message),
+          },
+        },
       ],
-      memo: ''
+      memo: '',
     })
     return signed.signature
   }

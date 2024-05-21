@@ -1,4 +1,4 @@
-import { IAesBundle, IMetaHandler } from '@/interfaces'
+import type { IAesBundle, IMetaHandler } from '@/interfaces'
 
 export interface IUploadPackage {
   file: File

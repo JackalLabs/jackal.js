@@ -3,7 +3,7 @@ import type {
   DDeliverTxResponse,
   DEncodeObject,
   DFeed,
-  IJackalSigningStargateClient,
+  TJackalSigningClient,
   TQueryAllFeedsResponseStrict,
 } from '@jackallabs/jackal.js-protos'
 import type { IClientHandler, IOracleHandler } from '@/interfaces/classes'
@@ -11,11 +11,11 @@ import type { IPageRequest, IWrappedEncodeObject } from '@/interfaces'
 
 export class OracleHandler implements IOracleHandler {
   protected readonly jackalClient: IClientHandler
-  protected readonly signingClient: IJackalSigningStargateClient | null
+  protected readonly signingClient: TJackalSigningClient | null
 
   protected constructor(client: IClientHandler) {
     this.jackalClient = client
-    this.signingClient = client.getSigningClient()
+    this.signingClient = client.getJackalSigner()
   }
 
   /**
@@ -33,13 +33,14 @@ export class OracleHandler implements IOracleHandler {
    * @returns {Promise<DFeed>}
    */
   async getFeed(name: string): Promise<DFeed> {
-    const result = await this.jackalClient
-      .getQueries()
-      .oracle.feed({ name })
-      .catch((err) => {
-        throw err
-      })
-    return result.feed
+    try {
+      const result = await this.jackalClient
+        .getQueries()
+        .oracle.feed({ name })
+      return result.feed
+    } catch (err) {
+      throw err
+    }
   }
 
   /**
@@ -50,12 +51,61 @@ export class OracleHandler implements IOracleHandler {
   async getAllFeeds(
     pagination?: IPageRequest,
   ): Promise<TQueryAllFeedsResponseStrict> {
-    return await this.jackalClient
-      .getQueries()
-      .oracle.allFeeds({ pagination })
-      .catch((err) => {
-        throw err
-      })
+    try {
+      return await this.jackalClient
+        .getQueries()
+        .oracle.allFeeds({ pagination })
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Create new oracle feed.
+   * @param {string} oracleName - Unique name of Oracle feed to create.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async createFeed(oracleName: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('OracleHandler', 'createFeed'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeCreateFeedMsg(oracleName),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
+  }
+
+  /**
+   * Update data of existing oracle feed.
+   * @param {string} oracleName - Name of Oracle feed to update.
+   * @param {string} data - Stringified JSON object of arbitrary data.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async pushToFeed(
+    oracleName: string,
+    data: Record<string, any>,
+  ): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('OracleHandler', 'updateFeed'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeUpdateFeedMsg(oracleName, data),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw err
+    }
   }
 
   /**
@@ -71,24 +121,6 @@ export class OracleHandler implements IOracleHandler {
     return this.signingClient.txLibrary.oracle.msgCreateFeed({
       creator: this.jackalClient.getJackalAddress(),
       name: oracleName,
-    })
-  }
-
-  /**
-   * Create new oracle feed.
-   * @param {string} oracleName - Unique name of Oracle feed to create.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async createFeed(oracleName: string): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('OracleHandler', 'createFeed'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeCreateFeedMsg(oracleName),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
     })
   }
 
@@ -110,28 +142,6 @@ export class OracleHandler implements IOracleHandler {
       creator: this.jackalClient.getJackalAddress(),
       name: oracleName,
       data: this.stringifyDataContents(data),
-    })
-  }
-
-  /**
-   * Update data of existing oracle feed.
-   * @param {string} oracleName - Name of Oracle feed to update.
-   * @param {string} data - Stringified JSON object of arbitrary data.
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async pushToFeed(
-    oracleName: string,
-    data: Record<string, any>,
-  ): Promise<DDeliverTxResponse> {
-    if (!this.signingClient) {
-      throw new Error(signerNotEnabled('OracleHandler', 'updateFeed'))
-    }
-    const wrapped: IWrappedEncodeObject = {
-      encodedObject: this.makeUpdateFeedMsg(oracleName, data),
-      modifier: 0,
-    }
-    return await this.jackalClient.broadcastsMsgs(wrapped).catch((err) => {
-      throw err
     })
   }
 

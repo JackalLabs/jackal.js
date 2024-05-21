@@ -21,7 +21,10 @@ export async function hashAndHex(input: string): Promise<string> {
  * @returns {Promise<string>}
  * @private
  */
-export async function hashAndHexOwner(hexedAddress: string, owner: string): Promise<string> {
+export async function hashAndHexOwner(
+  hexedAddress: string,
+  owner: string,
+): Promise<string> {
   const prefix = 'o'
   return await hashAndHex(`${prefix}${hexedAddress}${await hashAndHex(owner)}`)
 }
@@ -34,7 +37,11 @@ export async function hashAndHexOwner(hexedAddress: string, owner: string): Prom
  * @returns {Promise<string>}
  * @private
  */
-export async function hashAndHexUserAccess(prefix: string, trackingNumber: string, user: string): Promise<string> {
+export async function hashAndHexUserAccess(
+  prefix: string,
+  trackingNumber: string,
+  user: string,
+): Promise<string> {
   return await hashAndHex(`${prefix}${trackingNumber}${user}`)
 }
 
@@ -47,7 +54,7 @@ export async function hashAndHexUserAccess(prefix: string, trackingNumber: strin
  */
 export async function hexFullPath(
   path: string,
-  fileName: string
+  fileName: string,
 ): Promise<string> {
   return await hashAndHex(`${path}${await hashAndHex(fileName)}`)
 }
@@ -79,7 +86,10 @@ export async function merklePath(path: string | string[]): Promise<string> {
  * @returns {Promise<string>}
  * @private
  */
-export async function merklePathPlusIndex(path: string, index: string): Promise<string> {
+export async function merklePathPlusIndex(
+  path: string,
+  index: string,
+): Promise<string> {
   return await hashAndHex(`${await merklePath(path)}${index}`)
 }
 
@@ -89,7 +99,9 @@ export async function merklePathPlusIndex(path: string, index: string): Promise<
  * @returns {Promise<TMerkleParentChild>}
  * @private
  */
-export async function merkleParentAndChild(path: string): Promise<TMerkleParentChild> {
+export async function merkleParentAndChild(
+  path: string,
+): Promise<TMerkleParentChild> {
   const pathArray = path.split('/')
   if (pathArray.length < 2) {
     throw new Error(warnError('merkleParentAndChild()', 'Path too short'))
@@ -105,7 +117,10 @@ export async function merkleParentAndChild(path: string): Promise<TMerkleParentC
  * @param {string} index
  * @returns {Promise<TMerkleParentChild>}
  */
-export async function merkleParentAndIndex(path: string | string[], index: string): Promise<TMerkleParentChild> {
+export async function merkleParentAndIndex(
+  path: string | string[],
+  index: string,
+): Promise<TMerkleParentChild> {
   const pathArray: string[] = []
   if (path instanceof Array) {
     pathArray.push(...path)
@@ -115,6 +130,15 @@ export async function merkleParentAndIndex(path: string | string[], index: strin
   }
   let parentMerkle = await merklePath(pathArray)
   return [parentMerkle, index]
+}
+
+export async function stringToShaHex(source: string) {
+  const safe = atob(source)
+  const postProcess = await crypto.subtle.digest(
+    'SHA-256',
+    stringToUint8Array(safe),
+  )
+  return bufferToHex(new Uint8Array(postProcess))
 }
 
 /**
@@ -399,5 +423,5 @@ const hexMap: string[] = [
   'fc',
   'fd',
   'fe',
-  'ff'
+  'ff',
 ]

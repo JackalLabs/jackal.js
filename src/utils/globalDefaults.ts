@@ -1,11 +1,17 @@
-import { IChainConfig } from '@/interfaces'
+import type { IChainConfig, ISocketConfig } from '@/interfaces'
+import type { TSockets } from '@/types'
 
-export const signatureSeed: string = 'Initiate Jackal Session' /* Don't ever change this! */
+export const sharedPath = 'dashboard_sharedfiles'
+
+export const signatureSeed: string =
+  'Initiate Jackal Session' /* Don't ever change this! */
 export const chunkSize: number = 10240 /* In bytes. Don't ever change this! */
-export const encryptionChunkSize: number = 32 * Math.pow(1024, 2) /* In bytes. This number can change */
+export const encryptionChunkSize: number =
+  32 * Math.pow(1024, 2) /* In bytes. This number can change */
 export const assumedBlockTime: number = 6 /* In seconds. This number can change but shouldn't be */
 
-export const jackalTestnetRpc: string = 'https://testnet-rpc.jackalprotocol.com/'
+export const jackalTestnetRpc: string =
+  'https://testnet-rpc.jackalprotocol.com/'
 export const jackalTestnetChainId: string = 'lupulella-2'
 export const jackalMainnetChainId: string = 'jackal-1'
 
@@ -15,12 +21,12 @@ export const jackalTestnetChainConfig: IChainConfig = {
   rpc: 'https://testnet-rpc.jackalprotocol.com',
   rest: 'https://testnet-api.jackalprotocol.com',
   bip44: {
-    coinType: 118
+    coinType: 118,
   },
   stakeCurrency: {
     coinDenom: 'JKL',
     coinMinimalDenom: 'ujkl',
-    coinDecimals: 6
+    coinDecimals: 6,
   },
   bech32Config: {
     bech32PrefixAccAddr: 'jkl',
@@ -28,14 +34,14 @@ export const jackalTestnetChainConfig: IChainConfig = {
     bech32PrefixValAddr: 'jklvaloper',
     bech32PrefixValPub: 'jklvaloperpub',
     bech32PrefixConsAddr: 'jklvalcons',
-    bech32PrefixConsPub: 'jklvalconspub'
+    bech32PrefixConsPub: 'jklvalconspub',
   },
   currencies: [
     {
       coinDenom: 'JKL',
       coinMinimalDenom: 'ujkl',
-      coinDecimals: 6
-    }
+      coinDecimals: 6,
+    },
   ],
   feeCurrencies: [
     {
@@ -45,14 +51,45 @@ export const jackalTestnetChainConfig: IChainConfig = {
       gasPriceStep: {
         low: 0.002,
         average: 0.002,
-        high: 0.02
-      }
-    }
+        high: 0.02,
+      },
+    },
   ],
-  features: []
+  features: [],
 }
 
 export const keyAlgo: AesKeyGenParams = {
   name: 'AES-GCM',
-  length: 256
+  length: 256,
+}
+
+export const sockets: Record<TSockets, ISocketConfig> = {
+  jackal: {
+    chainId: 'jackal-1',
+    endpoint: 'wss://rpc.jackalprotocol.com',
+  },
+  jackaltest: {
+    chainId: 'lupulella-2',
+    endpoint: 'wss://testnet-rpc.jackalprotocol.com',
+  },
+  jackalv4: {
+    chainId: 'mesomelas-1',
+    endpoint: 'wss://jackal-testnet-v4-rpc.brocha.in',
+  },
+  jackallocal: {
+    chainId: 'puppy-1',
+    endpoint: 'ws://localhost:62744',
+  },
+  archway: {
+    chainId: 'archway-1',
+    endpoint: 'wss://rpc.mainnet.archway.io',
+  },
+  archwaytest: {
+    chainId: 'constantine-3',
+    endpoint: 'wss://rpc.constantine.archway.io',
+  },
+  wasm: {
+    chainId: 'localwasm-1',
+    endpoint: 'ws://localhost:62784',
+  },
 }

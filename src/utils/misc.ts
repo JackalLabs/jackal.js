@@ -1,5 +1,12 @@
+import {
+  DEncodeObject, findQueryKey,
+  IIbcEngageBundle,
+  TxEvent,
+} from '@jackallabs/jackal.js-protos'
 import { secondToMS } from '@/utils/converters'
-import type { TTidyStringModes } from '@/types'
+import { sockets } from '@/utils/globalDefaults'
+import type { TSockets, TTidyStringModes } from '@/types'
+import type { ISharedMetaDataMap } from '@/interfaces'
 
 /**
  * Notify that function is deprecated and should no longer be used.
@@ -14,14 +21,16 @@ import type { TTidyStringModes } from '@/types'
 export function deprecated(
   thing: string,
   version: string,
-  opts?: { aggressive?: boolean; replacement?: string }
+  opts?: { aggressive?: boolean; replacement?: string },
 ): void {
   let notice = `SAMPLE | ${thing} is deprecated as of: ${version}`
   if (opts?.replacement) {
     notice += ` - Please use ${opts.replacement} instead`
   }
   console.error(notice)
-  if (opts?.aggressive) alert(notice)
+  if (opts?.aggressive) {
+    alert(notice)
+  }
 }
 
 /**
@@ -31,10 +40,7 @@ export function deprecated(
  * @returns {any}
  * @private
  */
-export function warnError(
-  thing: string,
-  err: any
-): any {
+export function warnError(thing: string, err: any): any {
   const notice = `Jackal.js | ${thing}: ${err}`
   console.warn(notice)
   return err
@@ -47,17 +53,21 @@ export function warnError(
  * @param {TTidyStringModes} mode
  * @returns {string}
  */
-export function tidyString(source: string, toTidy: string, mode: TTidyStringModes = 'both'): string {
+export function tidyString(
+  source: string,
+  toTidy: string,
+  mode: TTidyStringModes = 'both',
+): string {
   let startIndex = 0
   let endIndex = source.length
 
   if (mode === 'start' || mode === 'both') {
-    while(startIndex < endIndex && source[startIndex] === toTidy) {
+    while (startIndex < endIndex && source[startIndex] === toTidy) {
       startIndex++
     }
   }
   if (mode === 'end' || mode === 'both') {
-    while(startIndex < endIndex && source[endIndex - 1] === toTidy) {
+    while (startIndex < endIndex && source[endIndex - 1] === toTidy) {
       endIndex--
     }
   }
@@ -74,6 +84,33 @@ export async function setDelay(seconds: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, delay))
 }
 
+export function findNestedSharedDepth(
+  obj: ISharedMetaDataMap,
+  path: string[],
+): number {
+  let findings = 0
+  const first = path.shift() as string
+  if (first in obj) {
+    findings++
+    if (path.length > 0) {
+      findings += findNestedSharedDepth(obj[first] as ISharedMetaDataMap, path)
+    }
+  }
+  return findings
+}
+
+export function findNestedContentsCount(
+  obj: ISharedMetaDataMap,
+  path: string[],
+): number {
+  if (path.length > 0) {
+    const first = path.shift() as string
+    return findNestedContentsCount(obj[first] as ISharedMetaDataMap, path)
+  } else {
+    return Object.keys(obj).length
+  }
+}
+
 /**
  * Notify that Signer has not been enabled.
  * @param {string} module - Name of parent Module.
@@ -86,3 +123,90 @@ export function signerNotEnabled(module: string, func: string): string {
   console.error(notice)
   return notice
 }
+
+export function isItPast(target: number): boolean {
+  const dd = Date.now()
+  return dd > target
+}
+
+export function isItPastDate(target: Date): boolean {
+  return isItPast(target.getTime())
+}
+
+export function makeConnectionBundles(
+  networks: TSockets[],
+  feed: TxEvent[],
+  msgs: DEncodeObject[],
+  addr: string,
+): IIbcEngageBundle<TxEvent>[] {
+  const bundles: IIbcEngageBundle<TxEvent>[] = []
+
+  const allUrls: string[] = []
+  for (let msg of msgs) {
+    allUrls.push(msg.typeUrl)
+  }
+  const uniqueUrls = [...new Set(allUrls)]
+
+  for (let url of uniqueUrls) {
+    function parser(resp: any) {
+      try {
+        // return parseMsgResponse(url, resp)
+        return resp
+      } catch {
+        console.log('url failed:', url)
+        // return null
+        return resp
+      }
+    }
+    const query = `${findQueryKey(url)} = '${addr}'`
+
+    for (let id of networks) {
+      const { chainId, endpoint } = sockets[id]
+      console.log('makeConnectionBundles')
+      console.log('chainId:', chainId)
+      console.log('endpoint:', endpoint)
+
+      bundles.push({
+        chainId,
+        endpoint,
+        feed,
+        parser,
+        query,
+      })
+    }
+  }
+  return bundles
+}
+
+export function makeConnectionBundle(
+  id: TSockets,
+  feed: TxEvent[],
+  msgKey: string,
+  query?: string,
+): IIbcEngageBundle<TxEvent> {
+  const { chainId, endpoint } = sockets[id]
+  console.log('makeConnectionBundle')
+  console.log('chainId:', chainId)
+  console.log('endpoint:', endpoint)
+
+  function parser(resp: any) {
+    try {
+      // return parseMsgResponse(msgKey, resp)
+      return resp
+    } catch {
+      console.log('msgKey failed:', msgKey)
+      // return null
+      return resp
+    }
+  }
+
+  return {
+    chainId,
+    endpoint,
+    feed,
+    parser,
+    query,
+  }
+}
+
+
