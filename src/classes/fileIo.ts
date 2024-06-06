@@ -1115,7 +1115,13 @@ async function doUpload(
       return resp.json()
     })
     .then((resp) => {
-      return { fid: [resp.fid], cid: resp.cid }
+      if (resp.fid.length === 0) {
+        throw new Error('Empty FID')
+      } else if (resp.cid.length === 0) {
+        throw new Error('Empty CID')
+      } else {
+        return { fid: [resp.fid], cid: resp.cid }
+      }
     })
     .catch((err) => {
       throw err
