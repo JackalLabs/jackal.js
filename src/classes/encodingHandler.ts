@@ -12,10 +12,14 @@ import { cryptString, genAesBundle } from '@/utils/crypt'
 import { warnError } from '@/utils/misc'
 import {
   DEncodeObject,
-  DMsgCreateNotification, DMsgExecuteContract, DMsgInstantiateContract,
+  DMsgCreateNotification,
+  DMsgExecuteContract,
+  DMsgInstantiateContract,
   DMsgStorageDeleteFile,
   DMsgStoragePostFile,
-  DUnifiedFile, reencodeEncodedObject, THostSigningClient,
+  DUnifiedFile,
+  reencodeEncodedObject,
+  THostSigningClient,
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
 import type {
@@ -28,7 +32,11 @@ import type {
   IWrappedEncodeObject,
 } from '@/interfaces'
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
-import { CosmosMsgForEmpty, ExecuteMsg, InstantiateMsg } from '@/types/StorageOutpost.client.types'
+import {
+  CosmosMsgForEmpty,
+  ExecuteMsg,
+  InstantiateMsg,
+} from '@/types/StorageOutpost.client.types'
 
 export class EncodingHandler {
   protected readonly jackalClient: IClientHandler
@@ -38,7 +46,12 @@ export class EncodingHandler {
   protected readonly jklAddress: string
   protected readonly hostAddress: string
 
-  constructor(client: IClientHandler, jackalSigner: TJackalSigningClient, hostSigner: THostSigningClient, accountAddress?: string) {
+  constructor(
+    client: IClientHandler,
+    jackalSigner: TJackalSigningClient,
+    hostSigner: THostSigningClient,
+    accountAddress?: string,
+  ) {
     this.jackalClient = client
     this.jackalSigner = jackalSigner
     this.hostSigner = hostSigner
@@ -53,7 +66,7 @@ export class EncodingHandler {
     connectionIdA: string,
     connectionIdB: string,
     codeId: number,
-    label: string
+    label: string,
   ): DEncodeObject {
     const initMsg: InstantiateMsg = {
       admin: this.hostAddress,
@@ -70,10 +83,12 @@ export class EncodingHandler {
       codeId,
       label,
       msg: stringToUint8Array(JSON.stringify(initMsg)),
-      funds: []
+      funds: [],
     }
 
-    return this.hostSigner.txLibrary.cosmwasm.msgInstantiateContract(forInstantiate)
+    return this.hostSigner.txLibrary.cosmwasm.msgInstantiateContract(
+      forInstantiate,
+    )
   }
 
   protected encodeExecuteContract(
@@ -85,20 +100,20 @@ export class EncodingHandler {
       stargate: {
         type_url: rdy.typeUrl,
         value: rdy.value,
-      }
+      },
     }
 
     const msgToExecute: ExecuteMsg = {
       send_cosmos_msgs: {
         messages: [stargateMsg],
-      }
+      },
     }
 
     const forExecute: DMsgExecuteContract = {
       sender: this.hostAddress,
       contract: contractAddress,
       msg: stringToUint8Array(JSON.stringify(msgToExecute)),
-      funds: []
+      funds: [],
     }
 
     return this.hostSigner.txLibrary.cosmwasm.msgExecuteContract(forExecute)
@@ -107,14 +122,14 @@ export class EncodingHandler {
   protected instantiateToMsgs(
     connectionIdA: string,
     connectionIdB: string,
-    codeId: number
+    codeId: number,
   ): IWrappedEncodeObject[] {
     try {
       const instantiate = this.encodeInstantiateContract(
         connectionIdA,
         connectionIdB,
         codeId,
-        `JAICA${this.jklAddress}`
+        `JAICA${this.jklAddress}`,
       )
       return [
         {
@@ -529,6 +544,27 @@ export class EncodingHandler {
           file: pkg.file,
           merkle: pkg.meta.getFileMeta().merkleLocation,
         },
+        {
+          encodedObject: await fileTreeFile,
+          modifier: 0,
+        },
+        {
+          encodedObject: await ref,
+          modifier: 0,
+        },
+      ]
+    } catch (err) {
+      throw warnError('storageHandler pkgToMsgs()', err)
+    }
+  }
+
+  protected async legacyPkgToMsgs(
+    pkg: IUploadPackage,
+  ): Promise<IWrappedEncodeObject[]> {
+    try {
+      const fileTreeFile = this.encodeFileTreeFile(pkg)
+      const ref = this.encodeFileTreeRef(pkg)
+      return [
         {
           encodedObject: await fileTreeFile,
           modifier: 0,

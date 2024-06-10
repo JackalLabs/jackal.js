@@ -33,6 +33,10 @@ export interface IStorageHandler {
 
   readActivePath(): string
 
+  readChildCount(): number
+
+  readMustConvertStatus(): boolean
+
   readCurrentQueue(): string[]
 
   removeFromQueue(name: string): void
@@ -78,4 +82,6 @@ export interface IStorageHandler {
   readSharing(): TSharedRootMetaDataMap
 
   refreshSharing(): Promise<TSharedRootMetaDataMap>
+
+  convert(): Promise<any>
 }

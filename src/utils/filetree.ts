@@ -10,18 +10,19 @@ import type {
   DQueryFileTreeFile,
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
-import type {
+import {
   IAesBundle,
   IClientHandler,
   IFileMeta,
-  IFileMetaData,
   IFileTreeOptions,
-  IFolderMetaData,
+  ILegacyMetaData,
+  IMetaHandler,
   IReconstructedFileTree,
+  TConversionStatusBundle,
 } from '@/interfaces'
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 import type { PrivateKey } from 'eciesjs'
-import type { IFileContents, IFolderFileFrame } from '@/interfaces/jjs_v2'
+import type { IFileContents } from '@/interfaces/jjs_v2'
 
 /**
  *
@@ -136,6 +137,14 @@ export async function extractViewAccess(
   }
 }
 
+/**
+ *
+ * @param {string} editAccess
+ * @param {string} trackingNumber
+ * @param {string} userAddress
+ * @returns {Promise<boolean>}
+ * @private
+ */
 export async function extractEditAccess(
   editAccess: string,
   trackingNumber: string,
@@ -210,6 +219,65 @@ export async function decryptAndParseContents(
  * @param {string} userAddress
  * @param {string} storageAddress
  * @param {string} basePath
+ * @returns {Promise<IConversionStatusBundle>}
+ */
+export async function loadFolderFileTreeMetaData(
+  client: TJackalSigningClient,
+  key: PrivateKey,
+  userAddress: string,
+  storageAddress: string,
+  basePath: string,
+): Promise<TConversionStatusBundle> {
+  try {
+    const tidyAddress = tidyString(`${basePath}/${storageAddress}`, '/')
+    const directoryLookup: DQueryFileTreeFile = await readFileTreePath(
+      tidyAddress,
+      userAddress,
+    )
+    console.log(directoryLookup)
+    const { file } = await client.queries.fileTree.file(directoryLookup)
+    const { editAccess, contents, trackingNumber } = file
+    const access = await extractEditAccess(
+      editAccess,
+      trackingNumber,
+      userAddress,
+    )
+
+    let requiresConversion = false
+    if (access) {
+      switch (true) {
+        case contents.includes('metaDataType'):
+          return {
+            requiresConversion,
+            metaData: JSON.parse(contents),
+          }
+        case contents.length > 0:
+          return {
+            requiresConversion: true,
+            metaData: (await decryptAndParseContents(
+              key,
+              file,
+              userAddress,
+            )) as ILegacyMetaData,
+          }
+        default:
+          throw new Error(`Empty contents for ${tidyAddress}`)
+      }
+    } else {
+      throw new Error('Not Authorized')
+    }
+  } catch (err) {
+    throw warnError('loadFolderFileTreeMetaData()', err)
+  }
+}
+
+/**
+ *
+ * @param {TJackalSigningClient} client
+ * @param {PrivateKey} key
+ * @param {string} userAddress
+ * @param {string} storageAddress
+ * @param {string} basePath
  * @param {number} [index]
  * @returns {Promise<TMetaDataSets>}
  * @private
@@ -233,6 +301,17 @@ export async function loadFileTreeMetaData(
   )
 }
 
+/**
+ *
+ * @param {TJackalSigningClient} client
+ * @param {PrivateKey} key
+ * @param {string} ownerAddress
+ * @param {string} readerAddress
+ * @param {string} storageAddress
+ * @param {string} basePath
+ * @param {number} [index]
+ * @returns {Promise<TMetaDataSets>}
+ */
 export async function loadExternalFileTreeMetaData(
   client: TJackalSigningClient,
   key: PrivateKey,
@@ -263,20 +342,27 @@ export async function loadExternalFileTreeMetaData(
         case contents.includes('metaDataType'):
           return JSON.parse(contents)
         case contents.includes('legacyMerkle'):
-          const data = JSON.parse(contents) as IFileContents
-          const name = tidyAddress.split('/').pop() as string
-          const jjs2Meta = await loadJjs2FileMeta(
+          const { legacyMerkle } = JSON.parse(contents) as IFileContents
+          const addressBlock = tidyAddress.split('/')
+          const subAddress = addressBlock.slice(0, -1).join('/')
+          const [name] = addressBlock.slice(-1)
+
+          const parent = await loadFolderFileTreeMetaData(
             client,
             key,
             readerAddress,
-            tidyAddress,
-            name,
+            '',
+            subAddress,
           )
-          return await convertFromJjs2File(
-            tidyAddress,
-            data.legacyMerkle,
-            jjs2Meta,
-          )
+          if (parent.requiresConversion) {
+            const meta = await MetaHandler.create(subAddress, {
+              legacyMerkle,
+              fileMeta: parent.metaData.fileChildren[name],
+            })
+            return meta.getFileMeta()
+          } else {
+            throw new Error('Conversion Mismatch')
+          }
         case contents.length > 0:
           return await parseMetaFromEncryptedContents(key, file, readerAddress)
         default:
@@ -290,6 +376,49 @@ export async function loadExternalFileTreeMetaData(
   }
 }
 
+export async function getLegacyMerkle(
+  client: TJackalSigningClient,
+  ownerAddress: string,
+  fileAddress: string,
+  basePath: string,
+  fileMeta: IFileMeta,
+): Promise<IMetaHandler> {
+  try {
+    const tidyAddress = tidyString(`${basePath}/${fileAddress}`, '/')
+    const directoryLookup: DQueryFileTreeFile = await readFileTreePath(
+      tidyAddress,
+      ownerAddress,
+    )
+    console.log(directoryLookup)
+    const { file } = await client.queries.fileTree.file(directoryLookup)
+    const { editAccess, contents, trackingNumber } = file
+    const access = await extractEditAccess(
+      editAccess,
+      trackingNumber,
+      ownerAddress,
+    )
+
+    if (access) {
+      const { legacyMerkle } = JSON.parse(contents) as IFileContents
+      return await MetaHandler.create(tidyAddress, { legacyMerkle, fileMeta })
+    } else {
+      throw new Error('Not Authorized')
+    }
+  } catch (err) {
+    throw warnError('getLegacyMerkle()', err)
+  }
+}
+
+/**
+ *
+ * @param {IClientHandler} client
+ * @param {TJackalSigningClient} signer
+ * @param {PrivateKey} key
+ * @param {string} userAddress
+ * @param {string[]} additionalViewers
+ * @param {string} path
+ * @returns {Promise<IReconstructedFileTree>}
+ */
 export async function reconstructFileTreeMetaData(
   client: IClientHandler,
   signer: TJackalSigningClient,
@@ -349,6 +478,16 @@ export async function reconstructFileTreeMetaData(
   }
 }
 
+/**
+ *
+ * @param {TJackalSigningClient} client
+ * @param {PrivateKey} key
+ * @param {string} ownerAddress
+ * @param {string} readerAddress
+ * @param {string} storageAddress
+ * @param {string} basePath
+ * @returns {Promise<IAesBundle>}
+ */
 export async function loadKeysFromFileTree(
   client: TJackalSigningClient,
   key: PrivateKey,
@@ -378,6 +517,13 @@ export async function loadKeysFromFileTree(
   }
 }
 
+/**
+ *
+ * @param {string} userAddress
+ * @param {TMerkleParentChild} location
+ * @param {IReconstructedFileTree} ready
+ * @returns {Promise<DMsgFileTreePostFile>}
+ */
 export async function reEncodeFileTreePostFile(
   userAddress: string,
   location: TMerkleParentChild,
@@ -393,6 +539,15 @@ export async function reEncodeFileTreePostFile(
   }
 }
 
+/**
+ *
+ * @param {IClientHandler} jackalClient
+ * @param {string} userAddress
+ * @param {TMerkleParentChild} location
+ * @param {TMetaDataSets} meta
+ * @param {IFileTreeOptions} [options]
+ * @returns {Promise<DEncodeObject>}
+ */
 export async function encodeFileTreePostFile(
   jackalClient: IClientHandler,
   userAddress: string,
@@ -444,69 +599,5 @@ export async function encodeFileTreePostFile(
     return jackalClient.getTxs().fileTree.msgPostFile(forFileTree)
   } catch (err) {
     throw warnError('encodeFileTreePostFile()', err)
-  }
-}
-
-/* TODO - WIP */
-export async function convertFromJjs2File(
-  tidyAddress: string,
-  legacyMerkle: string,
-  fileMeta: IFileMeta,
-): Promise<IFileMetaData> {
-  const meta = await MetaHandler.create(tidyAddress, { legacyMerkle, fileMeta })
-  return meta.getFileMeta()
-}
-
-export async function loadJjs2FileMeta(
-  client: TJackalSigningClient,
-  key: PrivateKey,
-  userAddress: string,
-  tidyAddress: string,
-  name: string,
-): Promise<IFileMeta> {
-  try {
-    const dat = await loadJjs2Folder(client, key, userAddress, tidyAddress)
-    return dat.fileChildren[name]
-  } catch (err) {
-    throw warnError('loadJjs2FileMeta()', err)
-  }
-}
-
-export async function convertFromJjs2Folder(
-  client: TJackalSigningClient,
-  key: PrivateKey,
-  userAddress: string,
-  tidyAddress: string,
-): Promise<IFolderMetaData> {
-  try {
-    const dat = await loadJjs2Folder(client, key, userAddress, tidyAddress)
-    const count = Object.keys(dat.fileChildren).length + dat.dirChildren.length
-    const meta = await MetaHandler.create(tidyAddress, { count })
-    return meta.getFolderMeta()
-  } catch (err) {
-    throw warnError('convertFromJjs2Folder()', err)
-  }
-}
-
-export async function loadJjs2Folder(
-  client: TJackalSigningClient,
-  key: PrivateKey,
-  userAddress: string,
-  tidyAddress: string,
-): Promise<IFolderFileFrame> {
-  try {
-    const directoryLookup: DQueryFileTreeFile = await readFileTreePath(
-      tidyAddress,
-      userAddress,
-    )
-    const { file } = await client.queries.fileTree.file(directoryLookup)
-    const data = await decryptAndParseContents(key, file, userAddress)
-    if ('dirChildren' in data && 'fileChildren' in data) {
-      return data as IFolderFileFrame
-    } else {
-      throw new Error(`Incompatible contents as ${file.contents}`)
-    }
-  } catch (err) {
-    throw warnError('loadJjs2Folder()', err)
   }
 }

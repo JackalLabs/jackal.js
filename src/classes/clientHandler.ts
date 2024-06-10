@@ -467,12 +467,14 @@ export class ClientHandler implements IClientHandler {
     wrappedMsgs: IWrappedEncodeObject | IWrappedEncodeObject[],
     options: IBroadcastOptions = {},
   ): Promise<IBroadcastResults> {
-    if (!this.hostSigner) {
+    if (!this.hostSigner || !this.jklSigner) {
       throw new Error(
         signerNotEnabled('ClientHandler', 'broadcastAndMonitorMsgs'),
       )
     }
     try {
+      let chosenSigner: THostSigningClient | TJackalSigningClient = this.jklSigner
+
       const {
         gasOverride,
         memo,
@@ -486,12 +488,13 @@ export class ClientHandler implements IClientHandler {
 
       const connectionBundles: IIbcEngageBundle<TxEvent>[] = makeConnectionBundles(this.networks, events, msgs, this.myIcaAddress || this.hostAddress)
       console.log('connectionBundles:', connectionBundles)
-      this.hostSigner.monitor(connectionBundles)
 
       if (this.myContractAddress && this.myCosmwasm) {
+        chosenSigner = this.hostSigner
         msgs = this.myCosmwasm.wrapEncodeObjectsForBroadcast(this.myContractAddress, msgs)
       }
-      const broadcastResult = this.hostSigner.selfSignAndBroadcast(msgs, {
+      chosenSigner.monitor(connectionBundles)
+      const broadcastResult = chosenSigner.selfSignAndBroadcast(msgs, {
         fee,
         memo,
         timeoutHeight: broadcastTimeoutHeight

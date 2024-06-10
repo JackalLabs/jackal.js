@@ -55,6 +55,14 @@ export interface IRefMetaData extends IBaseMetaData {
   pointsTo: string
 }
 
+export interface ILegacyMetaData {
+  whoAmI: string
+  whereAmI: string
+  whoOwnsMe: string
+  dirChildren: string[]
+  fileChildren: Record<string, IFileMeta>
+}
+
 export interface IShareRefMetaData extends IRefMetaData {}
 
 export interface IShareFolderMetaData extends IFolderMetaData {
