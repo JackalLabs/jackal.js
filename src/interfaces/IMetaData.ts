@@ -1,8 +1,7 @@
-import type {
+import {
   TChildFileMetaDataMap,
   TChildFolderMetaDataMap,
   TChildNullMetaDataMap,
-  TMetaDataTypes,
 } from '@/types/TMetaData'
 
 export interface IChildMetaDataMap {
@@ -12,67 +11,147 @@ export interface IChildMetaDataMap {
 }
 
 export interface IFileMeta {
-  name: string
   lastModified: number
+  name: string
   size: number
   type: string
 }
 
-export interface IMetaDataSource {
-  whoAmI?: string
-  count?: number
-  file?: File
-  fileMeta?: IFileMeta
-  label?: string
-  owner?: string
-  pointsTo?: string
-
-  legacyMerkle?: string
+export interface ILegacyFolderMetaData {
+  dirChildren: string[]
+  fileChildren: Record<string, IFileMeta>
+  metaDataType: undefined
+  whereAmI: string
+  whoAmI: string
+  whoOwnsMe: string
 }
 
 export interface IBaseMetaData {
-  metaDataType: TMetaDataTypes
   location: string
-  merkleLocation: string
-}
-
-export interface INullMetaData extends IBaseMetaData {
-  removed: true
-}
-
-export interface IFolderMetaData extends IBaseMetaData {
-  whoAmI: string
-  count: string
-}
-
-export interface IFileMetaData extends IBaseMetaData {
-  merkleRoot: Uint8Array
-  merkleMem: string
-  fileMeta: IFileMeta
+  merkleHex: string
 }
 
 export interface IRefMetaData extends IBaseMetaData {
+  metaDataType: 'ref'
   pointsTo: string
 }
 
-export interface ILegacyMetaData {
+export interface IShareRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
+  metaDataType: 'shareref'
+}
+
+export interface INullMetaData extends IBaseMetaData {
+  metaDataType: 'null'
+  removed: true
+}
+
+export interface IFolderMetaDataSource {
+  count: number
+  description?: string
+  location: string
+  name: string
+  refIndex?: number
+  ulid?: string
+}
+
+export interface IFolderMetaFoundationalData {
+  count: number
+  description: string
+  location: string
+  refIndex: number
+  ulid: string
   whoAmI: string
-  whereAmI: string
-  whoOwnsMe: string
-  dirChildren: string[]
-  fileChildren: Record<string, IFileMeta>
 }
 
-export interface IShareRefMetaData extends IRefMetaData {}
+export interface IFolderMetaData extends IBaseMetaData {
+  count: string
+  description: string
+  metaDataType: 'folder'
+  whoAmI: string
+}
 
-export interface IShareFolderMetaData extends IFolderMetaData {
+export interface IFileMetaDataSource {
+  description?: string
+  file?: File
+  fileMeta: IFileMeta
+  legacyMerkles?: Uint8Array[]
+  location: string
+  refIndex?: number
+  thumbnail?: string
+  ulid?: string
+}
+
+export interface IFileMetaFoundationalData {
+  description: string
+  fileMeta: IFileMeta
+  location: string
+  merkleHex: string
+  merkleMem: string
+  merkleRoot: Uint8Array
+  refIndex: number
+  thumbnail: string
+  ulid: string
+}
+
+export interface IFileMetaData extends IBaseMetaData {
+  description: string
+  fileMeta: IFileMeta
+  metaDataType: 'file'
+  merkleMem: string
+  merkleRoot: Uint8Array
+  thumbnail: string
+  ulid: string
+}
+
+export interface ISharedFolderMetaDataSource {
+  count: number
+  location: string
+  name: string
+  refIndex?: number
+  ulid?: string
+}
+
+export interface ISharedFolderMetaFoundationalData {
+  count: number
+  location: string
+  refIndex: number
+  ulid: string
+  whoAmI: string
+}
+
+export interface IShareFolderMetaData extends Omit<IFolderMetaData, 'metaDataType'> {
+  metaDataType: 'sharefolder'
   pointsTo: string
-  label: string
 }
 
-export interface IShareMetaData extends IRefMetaData {
+export interface IShareMetaDataSource {
+  label: string
+  location: string
+  owner: string
+  pointsTo: string
+  refIndex?: number
+  ulid?: string
+}
+
+export interface IShareMetaFoundationalData {
+  label: string
+  location: string
+  owner: string
+  pointsTo: string
+  refIndex: number
+  ulid: string
+}
+
+export interface IShareMetaData extends Omit<IRefMetaData, 'metaDataType'> {
+  label: string
+  metaDataType: 'share'
   owner: string
 }
 
 export interface ISharedMetaDataMap
   extends Record<string, ISharedMetaDataMap | IShareMetaData> {}
+
+export interface IRootLookupMetaData {
+  metaDataType: 'rootlookup'
+  ulid: string
+}

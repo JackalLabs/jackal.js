@@ -1,3 +1,3 @@
 export interface IFileContents {
-  legacyMerkle: string
+  legacyMerkles: Uint8Array[]
 }

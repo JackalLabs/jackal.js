@@ -9,14 +9,17 @@ import type { IClientHandler, IWrappedEncodeObject } from '@/interfaces'
 import { IWasmHandler } from '@/interfaces/classes'
 import { stringToUint8Array, uintArrayToString } from '@/utils/converters'
 import { EncodingHandler } from '@/classes/encodingHandler'
+import { PrivateKey } from 'eciesjs'
+import { stringToShaHex } from '@/utils/hash'
 
 export class WasmHandler extends EncodingHandler implements IWasmHandler {
   protected constructor(
     client: IClientHandler,
     jackalSigner: TJackalSigningClient,
     hostSigner: THostSigningClient,
+    keyPair: PrivateKey
   ) {
-    super(client, jackalSigner, hostSigner)
+    super(client, jackalSigner, hostSigner, keyPair)
   }
 
   /**
@@ -33,7 +36,9 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
     if (!hostSigner) {
       throw new Error(signerNotEnabled('WasmHandler', 'init'))
     }
-    return new WasmHandler(client, jackalSigner, hostSigner)
+    let dummyKey = await stringToShaHex('')
+    const keyPair = PrivateKey.fromHex(dummyKey)
+    return new WasmHandler(client, jackalSigner, hostSigner, keyPair)
   }
 
   /**

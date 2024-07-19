@@ -1,13 +1,13 @@
-import type { TMetaDataSets } from '@/types'
-import type { ILegacyMetaData } from '@/interfaces/IMetaData'
+import { IFolderMetaData, ILegacyFolderMetaData } from '@/interfaces/IMetaData'
 
 export interface IConversionNeededBundle {
   requiresConversion: true
-  metaData: ILegacyMetaData
+  metaData: ILegacyFolderMetaData
 }
+
 export interface IConversionNotNeededBundle {
   requiresConversion: false
-  metaData: TMetaDataSets
+  metaData: IFolderMetaData
 }
 
 export type TConversionStatusBundle = IConversionNeededBundle | IConversionNotNeededBundle

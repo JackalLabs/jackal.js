@@ -1,10 +1,12 @@
-import { readShareNotification } from '@/utils/notifications'
 import {
   findNestedContentsCount,
   findNestedSharedDepth,
   warnError,
 } from '@/utils/misc'
-import { MetaHandler } from '@/classes/metaHandler'
+import {
+  ShareFolderMetaHandler,
+  ShareMetaHandler,
+} from '@/classes/metaHandlers'
 import { sharedPath } from '@/utils/globalDefaults'
 import { EncodingHandler } from '@/classes/encodingHandler'
 import { genAesBundle } from '@/utils/crypt'
@@ -13,11 +15,12 @@ import type {
   THostSigningClient,
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
-import type {
+import {
   IClientHandler,
-  IMetaHandler,
   INotificationRecord,
   ISharedUpdater,
+  IShareFolderMetaHandler,
+  IShareMetaHandler,
   IWrappedEncodeObject,
 } from '@/interfaces'
 import type { TSharedRootMetaDataMap } from '@/types'
@@ -27,10 +30,10 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
   protected readonly shared: TSharedRootMetaDataMap
 
   protected readonly notifications: INotificationRecord[]
-  protected readonly existingPaths: Record<string, IMetaHandler>
-  protected readonly addedSharer: Record<string, IMetaHandler>
-  protected readonly addedMiddle: Record<string, IMetaHandler>
-  protected readonly addedShared: Record<string, IMetaHandler>
+  protected readonly existingPaths: Record<string, IShareFolderMetaHandler>
+  protected readonly addedSharer: Record<string, IShareFolderMetaHandler>
+  protected readonly addedMiddle: Record<string, IShareFolderMetaHandler>
+  protected readonly addedShared: Record<string, IShareMetaHandler>
 
   constructor(
     client: IClientHandler,
@@ -39,7 +42,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
     keyPair: PrivateKey,
     shared: TSharedRootMetaDataMap,
   ) {
-    super(client, jackalSigner, hostSigner)
+    super(client, jackalSigner, hostSigner, keyPair, client.getJackalAddress())
     this.keyPair = keyPair
     this.shared = shared
 
@@ -61,9 +64,8 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
           { to: this.jklAddress },
         )
       for (let one of raw.notifications) {
-        this.notifications.push(
-          await readShareNotification(this.keyPair, one, this.jklAddress),
-        )
+        const rec = await this.reader.readShareNotification(one)
+        this.notifications.push(rec)
       }
       return this.notifications.length
     } catch (err) {
@@ -100,25 +102,27 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
               ...subChunked,
             ].join('/')
             if (parentName in this.existingPaths) {
-              this.existingPaths[parentName].addToCount(1)
+              this.existingPaths[parentName].addAndReturnCount(1)
             } else {
-              this.existingPaths[parentName] = await MetaHandler.create(
-                parentName,
-                {
+              this.existingPaths[parentName] =
+                await ShareFolderMetaHandler.create({
                   count: size + 1,
-                },
-              )
+                  location: '',
+                  name: ''
+                })
             }
 
             const fresh = this.makeFreshFolders(one.sender, chunked, depth)
             for (let path of fresh) {
               if (path in this.addedMiddle) {
-                this.addedMiddle[path].addToCount(1)
+                this.addedMiddle[path].addAndReturnCount(1)
               } else {
-                this.addedMiddle[path] = await MetaHandler.create(path, {
+                this.addedMiddle[path] = await ShareFolderMetaHandler.create({
                   count: 1,
+                  location: '',
+                  name: '',
+                  refIndex: this.findRefIndex(path),
                 })
-                this.addedMiddle[path].setRefIndex(this.findRefIndex(path))
               }
             }
             finalName = ['s', sharedPath, one.sender, ...chunked, name].join(
@@ -127,11 +131,13 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
           } else {
             finalName = ['s', sharedPath, one.sender, name].join('/')
           }
-          this.addedShared[finalName] = await MetaHandler.create(finalName, {
+          this.addedShared[finalName] = await ShareMetaHandler.create({
+            label: '',
+            location: '',
             pointsTo: msgTrimmed,
             owner: one.sender,
+            refIndex: this.findRefIndex(finalName),
           })
-          this.addedShared[finalName].setRefIndex(this.findRefIndex(finalName))
         }
       }
 
@@ -149,18 +155,21 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
   protected async maybeMakeSharer(sender: string): Promise<void> {
     const path = `s/${sharedPath}/${sender}`
     if (path in this.existingPaths) {
-      this.existingPaths[path].addToCount(1)
+      this.existingPaths[path].addAndReturnCount(1)
     } else {
       if (sender in this.shared) {
-        this.existingPaths[path] = await MetaHandler.create(path, {
+        this.existingPaths[path] = await ShareFolderMetaHandler.create({
           count: Object.keys(this.shared[sender]).length + 1,
+          location: '',
+          name: '',
         })
       } else {
-        const meta = await MetaHandler.create(path, {
+        this.addedSharer[path] = await ShareFolderMetaHandler.create({
           count: 1,
+          location: '',
+          name: '',
+          refIndex: Object.keys(this.shared).length,
         })
-        meta.setRefIndex(Object.keys(this.shared).length)
-        this.addedSharer[path] = meta
         this.shared[sender] = {}
       }
     }
@@ -204,12 +213,14 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
       }
 
       if (Object.keys(this.addedSharer).length > 0) {
-        const sharedMeta = await MetaHandler.create(`s/${sharedPath}`, {
+        const sharedMeta = await ShareFolderMetaHandler.create({
           count: Object.keys(this.shared).length,
+          location: '',
+          name: `s/${sharedPath}`,
         })
         for (let name in this.addedSharer) {
           this.addedSharer[name].setRefIndex(sharedMeta.getCount())
-          sharedMeta.addToCount(1)
+          sharedMeta.addAndReturnCount(1)
           const addedSharerMsgs = await this.sharedFolderToMsgs({
             meta: this.addedSharer[name],
             aes: await genAesBundle(),

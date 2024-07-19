@@ -1,7 +1,7 @@
-import { IChildMetaDataMap, IMetaHandler, IUploadPackage } from '@/interfaces'
+import { IChildMetaDataMap, IFolderMetaHandler, IUploadPackage } from '@/interfaces'
 
 export interface IStagedUploadPackage {
   children: IChildMetaDataMap
-  folderMeta: IMetaHandler
+  folderMeta: IFolderMetaHandler
   queue: IUploadPackage[]
 }

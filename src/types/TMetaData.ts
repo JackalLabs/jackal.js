@@ -1,9 +1,9 @@
-import type {
-  IBaseMetaData,
+import {
   IFileMetaData,
   IFolderMetaData,
-  INullMetaData,
-  IRefMetaData,
+  ILegacyFolderMetaData,
+  INullMetaData, INullMetaHandler,
+  IRefMetaData, IRootLookupMetaData,
   ISharedMetaDataMap,
   IShareFolderMetaData,
   IShareMetaData,
@@ -18,10 +18,11 @@ export type TMetaDataTypes =
   | 'shareref'
   | 'sharefolder'
 export type TMetaDataSets =
-  | TOtherMetaData
   | TChildMetaData
   | TSharedMetaData
   | IRefMetaData
+  | ILegacyFolderMetaData
+  | IRootLookupMetaData
 export type TChildMetaData = INullMetaData | IFolderMetaData | IFileMetaData
 export type TSharedMetaData = IShareFolderMetaData | IShareMetaData
 
@@ -33,9 +34,7 @@ export type TMergedMetaData = INullMetaData &
   IShareMetaData
 export type TFoundationalMetaData = Omit<TMergedMetaData, 'metaDataType'>
 
-export type TOtherMetaData = IBaseMetaData & Record<string, any>
-
-export type TChildNullMetaDataMap = Record<number, INullMetaData>
+export type TChildNullMetaDataMap = Record<number, INullMetaHandler>
 export type TChildFolderMetaDataMap = Record<number, IFolderMetaData>
 export type TChildFileMetaDataMap = Record<number, IFileMetaData>
 

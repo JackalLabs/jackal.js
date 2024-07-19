@@ -1,8 +1,8 @@
-import type { IAesBundle, IMetaHandler } from '@/interfaces'
+import { IAesBundle, IFileMetaHandler } from '@/interfaces'
 
 export interface IUploadPackage {
   file: File
-  meta: IMetaHandler
+  meta: IFileMetaHandler
   duration: number
   aes?: IAesBundle
 }

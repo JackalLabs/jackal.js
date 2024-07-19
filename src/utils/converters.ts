@@ -199,3 +199,12 @@ export function blockToDateFixed(options: IBlockTimeOptions): Date {
   const now = Date.now()
   return new Date(now + diffMs)
 }
+
+export async function maybeMakeThumbnail(source: File): Promise<string> {
+  const convertableImages: string[] = ['png']
+  if (source.type in convertableImages) {
+    return ''
+  } else {
+    return ''
+  }
+}

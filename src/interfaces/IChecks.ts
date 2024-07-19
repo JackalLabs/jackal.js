@@ -5,4 +5,5 @@ export interface IChecks {
   mustConvert?: true
   noConvert?: true
   shared?: true
+  signer?: true
 }

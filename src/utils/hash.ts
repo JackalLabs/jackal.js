@@ -1,4 +1,4 @@
-import { stringToUint8Array } from '@/utils/converters'
+import { intToHex, stringToUint8Array } from '@/utils/converters'
 import { warnError } from '@/utils/misc'
 import type { TMerkleParentChild } from '@/types'
 
@@ -82,15 +82,15 @@ export async function merklePath(path: string | string[]): Promise<string> {
 /**
  *
  * @param {string} path
- * @param {string} index
+ * @param {number} index
  * @returns {Promise<string>}
  * @private
  */
 export async function merklePathPlusIndex(
   path: string,
-  index: string,
+  index: number,
 ): Promise<string> {
-  return await hashAndHex(`${await merklePath(path)}${index}`)
+  return await hashAndHex(`${await merklePath(path)}${intToHex(index)}`)
 }
 
 /**
@@ -102,12 +102,12 @@ export async function merklePathPlusIndex(
 export async function merkleParentAndChild(
   path: string,
 ): Promise<TMerkleParentChild> {
-  const pathArray = path.split('/')
+  const pathArray: string[] = ['s', ...path.split('/')]
   if (pathArray.length < 2) {
     throw new Error(warnError('merkleParentAndChild()', 'Path too short'))
   }
-  const child = pathArray.pop() || ''
-  let parentMerkle = await merklePath(pathArray)
+  const [child] = pathArray.slice(-1)
+  let parentMerkle = await merklePath(pathArray.slice(0, -1))
   return [parentMerkle, await hashAndHex(child)]
 }
 

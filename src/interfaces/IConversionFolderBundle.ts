@@ -1,6 +1,6 @@
-import type { IWrappedEncodeObject } from '@/interfaces'
+import type { IFolderMetaHandler, IWrappedEncodeObject } from '@/interfaces'
 
 export interface IConversionFolderBundle {
-  count: number
   msgs: IWrappedEncodeObject[]
+  handler: IFolderMetaHandler
 }

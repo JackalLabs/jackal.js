@@ -1,6 +1,6 @@
 {
   "name": "@jackallabs/jackal.js",
-  "version": "3.0.0-rc.3",
+  "version": "3.0.0-rc.4",
   "description": "Javascript library for interacting with the Jackal Chain",
   "keywords": [
     "jackal",
@@ -70,7 +70,8 @@
     "create-hash": "^1.2.0",
     "eciesjs": "^0.4.2",
     "for-each": "^0.3.3",
-    "ripemd160": "^2.0.2"
+    "ripemd160": "^2.0.2",
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@btmills/prettier": "3.0.3",

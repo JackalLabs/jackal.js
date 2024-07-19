@@ -1,9 +1,10 @@
 import type { DDeliverTxResponse } from '@jackallabs/jackal.js-protos'
-import type {
+import {
   IChildMetaDataMap,
   IDownloadTracker,
-  IFileMeta, IFileMetaData,
-  IProviderUploadResponse,
+  IFileMetaData,
+  IFileParticulars,
+  IFolderMetaData,
   IStagedUploadPackage,
   IStorageStatus,
   IWrappedEncodeObject,
@@ -13,9 +14,21 @@ import type { TSharedRootMetaDataMap } from '@/types'
 export interface IStorageHandler {
   cleanShutdown(): void
 
-  initStorage(): Promise<any>
+  loadDirectory(path?: string): Promise<void>
 
-  initStorageCustom(name: string, mod?: number): Promise<DDeliverTxResponse>
+  loadShared(): Promise<void>
+
+  listChildFolders(): string[]
+
+  listChildFolderMetas(): IFolderMetaData[]
+
+  listChildFiles(): string[]
+
+  listChildFileMetas(): IFileMetaData[]
+
+  upgradeSigner(): Promise<void>
+
+  initStorage(): Promise<any>
 
   planStatus(): Promise<IStorageStatus>
 
@@ -33,6 +46,10 @@ export interface IStorageHandler {
 
   readActivePath(): string
 
+  readCurrentLocation(): string
+
+  readCurrentUlid(): string
+
   readChildCount(): number
 
   readMustConvertStatus(): boolean
@@ -41,23 +58,13 @@ export interface IStorageHandler {
 
   removeFromQueue(name: string): void
 
-  changeActiveDirectory(path: string): Promise<string>
-
-  listChildFolders(): string[]
-
-  listChildFileMeta(): IFileMeta[]
-  listChildFiles(): IFileMetaData[]
-
   queuePrivate(toQueue: File | File[], duration?: number): Promise<number>
 
   queuePublic(toQueue: File | File[], duration?: number): Promise<number>
 
-  uploadFile(
-    url: string,
-    startBlock: number,
-    file: File,
-    merkle: string,
-  ): Promise<IProviderUploadResponse>
+  processAllQueues(): Promise<any>
+
+  getFileParticulars(filePath: string): Promise<IFileParticulars>
 
   downloadFile(filePath: string, trackers: IDownloadTracker): Promise<File>
 
@@ -67,11 +74,7 @@ export interface IStorageHandler {
     trackers: IDownloadTracker,
   ): Promise<File>
 
-  processAllQueues(): Promise<any>
-
   deleteTargets(targets: string | string[]): Promise<DDeliverTxResponse>
-
-  debug(): IChildMetaDataMap
 
   share(receiver: string, paths: string | string[]): Promise<DDeliverTxResponse>
 
@@ -81,7 +84,7 @@ export interface IStorageHandler {
 
   readSharing(): TSharedRootMetaDataMap
 
-  refreshSharing(): Promise<TSharedRootMetaDataMap>
-
   convert(): Promise<any>
+
+  debug(): IChildMetaDataMap
 }

@@ -1,6 +1,7 @@
-import type { IAesBundle, IMetaHandler } from '@/interfaces'
+import type { IAesBundle } from '@/interfaces'
+import { TMetaHandler } from '@/types'
 
 export interface IFileTreePackage {
-  meta: IMetaHandler
+  meta: TMetaHandler
   aes?: IAesBundle
 }

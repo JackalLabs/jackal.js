@@ -2,16 +2,11 @@ import type {
   DDeliverTxResponse,
   DMsgBuyStorage,
   DMsgPostKey,
-  DMsgProvisionFileTree,
   THostSigningClient,
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
 import { PrivateKey } from 'eciesjs'
-import {
-  extractFileMetaData,
-  hexToInt,
-  stringToUint8Array,
-} from '@/utils/converters'
+import { extractFileMetaData } from '@/utils/converters'
 import {
   isItPastDate,
   signerNotEnabled,
@@ -19,48 +14,30 @@ import {
   warnError,
 } from '@/utils/misc'
 import {
-  createEditAccess,
-  createViewAccess,
-  getLegacyMerkle,
-  loadExternalFileTreeMetaData,
-  loadFileTreeMetaData,
-  loadFolderFileTreeMetaData,
-  loadKeysFromFileTree,
-  reconstructFileTreeMetaData,
-} from '@/utils/filetree'
-import { MetaHandler } from '@/classes/metaHandler'
-import {
-  encryptionChunkSize,
-  sharedPath,
-  signatureSeed,
-} from '@/utils/globalDefaults'
+  FileMetaHandler,
+  FolderMetaHandler,
+  NullMetaHandler,
+} from '@/classes/metaHandlers'
+import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
 import { aesBlobCrypt, genAesBundle, genIv, genKey } from '@/utils/crypt'
 import { hashAndHex, stringToShaHex } from '@/utils/hash'
-
-import {
-  loadSingleSharingFolder,
-  readShareNotification,
-} from '@/utils/notifications'
 import { EncodingHandler } from '@/classes/encodingHandler'
 import { SharedUpdater } from '@/classes/sharedUpdater'
 import { bech32 } from '@jackallabs/bech32'
-import type {
+import {
   IAesBundle,
   IChecks,
   IChildMetaDataMap,
   IClientHandler,
   IDownloadTracker,
-  IFileMeta,
   IFileMetaData,
+  IFileParticulars,
   IFolderMetaData,
-  IMetaHandler,
+  IFolderMetaHandler,
   INotification,
   INotificationPackage,
-  INullMetaData,
   IProviderUploadResponse,
-  IRefMetaData,
   IRnsHandler,
-  IShareFolderMetaData,
   IStagedUploadPackage,
   IStorageHandler,
   IStorageOptions,
@@ -68,23 +45,25 @@ import type {
   IUploadPackage,
   IWrappedEncodeObject,
 } from '@/interfaces'
-import type { TLoadedFolder, TSharedRootMetaDataMap } from '@/types'
+import type { TSharedRootMetaDataMap } from '@/types'
 import { IConversionFolderBundle } from '@/interfaces/IConversionFolderBundle'
+import { TFullSignerState } from '@/types/TFullSignerState'
 
 export class StorageHandler extends EncodingHandler implements IStorageHandler {
   protected readonly rns: IRnsHandler | null
-  protected readonly basePath: string
-  protected readonly keyPair: PrivateKey
+  protected path: string
+  protected keyPair: PrivateKey
+  protected fullSigner: boolean
   protected readonly jackalClient: IClientHandler
   protected readonly proofInterval: number
   protected mustConvert: boolean
   protected uploadsInProgress: boolean
   protected uploadQueue: IUploadPackage[]
   protected stagedUploads: Record<string, IStagedUploadPackage>
-  protected currentPath: string
-  protected indexCount: number
   protected children: IChildMetaDataMap
   protected shared: TSharedRootMetaDataMap
+
+  protected meta: IFolderMetaHandler
 
   protected constructor(
     rns: IRnsHandler | null,
@@ -92,29 +71,32 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     jackalSigner: TJackalSigningClient,
     hostSigner: THostSigningClient,
     accountAddress: string,
-    keyPair: PrivateKey,
-    storageAddress: string,
-    basePath: string,
-    loadedFolder: TLoadedFolder,
-    shared: TSharedRootMetaDataMap,
+    fullSignerState: TFullSignerState,
+    path: string,
+    meta: IFolderMetaHandler,
   ) {
-    super(client, jackalSigner, hostSigner, accountAddress)
-    const [indexCount, children, mustConvert]: TLoadedFolder = loadedFolder
+    super(client, jackalSigner, hostSigner, fullSignerState[0], accountAddress)
 
     this.rns = rns
-    this.basePath = basePath
-    this.keyPair = keyPair
+    this.path = path
+    this.keyPair = fullSignerState[0]
+    this.fullSigner = fullSignerState[1]
     this.jackalClient = client
     this.proofInterval = client.getProofWindow()
 
     this.uploadsInProgress = false
     this.uploadQueue = []
     this.stagedUploads = {}
-    this.currentPath = storageAddress
-    this.indexCount = indexCount
-    this.children = children
-    this.mustConvert = mustConvert
-    this.shared = shared
+
+    this.children = {
+      files: {},
+      folders: {},
+      nulls: {},
+    }
+    this.mustConvert = false
+    this.shared = {}
+
+    this.meta = meta
 
     window.addEventListener('beforeunload', this.beforeUnloadHandler)
   }
@@ -131,8 +113,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   ): Promise<IStorageHandler> {
     const {
       rns = null,
-      basePath = 's/Home',
+      path = 'Home',
       accountAddress = client.getJackalAddress(),
+      setFullSigner = false,
     } = options
 
     const jackalSigner = client.getJackalSigner()
@@ -143,25 +126,55 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     if (!hostSigner) {
       throw new Error(signerNotEnabled('StorageHandler', 'init'))
     }
-    const selectedWallet = client.getSelectedWallet()
-    switch (selectedWallet) {
-      case 'keplr':
-        if (!window.keplr) {
-          throw new Error('Keplr Wallet selected but unavailable')
-        }
-        break
-      case 'leap':
-        if (!window.leap) {
-          throw new Error('Leap Wallet selected but unavailable')
-        }
-        break
-      default:
-        throw new Error(
-          'No wallet selected but one is required to init StorageHandler',
-        )
-    }
 
     try {
+      let dummyKey = await stringToShaHex('')
+      let keyPair: TFullSignerState = [PrivateKey.fromHex(dummyKey), false]
+      if (setFullSigner) {
+        keyPair = await this.enableFullSigner(client)
+      }
+      const meta = await FolderMetaHandler.create({
+        count: -1,
+        location: '',
+        name: '',
+      })
+      return new StorageHandler(
+        rns,
+        client,
+        jackalSigner,
+        hostSigner,
+        accountAddress,
+        keyPair,
+        path,
+        meta,
+      )
+    } catch (err) {
+      throw warnError('storageHandler init()', err)
+    }
+  }
+
+  static async enableFullSigner(
+    client: IClientHandler,
+  ): Promise<TFullSignerState> {
+    try {
+      const selectedWallet = client.getSelectedWallet()
+      switch (selectedWallet) {
+        case 'keplr':
+          if (!window.keplr) {
+            throw new Error('Keplr Wallet selected but unavailable')
+          }
+          break
+        case 'leap':
+          if (!window.leap) {
+            throw new Error('Leap Wallet selected but unavailable')
+          }
+          break
+        default:
+          throw new Error(
+            'No wallet selected but one is required to init StorageHandler',
+          )
+      }
+
       const hostAddress = client.getHostAddress()
       const chainId = client.getHostChainId()
       let signatureAsHex = ''
@@ -191,185 +204,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           }
           break
       }
-      const keyPair = PrivateKey.fromHex(signatureAsHex)
-      const storageAddress = ''
-      let loadedFolder: TLoadedFolder = [-1, this.basicFolderShell(), false]
-      let shared: TSharedRootMetaDataMap = {}
-      try {
-        loadedFolder = await this.loadFolder(
-          jackalSigner,
-          keyPair,
-          accountAddress,
-          storageAddress,
-          basePath,
-        )
-        shared = await this.loadShared(jackalSigner, keyPair, accountAddress)
-      } catch (err) {
-        warnError('Nonfatal StorageHandler init()', err)
-      }
-      return new StorageHandler(
-        rns,
-        client,
-        jackalSigner,
-        hostSigner,
-        accountAddress,
-        keyPair,
-        storageAddress,
-        basePath,
-        loadedFolder,
-        shared,
-      )
+      return [PrivateKey.fromHex(signatureAsHex), true]
     } catch (err) {
-      throw warnError('storageHandler init()', err)
-    }
-  }
-
-  /**
-   *
-   * @param {TJackalSigningClient} client
-   * @param {string} key
-   * @param {string} userAddress
-   * @param {string} storageAddress
-   * @param {string} basePath
-   * @returns {Promise<TLoadedFolder>}
-   */
-  static async loadFolder(
-    client: TJackalSigningClient,
-    key: PrivateKey,
-    userAddress: string,
-    storageAddress: string,
-    basePath: string,
-  ): Promise<TLoadedFolder> {
-    try {
-      const bundle = await loadFolderFileTreeMetaData(
-        client,
-        key,
-        userAddress,
-        storageAddress,
-        basePath,
-      )
-      if (bundle.requiresConversion) {
-        return [-1, this.basicFolderShell(), true]
-      } else if (bundle && 'count' in bundle.metaData) {
-        const metaData = bundle.metaData as IFolderMetaData
-        // console.log('metaData:', metaData)
-        const indexCount = hexToInt(metaData.count)
-        const children: IChildMetaDataMap = this.basicFolderShell()
-        for (let i = 0; i < indexCount; i++) {
-          const ref = await loadFileTreeMetaData(
-            client,
-            key,
-            userAddress,
-            storageAddress,
-            basePath,
-            i,
-          )
-          const unsorted = await loadFileTreeMetaData(
-            client,
-            key,
-            userAddress,
-            '',
-            (ref as IRefMetaData).pointsTo,
-          ).catch(() => {
-            /* do nothing */
-          })
-          if (!unsorted) {
-            continue
-          }
-          // console.log('unsorted:', unsorted)
-          if (unsorted.metaDataType === 'file') {
-            const fileMeta = unsorted as IFileMetaData
-            fileMeta.merkleRoot = stringToUint8Array(fileMeta.merkleMem)
-            children.files[i] = fileMeta
-          } else if (unsorted.metaDataType === 'folder') {
-            children.folders[i] = unsorted as IFolderMetaData
-          } else if (unsorted.metaDataType === 'null') {
-            children.nulls[i] = unsorted as INullMetaData
-          } else {
-            console.dir(unsorted)
-          }
-        }
-        return [indexCount, children, false]
-      } else {
-        console.dir(bundle)
-        throw new Error('Invalid parsed value')
-      }
-    } catch (err) {
-      throw warnError('storageHandler loadFolder()', err)
-    }
-  }
-
-  /**
-   *
-   * @param {TJackalSigningClient} client
-   * @param {PrivateKey} key
-   * @param {string} userAddress
-   * @returns {Promise<TSharedRootMetaDataMap>}
-   */
-  static async loadShared(
-    client: TJackalSigningClient,
-    key: PrivateKey,
-    userAddress: string,
-  ): Promise<TSharedRootMetaDataMap> {
-    try {
-      const data: TSharedRootMetaDataMap = {}
-      const parsed = await loadFileTreeMetaData(
-        client,
-        key,
-        userAddress,
-        sharedPath,
-        's',
-      )
-      // console.log('parsed:', parsed)
-      if (parsed && 'count' in parsed) {
-        const metaData = parsed as IFolderMetaData
-        const indexCount = hexToInt(metaData.count)
-        for (let i = 0; i < indexCount; i++) {
-          const ref = await loadFileTreeMetaData(
-            client,
-            key,
-            userAddress,
-            sharedPath,
-            's',
-            i,
-          ).catch(() => {
-            console.log('caught')
-          })
-          if (!ref) {
-            continue
-          }
-          const wedgeRef = ref as IShareFolderMetaData
-          // console.log('wedgeRef:', wedgeRef)
-          const wedge = await loadSingleSharingFolder(
-            client,
-            key,
-            userAddress,
-            wedgeRef.pointsTo,
-          ).catch(() => {
-            console.log('caught')
-          })
-          if (!wedge) {
-            continue
-          }
-          // console.log('wedge:', wedge)
-          data[wedgeRef.label] = wedge
-        }
-      }
-      return data
-    } catch (err) {
-      throw warnError('storageHandler loadShared()', err)
-    }
-  }
-
-  /**
-   *
-   * @returns {IChildMetaDataMap}
-   */
-  static basicFolderShell(): IChildMetaDataMap {
-    return {
-      files: {},
-      folders: {},
-      nulls: {},
+      throw warnError('storageHandler enableFullSigner()', err)
     }
   }
 
@@ -382,17 +219,34 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {string} path
-   * @returns {Promise<string>}
+   * @param {string} [path]
+   * @returns {Promise<void>}
    */
-  async changeActiveDirectory(path: string): Promise<string> {
-    if (this.checkLocked({ noConvert: true })) {
-      throw new Error('Locked. Must Convert.')
+  async loadDirectory(path?: string): Promise<void> {
+    if (this.checkLocked({ noConvert: true, signer: true })) {
+      throw new Error('Locked.')
     }
-    await this.stageQueue()
-    this.currentPath = this.sanitizePath(path)
-    await this.refreshActiveFolder()
-    return this.currentPath
+    try {
+      this.path = path || this.path
+      this.meta = await this.reader.loadFolderMetaHandler(this.path)
+      this.children = this.reader.readFolderContents(this.path)
+    } catch (err) {
+      throw warnError('storageHandler loadDirectory()', err)
+    }
+  }
+
+  /**
+   *
+   * @returns {Promise<void>}
+   */
+  async loadShared(): Promise<void> {
+    if (this.checkLocked({ signer: true })) {
+      throw new Error('Locked.')
+    }
+    try {
+    } catch (err) {
+      throw warnError('storageHandler loadShared()', err)
+    }
   }
 
   /**
@@ -409,12 +263,20 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @returns {IFileMeta[]}
+   * @returns {IFolderMetaData[]}
    */
-  listChildFileMeta(): IFileMeta[] {
-    const fileMetas: IFileMeta[] = []
+  listChildFolderMetas(): IFolderMetaData[] {
+    return Object.values(this.children.folders)
+  }
+
+  /**
+   *
+   * @returns {string[]}
+   */
+  listChildFiles(): string[] {
+    const fileMetas: string[] = []
     for (let child of Object.values(this.children.files)) {
-      fileMetas.push(child.fileMeta)
+      fileMetas.push(child.fileMeta.name)
     }
     return fileMetas
   }
@@ -423,46 +285,39 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    *
    * @returns {IFileMetaData[]}
    */
-  listChildFiles(): IFileMetaData[] {
-    const files: IFileMetaData[] = []
-    for (let child of Object.values(this.children.files)) {
-      files.push(child)
-    }
-    return files
+  listChildFileMetas(): IFileMetaData[] {
+    return Object.values(this.children.files)
   }
 
   /**
    *
-   * @returns {Promise<DDeliverTxResponse>}
+   * @returns {Promise<void>}
+   */
+  async upgradeSigner(): Promise<void> {
+    try {
+      ;[this.keyPair, this.fullSigner] = await StorageHandler.enableFullSigner(
+        this.jackalClient,
+      )
+    } catch (err) {
+      throw warnError('storageHandler upgradeSigner()', err)
+    }
+  }
+
+  /**
+   *
+   * @returns {Promise<any>}
    */
   async initStorage(): Promise<any> {
+    if (this.checkLocked({ signer: true })) {
+      throw new Error('Locked.')
+    }
     try {
-      const msgs = await this.initStorageBase()
+      const msgs = await this.initUlidHome()
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(msgs)
       return postBroadcast
     } catch (err) {
       throw warnError('storageHandler initStorage()', err)
-    }
-  }
-
-  /**
-   *
-   * @param {string} name
-   * @param {number} [mod]
-   * @returns {Promise<DDeliverTxResponse>}
-   */
-  async initStorageCustom(
-    name: string,
-    mod?: number,
-  ): Promise<DDeliverTxResponse> {
-    try {
-      const msgs = await this.initStorageBase(name, mod)
-      const postBroadcast =
-        await this.jackalClient.broadcastAndMonitorMsgs(msgs)
-      return postBroadcast.txResponse
-    } catch (err) {
-      throw warnError('storageHandler initStorageCustom()', err)
     }
   }
 
@@ -525,7 +380,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<DDeliverTxResponse>}
    */
   async createFolders(names: string | string[]): Promise<DDeliverTxResponse> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
       throw new Error('Locked.')
     }
     try {
@@ -533,20 +388,22 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       if (names instanceof Array) {
         for (let i = 0; i < names.length; i++) {
           msgs.push(
-            ...(await this.makeCreateFolderMsgs(names[i], this.indexCount + i)),
+            ...(await this.makeCreateFolderMsgs(
+              names[i],
+              this.meta.getCount() + i,
+            )),
           )
         }
-        this.indexCount += names.length
+        this.meta.addAndReturnCount(names.length)
       } else {
-        msgs.push(...(await this.makeCreateFolderMsgs(names, this.indexCount)))
-        this.indexCount++
+        msgs.push(
+          ...(await this.makeCreateFolderMsgs(names, this.meta.getCount())),
+        )
+        this.meta.addAndReturnCount(1)
       }
 
-      const parentMeta = await MetaHandler.create(this.readActivePath(), {
-        count: this.indexCount,
-      })
       const parentMsgs = await this.existingFolderToMsgs({
-        meta: parentMeta,
+        meta: this.meta,
         aes: await genAesBundle(),
       })
       msgs.unshift(...parentMsgs)
@@ -566,7 +423,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   async saveFolder(
     bundle: IStagedUploadPackage,
   ): Promise<IWrappedEncodeObject[]> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
       throw new Error('Locked.')
     }
     try {
@@ -577,29 +434,32 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const childrenFilesLen = Object.keys(bundle.children.files).length
 
       for (let pkg of bundle.queue) {
-        const meta = pkg.meta.getFileMeta()
+        const meta = pkg.meta.export()
         if (matchedCount < childrenFilesLen) {
           for (let index in bundle.children.files) {
-            if (
-              bundle.children.files[index].fileMeta.name === meta.fileMeta.name
-            ) {
+            const childName = bundle.children.files[index].fileMeta.name
+            if (childName === meta.fileMeta.name) {
               matchedCount++
               const { merkleRoot } = bundle.children.files[index]
-              const { files } =
-                await this.jackalSigner.queries.storage.allFilesByMerkle({
-                  merkle: merkleRoot,
-                })
-              const [target] = files.filter(
-                (file) => file.owner === this.jklAddress,
-              )
-              const updates = await this.existingPkgToMsgs(
-                target,
-                pkg,
-                blockHeight,
-              )
-              msgs.push(...updates)
-              foundMatch = true
-              break
+              if (merkleRoot === meta.merkleRoot) {
+                // skip duplicate file
+              } else {
+                const { files } =
+                  await this.jackalSigner.queries.storage.allFilesByMerkle({
+                    merkle: merkleRoot,
+                  })
+                const [target] = files.filter(
+                  (file) => file.owner === this.jklAddress,
+                )
+                const updates = await this.existingPkgToMsgs(
+                  target,
+                  pkg,
+                  blockHeight,
+                )
+                msgs.push(...updates)
+                foundMatch = true
+                break
+              }
             }
           }
         }
@@ -608,17 +468,17 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         } else {
           const nulls = Object.keys(bundle.children.nulls)
           if (nulls.length) {
-            const nullIndex = hexToInt(nulls[0])
-            pkg.meta.setRefIndex(nullIndex)
+            pkg.meta.setRefIndex(
+              bundle.children.nulls[Number(nulls[0])].getRefIndex(),
+            )
             const nullReplacement = await this.pkgToMsgs(pkg, blockHeight)
             msgs.push(...nullReplacement)
-            delete bundle.children.nulls[nullIndex]
+            delete bundle.children.nulls[Number(nulls[0])]
           } else {
-            const { count } = bundle.folderMeta.getFolderMeta()
-            pkg.meta.setRefIndex(hexToInt(count))
+            pkg.meta.setRefIndex(bundle.folderMeta.getCount())
             const fresh = await this.pkgToMsgs(pkg, blockHeight)
             msgs.push(...fresh)
-            bundle.folderMeta.addToCount(1)
+            bundle.folderMeta.addAndReturnCount(1)
           }
         }
         foundMatch = false
@@ -639,7 +499,23 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {string}
    */
   readActivePath(): string {
-    return tidyString(`${this.basePath}/${this.currentPath}`, '/')
+    return this.path
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  readCurrentLocation(): string {
+    return this.meta.getLocation()
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  readCurrentUlid(): string {
+    return this.meta.getUlid()
   }
 
   /**
@@ -647,8 +523,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {number}
    */
   readChildCount(): number {
-    if (this.indexCount < 1) {
-      return this.indexCount
+    if (this.meta.getCount() < 1) {
+      return this.meta.getCount()
     } else {
       const folders = this.listChildFolders()
       const files = this.listChildFiles()
@@ -696,7 +572,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     toQueue: File | File[],
     duration: number = 0,
   ): Promise<number> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
       throw new Error('Locked.')
     }
     if (toQueue instanceof Array) {
@@ -720,7 +596,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     toQueue: File | File[],
     duration: number = 0,
   ): Promise<number> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
       throw new Error('Locked.')
     }
     if (toQueue instanceof Array) {
@@ -739,14 +615,14 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<any>}
    */
   async processAllQueues(): Promise<any> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
       throw new Error('Locked.')
     }
     try {
       await this.stageQueue()
       const msgs: IWrappedEncodeObject[] = []
-      for (let folderName in this.stagedUploads) {
-        const readyMsgs = await this.saveFolder(this.stagedUploads[folderName])
+      for (let folderUlid in this.stagedUploads) {
+        const readyMsgs = await this.saveFolder(this.stagedUploads[folderUlid])
         msgs.push(...readyMsgs)
       }
       const postBroadcast =
@@ -797,7 +673,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       await Promise.all(activeUploads).then(() => {
         this.uploadsInProgress = false
       })
-      await this.refreshActiveFolder()
+      await this.loadDirectory()
       return postBroadcast
     } catch (err) {
       throw warnError('storageHandler processAllQueues()', err)
@@ -806,38 +682,31 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {string} url
-   * @param {number} startBlock
-   * @param {File} file
-   * @param {string} merkle
-   * @returns {Promise<IProviderUploadResponse>}
+   * @param {string} filePath
+   * @returns {Promise<IFileParticulars>}
    */
-  async uploadFile(
-    url: string,
-    startBlock: number,
-    file: File,
-    merkle: string,
-  ): Promise<IProviderUploadResponse> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+  async getFileParticulars(filePath: string): Promise<IFileParticulars> {
+    if (this.checkLocked({ signer: true })) {
       throw new Error('Locked.')
     }
-    const fileFormData = new FormData()
-    fileFormData.set('file', file)
-    fileFormData.set('merkle', merkle)
-    fileFormData.set('sender', this.jklAddress)
-    fileFormData.set('start', startBlock.toString())
-
-    return await fetch(url, { method: 'POST', body: fileFormData })
-      .then(async (resp): Promise<IProviderUploadResponse> => {
-        if (resp.status !== 200) {
-          throw new Error(`Status Message: ${resp.statusText}`)
-        } else {
-          return resp.json()
-        }
+    try {
+      const ica = this.jackalClient.getICAJackalAddress()
+      const ft = await this.reader.loadMetaByExternalPath(filePath, ica)
+      if (ft.metaDataType !== 'file') {
+        throw new Error('Not a file')
+      }
+      const { providerIps } = await this.jackalSigner.queries.storage.findFile({
+        merkle: ft.merkleRoot,
       })
-      .catch((err) => {
-        throw warnError('storageHandler uploadFile()', err)
-      })
+      return {
+        fileMeta: ft.fileMeta,
+        merkle: ft.merkleRoot,
+        merkleLocation: ft.merkleHex,
+        providerIps,
+      }
+    } catch (err) {
+      throw warnError('storageHandler getFileProviders()', err)
+    }
   }
 
   /**
@@ -865,27 +734,16 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     filePath: string, // /cat_turtle.png
     trackers: IDownloadTracker,
   ): Promise<File> {
-    const ica = this.jackalClient.getICAJackalAddress()
-    // console.log("ica address: ", ica)
+    if (this.checkLocked({ signer: true })) {
+      throw new Error('Locked.')
+    }
     try {
-      const ft = await loadExternalFileTreeMetaData(
-        this.jackalSigner,
-        this.keyPair,
-        ica,
-        ica,
-        '',
-        filePath,
-      )
-      if (ft.metaDataType !== 'file') {
-        throw new Error('Not a file')
-      }
-      const workingMetadata = ft as IFileMetaData
-      const { providerIps } = await this.jackalSigner.queries.storage.findFile({
-        merkle: workingMetadata.merkleRoot,
-      })
+      const particulars = await this.getFileParticulars(filePath)
       const provider =
-        providerIps[Math.floor(Math.random() * providerIps.length)]
-      const url = `${provider}/download/${workingMetadata.merkleLocation}`
+        particulars.providerIps[
+          Math.floor(Math.random() * particulars.providerIps.length)
+        ]
+      const url = `${provider}/download/${particulars.merkleLocation}`
       return await fetch(url, { method: 'GET' }).then(
         async (resp): Promise<File> => {
           const contentLength = resp.headers.get('Content-Length')
@@ -906,18 +764,14 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
               trackers.progress =
                 Math.floor((receivedLength / Number(contentLength)) * 100) || 1
             }
-            const { name, ...meta } = workingMetadata.fileMeta
+            const { name, ...meta } = particulars.fileMeta
             let baseFile = new File(trackers.chunks, name, meta)
             const tmp = await baseFile.slice(0, 8).text()
             if (Number(tmp) > 0) {
               const parts: Blob[] = []
-              const aes = await loadKeysFromFileTree(
-                this.jackalSigner,
-                this.keyPair,
-                userAddress,
-                this.jklAddress,
-                '',
+              const aes = await this.reader.loadKeysByPath(
                 filePath,
+                userAddress,
               )
               for (let i = 0; i < baseFile.size; ) {
                 const offset = i + 8
@@ -945,7 +799,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<DDeliverTxResponse>}
    */
   async deleteTargets(targets: string | string[]): Promise<DDeliverTxResponse> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
       throw new Error('Locked.')
     }
     try {
@@ -979,41 +833,26 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     receiver: string,
     paths: string | string[],
   ): Promise<DDeliverTxResponse> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
       throw new Error('Locked.')
     }
     try {
+      const rec = await this.possibleRnsToAddress(receiver)
       const msgs: IWrappedEncodeObject[] = []
       const pkg: INotificationPackage = {
         isPrivate: true,
-        receiver: await this.possibleRnsToAddress(receiver),
+        receiver: rec,
         path: 'tbd',
         isFile: true,
       }
       if (paths instanceof Array) {
         for (let path of paths) {
-          const rdy = await reconstructFileTreeMetaData(
-            this.jackalClient,
-            this.jackalSigner,
-            this.keyPair,
-            this.jklAddress,
-            [await this.possibleRnsToAddress(receiver)],
-            path,
-          )
           pkg.path = path
-          msgs.push(...(await this.shareToMsgs(pkg, rdy)))
+          msgs.push(...(await this.shareToMsgs(pkg, [rec])))
         }
       } else {
-        const rdy = await reconstructFileTreeMetaData(
-          this.jackalClient,
-          this.jackalSigner,
-          this.keyPair,
-          this.jklAddress,
-          [await this.possibleRnsToAddress(receiver)],
-          paths,
-        )
         pkg.path = paths
-        msgs.push(...(await this.shareToMsgs(pkg, rdy)))
+        msgs.push(...(await this.shareToMsgs(pkg, [rec])))
       }
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(msgs)
@@ -1028,6 +867,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<number>}
    */
   async checkNotifications(): Promise<number> {
+    if (this.checkLocked({ signer: true })) {
+      throw new Error('Locked.')
+    }
     try {
       const updater = new SharedUpdater(
         this.jackalClient,
@@ -1047,7 +889,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<TSharedRootMetaDataMap>}
    */
   async processPendingNotifications(): Promise<TSharedRootMetaDataMap> {
-    if (this.checkLocked({ noConvert: true, exists: true })) {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
       throw new Error('Locked.')
     }
     try {
@@ -1061,7 +903,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const count = await updater.fetchNotifications()
       if (count > 0) {
         await updater.digest()
-        return this.refreshSharing()
+        this.loadShared()
+        return this.shared
       } else {
         return this.shared
       }
@@ -1080,39 +923,19 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @returns {Promise<TSharedRootMetaDataMap>}
-   */
-  async refreshSharing(): Promise<TSharedRootMetaDataMap> {
-    try {
-      this.shared = await StorageHandler.loadShared(
-        this.jackalSigner,
-        this.keyPair,
-        this.jklAddress,
-      )
-      return this.shared
-    } catch (err) {
-      throw warnError('storageHandler refreshNotifications()', err)
-    }
-  }
-
-  /**
-   *
    * @returns {Promise<any>}
    */
   async convert(): Promise<any> {
-    if (this.checkLocked({ mustConvert: true })) {
+    if (this.checkLocked({ mustConvert: true, signer: true })) {
       throw new Error('Not Locked. Convert Not Available.')
     }
     try {
       const msgs: IWrappedEncodeObject[] = []
       const bundle = await this.buildConversion(this.readActivePath())
       if (bundle) {
-        const meta = await MetaHandler.create(this.readActivePath(), {
-          count: bundle.count,
-        })
-        meta.setRefIndex(0)
+        bundle.handler.setLocation(this.meta.getLocation())
         const group = await this.folderToMsgs({
-          meta: meta,
+          meta: bundle.handler,
           aes: await genAesBundle(),
         })
         msgs.push(...group)
@@ -1124,6 +947,45 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       }
     } catch (err) {
       throw warnError('storageHandler convert()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} url
+   * @param {number} startBlock
+   * @param {File} file
+   * @param {string} merkle
+   * @returns {Promise<IProviderUploadResponse>}
+   * @protected
+   */
+  protected async uploadFile(
+    url: string,
+    startBlock: number,
+    file: File,
+    merkle: string,
+  ): Promise<IProviderUploadResponse> {
+    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+      throw new Error('Locked.')
+    }
+    try {
+      const fileFormData = new FormData()
+      fileFormData.set('file', file)
+      fileFormData.set('merkle', merkle)
+      fileFormData.set('sender', this.jklAddress)
+      fileFormData.set('start', startBlock.toString())
+
+      return await fetch(url, { method: 'POST', body: fileFormData }).then(
+        async (resp): Promise<IProviderUploadResponse> => {
+          if (resp.status !== 200) {
+            throw new Error(`Status Message: ${resp.statusText}`)
+          } else {
+            return resp.json()
+          }
+        },
+      )
+    } catch (err) {
+      throw warnError('storageHandler uploadFile()', err)
     }
   }
 
@@ -1151,45 +1013,31 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {string} [name]
-   * @param {number} [mod]
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async initStorageBase(
-    name: string = 'Home',
-    mod: number = 10,
-  ): Promise<IWrappedEncodeObject[]> {
+  protected async initUlidHome(): Promise<IWrappedEncodeObject[]> {
     try {
+      const msgs: IWrappedEncodeObject[] = []
       const forKey: DMsgPostKey = {
         creator: this.jklAddress,
         key: this.keyPair.publicKey.toHex(),
       }
-      const msg: IWrappedEncodeObject = {
+      msgs.push({
         encodedObject: this.jackalSigner.txLibrary.fileTree.msgPostKey(forKey),
-        modifier: mod,
-      }
-      await this.jackalClient.broadcastAndMonitorMsgs(msg)
-
-      const trackingNumber = crypto.randomUUID()
-      const forInit: DMsgProvisionFileTree = {
-        creator: this.jklAddress,
-        viewers: await createViewAccess(trackingNumber, [this.jklAddress]),
-        editors: await createEditAccess(trackingNumber, [this.jklAddress]),
-        trackingNumber: trackingNumber,
-      }
-      const msgs: IWrappedEncodeObject[] = [
-        {
-          encodedObject:
-            this.jackalSigner.txLibrary.fileTree.msgProvisionFileTree(forInit),
-          modifier: mod,
-        },
-      ]
-      msgs.push(...(await this.makeCreateBaseFolderMsgs(name, 0)))
-      msgs.push(...(await this.makeCreateBaseFolderMsgs(sharedPath, 1)))
+        modifier: 10,
+      })
+      const forInit = await this.reader.encodeProvisionFileTree()
+      msgs.push({
+        encodedObject:
+          this.jackalSigner.txLibrary.fileTree.msgProvisionFileTree(forInit),
+        modifier: 10,
+      })
+      msgs.push(...(await this.ulidFolderToMsgs()))
+      msgs.push(...(await this.makeCreateBaseFolderMsgs('Home')))
       return msgs
     } catch (err) {
-      throw warnError('storageHandler initStorageBase()', err)
+      throw warnError('storageHandler initUlidHome()', err)
     }
   }
 
@@ -1233,13 +1081,12 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     position: number,
   ): Promise<IWrappedEncodeObject[]> {
     try {
-      const baseMeta = await MetaHandler.create(
-        `${this.readActivePath()}/${name}`,
-        {
-          count: 0,
-        },
-      )
-      baseMeta.setRefIndex(position)
+      const baseMeta = await FolderMetaHandler.create({
+        count: 0,
+        location: this.meta.getUlid(),
+        name,
+        refIndex: position,
+      })
       return await this.folderToMsgs({
         meta: baseMeta,
         aes: await genAesBundle(),
@@ -1252,20 +1099,19 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   /**
    *
    * @param {string} name
-   * @param {number} position
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
   protected async makeCreateBaseFolderMsgs(
     name: string,
-    position: number,
   ): Promise<IWrappedEncodeObject[]> {
     try {
-      const baseMeta = await MetaHandler.create(`s/${name}`, {
+      const baseMeta = await FolderMetaHandler.create({
         count: 0,
+        location: 'ulid',
+        name,
       })
-      baseMeta.setRefIndex(position)
-      return await this.folderToMsgs({
+      return await this.baseFolderToMsgs({
         meta: baseMeta,
         aes: await genAesBundle(),
       })
@@ -1283,18 +1129,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   protected async prepDelete(target: string): Promise<IWrappedEncodeObject[]> {
     try {
       const msgs: IWrappedEncodeObject[] = []
-      const ft = await loadFileTreeMetaData(
-        this.jackalSigner,
-        this.keyPair,
-        this.jklAddress,
-        '',
-        target,
-      )
+      const ft = await this.reader.loadMetaByPath(target)
       if (ft.metaDataType === 'file') {
-        const workingMetadata = ft as IFileMetaData
         const { files } =
           await this.jackalSigner.queries.storage.allFilesByMerkle({
-            merkle: workingMetadata.merkleRoot,
+            merkle: ft.merkleRoot,
           })
         const [details] = files
         const deletePkg = {
@@ -1309,24 +1148,18 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         }
         msgs.push(wrapped)
       } else if (ft.metaDataType === 'folder') {
-        const [_, children] = await StorageHandler.loadFolder(
-          this.jackalSigner,
-          this.keyPair,
-          this.jklAddress,
-          '',
-          target,
-        )
-        for (let file of Object.values(children.files)) {
+        const data = this.reader.readFolderContents(target)
+        for (let file of Object.values(data.files)) {
           const path = tidyString(`${target}/${file.fileMeta.name}`, '/')
           msgs.push(...(await this.prepDelete(path)))
         }
-        for (let folder of Object.values(children.folders)) {
+        for (let folder of Object.values(data.folders)) {
           const path = tidyString(`${target}/${folder.whoAmI}`, '/')
           msgs.push(...(await this.prepDelete(path)))
         }
       }
       const pkg = {
-        meta: await MetaHandler.create(target),
+        meta: await NullMetaHandler.create(target),
         aes: await genAesBundle(),
       }
       msgs.push(...(await this.filetreeDeleteToMsgs(pkg)))
@@ -1350,27 +1183,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @returns {Promise<void>}
+   * @returns {Promise<INotification[]>}
    * @protected
    */
-  protected async refreshActiveFolder(): Promise<void> {
-    try {
-      const [indexCount, children, mustConvert] =
-        await StorageHandler.loadFolder(
-          this.jackalSigner,
-          this.keyPair,
-          this.jklAddress,
-          this.currentPath,
-          this.basePath,
-        )
-      this.indexCount = indexCount
-      this.children = children
-      this.mustConvert = mustConvert
-    } catch (err) {
-      throw warnError('storageHandler refreshActiveFolder()', err)
-    }
-  }
-
   protected async loadMyNotifications(): Promise<INotification[]> {
     try {
       const noti =
@@ -1382,11 +1197,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       for (let data of noti.notifications) {
         const contents = JSON.parse(data.contents)
         if ('private' in contents) {
-          const clean = await readShareNotification(
-            this.keyPair,
-            data,
-            this.jklAddress,
-          )
+          const clean = await this.reader.readShareNotification(data)
           messages.push(clean)
         } else {
           messages.push(contents)
@@ -1396,18 +1207,6 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     } catch (err) {
       throw warnError('storageHandler loadMyNotifications()', err)
     }
-  }
-
-  /**
-   *
-   * @param {string} path
-   * @returns {string}
-   * @protected
-   */
-  protected sanitizePath(path: string): string {
-    const singleSlashPath = path.replaceAll(/\/+/g, '/')
-    const rootFreePath = singleSlashPath.replace('s/Home', '')
-    return tidyString(rootFreePath, '/')
   }
 
   /**
@@ -1447,9 +1246,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     const finalName = await hashAndHex(fileMeta.name + Date.now().toString())
     const file = new File(encryptedArray, finalName, { type: 'text/plain' })
 
-    const baseMeta = await MetaHandler.create(this.readActivePath(), {
+    const baseMeta = await FileMetaHandler.create({
+      description: '',
       file,
       fileMeta,
+      location: this.readCurrentLocation(),
     })
     return { file, meta: baseMeta, duration, aes }
   }
@@ -1466,9 +1267,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     duration: number,
   ): Promise<IUploadPackage> {
     const fileMeta = extractFileMetaData(toProcess)
-    const baseMeta = await MetaHandler.create(this.readActivePath(), {
+    const baseMeta = await FileMetaHandler.create({
+      description: '',
       file: toProcess,
       fileMeta,
+      location: this.readCurrentLocation(),
     })
     return { file: toProcess, meta: baseMeta, duration }
   }
@@ -1498,19 +1301,24 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         }
       }
       if (checkSet.exists) {
-        if (this.indexCount === -1) {
+        if (this.meta.getCount() === -1) {
           throw true
         }
       }
       if (checkSet.keys) {
         // TODO - add keys check
-        if (this.indexCount === -1) {
+        if (this.meta.getCount() === -1) {
           throw true
         }
       }
       if (checkSet.shared) {
         // TODO - add shared check
         if (!this.mustConvert) {
+          throw true
+        }
+      }
+      if (checkSet.signer) {
+        if (!this.fullSigner) {
           throw true
         }
       }
@@ -1526,22 +1334,17 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @protected
    */
   protected async stageQueue(): Promise<void> {
-    const path = this.readActivePath()
-    const instance = this.stagedUploads[path]
-
+    const instance = this.stagedUploads[this.meta.getUlid()]
     if (instance) {
       instance.queue.push(...this.uploadQueue)
       this.uploadQueue = []
     } else {
-      const meta: IMetaHandler = await MetaHandler.create(path, {
-        count: this.indexCount,
-      })
       const queue: IUploadPackage[] = []
       queue.push(...this.uploadQueue)
       this.uploadQueue = []
-      this.stagedUploads[path] = {
+      this.stagedUploads[this.meta.getUlid()] = {
         children: this.children,
-        folderMeta: meta,
+        folderMeta: this.meta,
         queue,
       }
     }
@@ -1557,29 +1360,23 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     path: string,
   ): Promise<null | IConversionFolderBundle> {
     try {
-      const data = await loadFolderFileTreeMetaData(
-        this.jackalSigner,
-        this.keyPair,
-        this.jklAddress,
-        '',
-        path,
-      )
-
-      if (!data.requiresConversion) {
-        return null
-      } else {
+      const data = await this.reader.loadMetaByPath(path)
+      if (data.metaDataType === undefined) {
         const msgs: IWrappedEncodeObject[] = []
         let ii = 0
+        const parent = await FolderMetaHandler.create({
+          count: 0,
+          location: '',
+          name: data.whoAmI,
+        })
 
-        for (let dir of data.metaData.dirChildren) {
+        for (let dir of data.dirChildren) {
           const child = await this.buildConversion(`${path}/${dir}`)
           if (child) {
-            const meta = await MetaHandler.create(`${path}/${dir}`, {
-              count: child.count,
-            })
-            meta.setRefIndex(ii)
+            child.handler.setLocation(parent.getUlid())
+            child.handler.setRefIndex(ii)
             const group = await this.folderToMsgs({
-              meta: meta,
+              meta: child.handler,
               aes: await genAesBundle(),
             })
             msgs.push(...group)
@@ -1587,12 +1384,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           }
         }
 
-        for (let fileMeta of Object.values(data.metaData.fileChildren)) {
-          const meta = await getLegacyMerkle(
-            this.jackalSigner,
-            this.jklAddress,
-            fileMeta.name,
+        for (let fileMeta of Object.values(data.fileChildren)) {
+          ii++
+          const meta = await this.reader.loadFromLegacyMerkles(
             path,
+            parent.getUlid(),
             fileMeta,
           )
           const pkg: IUploadPackage = {
@@ -1605,10 +1401,13 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           msgs.push(...group)
         }
 
+        parent.setCount(ii)
         return {
-          count: ii,
           msgs,
+          handler: parent,
         }
+      } else {
+        return null
       }
     } catch (err) {
       throw warnError('storageHandler buildConversion()', err)
