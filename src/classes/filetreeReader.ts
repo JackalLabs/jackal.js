@@ -638,15 +638,15 @@ export class FiletreeReader implements IFiletreeReader {
           case path.startsWith('s/'):
             throw new Error('Storage prefix not required')
           case !path.includes('/'):
-            const hexRootAddress = await merklePath(`s/ulid/roots/${path}`)
+            console.log(path)
+            const hexRootAddress = await merklePath(`s/ulid/${path}`)
             const rootLookup = {
               address: hexRootAddress,
               ownerAddress: await hashAndHexOwner(hexRootAddress, ownerAddress),
             }
-            const {
-              file: { contents },
-            } = await this.jackalSigner.queries.fileTree.file(rootLookup)
-            const lookup: IRootLookupMetaData = JSON.parse(contents)
+            const { file } = await this.jackalSigner.queries.fileTree.file(rootLookup)
+            const lookup = await this.decryptAndParseContents(file) as IRootLookupMetaData
+            console.log(lookup)
             if (!(ownerAddress in this.redpages)) {
               this.redpages[ownerAddress] = {}
             }

@@ -223,6 +223,10 @@ export class FileMetaHandler implements IFileMetaHandler {
     return intToHex(this.refIndex)
   }
 
+  getUlid(): string {
+    return this.ulid
+  }
+
   setLocation(location: string): void {
     this.location = `s/ulid/${location}`
   }
@@ -302,6 +306,10 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
     return intToHex(this.refIndex)
   }
 
+  getUlid(): string {
+    return this.ulid
+  }
+
   getLocation(): string {
     return this.location
   }
@@ -367,6 +375,10 @@ export class ShareMetaHandler implements IShareMetaHandler {
 
   getLabel(): string {
     return this.label
+  }
+
+  getUlid(): string {
+    return this.ulid
   }
 
   getLocation(): string {

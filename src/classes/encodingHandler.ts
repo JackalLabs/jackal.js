@@ -254,7 +254,7 @@ export class EncodingHandler {
     pkg: IUploadPackage,
   ): Promise<DEncodeObject> {
     const meta = pkg.meta.export()
-    const parentAndChild = await merkleParentAndChild(meta.location)
+    const parentAndChild = await merkleParentAndChild(`${meta.location}/${pkg.meta.getUlid()}`)
     return this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
   }
 
@@ -300,7 +300,7 @@ export class EncodingHandler {
       ulid: mH.getUlid()
     }
 
-    const parentAndChild = await merkleParentAndChild(`ulid/${meta.whoAmI}`)
+    const parentAndChild = await merkleParentAndChild(`s/ulid/${meta.whoAmI}`)
     return this.storageEncodeFileTree(parentAndChild, lookup, { aes: pkg.aes })
   }
 
@@ -317,7 +317,7 @@ export class EncodingHandler {
     const meta = mH.export()
     console.log('saving:', meta.whoAmI)
 
-    const parentAndChild = await merkleParentAndChild(`ulid/${mH.getUlid()}`)
+    const parentAndChild = await merkleParentAndChild(`s/ulid/${mH.getUlid()}`)
     return this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
   }
 
@@ -348,7 +348,7 @@ export class EncodingHandler {
     const mH = pkg.meta as IShareFolderMetaHandler
     const meta = mH.export()
     const parentAndChild = await merkleParentAndIndex(
-      mH.getLocation(),
+      mH.getUlid(),
       mH.getRefString(),
     )
     return this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
@@ -436,8 +436,13 @@ export class EncodingHandler {
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
-      const fileTreeFolder = this.encodeFileTreeBaseFolder(pkg)
+      const fileTreeBaseFolder = this.encodeFileTreeBaseFolder(pkg)
+      const fileTreeFolder = this.encodeFileTreeFolder(pkg)
       return [
+        {
+          encodedObject: await fileTreeBaseFolder,
+          modifier: 0,
+        },
         {
           encodedObject: await fileTreeFolder,
           modifier: 0,
@@ -510,7 +515,7 @@ export class EncodingHandler {
         location: '',
         name: 'ulid',
       })
-      const parentAndChild = await merkleParentAndChild('ulid')
+      const parentAndChild = await merkleParentAndChild('s/ulid')
       const fileTreeFolder =  this.storageEncodeFileTree(parentAndChild, ulidMeta.export(), { aes })
 
       return [

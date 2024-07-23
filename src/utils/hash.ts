@@ -102,7 +102,7 @@ export async function merklePathPlusIndex(
 export async function merkleParentAndChild(
   path: string,
 ): Promise<TMerkleParentChild> {
-  const pathArray: string[] = ['s', ...path.split('/')]
+  const pathArray: string[] = path.split('/')
   if (pathArray.length < 2) {
     throw new Error(warnError('merkleParentAndChild()', 'Path too short'))
   }

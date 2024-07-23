@@ -41,6 +41,8 @@ export interface IFolderMetaHandler extends IRefMetaHandler {
 }
 
 export interface IFileMetaHandler extends IRefMetaHandler {
+  getUlid(): string
+
   setLocation(location: string): void
 
   getLocation(): string
@@ -55,6 +57,8 @@ export interface IShareFolderMetaHandler extends IRefMetaHandler {
 
   getCount(): number
 
+  getUlid(): string
+
   getLocation(): string
 
   export(): IShareFolderMetaData
@@ -66,6 +70,8 @@ export interface IShareMetaHandler extends IRefMetaHandler {
   getLabel(): string
 
   getLocation(): string
+
+  getUlid(): string
 
   export(): IShareMetaData
 

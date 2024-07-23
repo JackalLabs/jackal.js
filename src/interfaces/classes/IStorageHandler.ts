@@ -4,7 +4,7 @@ import {
   IDownloadTracker,
   IFileMetaData,
   IFileParticulars,
-  IFolderMetaData,
+  IFolderMetaData, IProviderIpSet,
   IStagedUploadPackage,
   IStorageStatus,
   IWrappedEncodeObject,
@@ -27,6 +27,12 @@ export interface IStorageHandler {
   listChildFileMetas(): IFileMetaData[]
 
   upgradeSigner(): Promise<void>
+
+  getAvailableProviders(): Promise<string[]>
+
+  findProviderIps(providers: string[]): Promise<IProviderIpSet>
+
+  loadProviderPool(providers?: IProviderIpSet): Promise<void>
 
   initStorage(): Promise<any>
 
