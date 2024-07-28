@@ -697,69 +697,75 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(msgs)
 
-
-      // tmp fix for archway
-      const activeUploads: Promise<IProviderUploadResponse>[] = []
       if (!postBroadcast.error) {
-        const startBlock = await this.jackalClient.getJackalBlockHeight()
-        const providerTeams = Object.keys(this.providers)
-        const copies = Math.min(3, providerTeams.length)
+        let remaining = [...msgs]
+        while (remaining.length > 0) {
+          const activeUploads = await this.batchUploads(remaining)
+          const results = await Promise.allSettled(activeUploads)
 
-        for (let i = 0; i < msgs.length; i++) {
-          const { file, merkle } = msgs[i]
-          if (file && merkle) {
-            this.uploadsInProgress = true
-
-            const used: number[] = []
-            for (let i = 0; i < copies; i++) {
-              while (true) {
-                const seed = Math.floor(Math.random() * providerTeams.length)
-                if (used.includes(seed)) {
-                  continue
-                } else {
-                  used.push(seed)
-                  break
-                }
-              }
-              const [seed] = used.slice(-1)
-              const selected = this.providers[providerTeams[seed]]
-              const one = selected[Math.floor(Math.random() * selected.length)]
-              const uploadUrl = `${one.ip}/upload`
-
-              const uploadPromise = this.uploadFile(
-                uploadUrl,
-                startBlock,
-                file,
-                merkle,
-              )
-              activeUploads.push(uploadPromise)
+          const loop: IWrappedEncodeObject[] = []
+          for (let i = 0; i < results.length; i++) {
+            if (results[i].status === 'rejected') {
+              loop.push(remaining[i])
             }
           }
+          remaining = [...loop]
         }
       }
-
-      // const activeUploads: Promise<IProviderUploadResponse>[] = []
-      // for (let i = 0; i < msgs.length; i++) {
-      //   const { file, merkle } = msgs[i]
-      //   if (file && merkle && postBroadcast.txEvents[i]) {
-      //     const dat = postBroadcast.txEvents[i].parsed as DMsgStoragePostFileResponse
-      //     const { providerIps, startBlock } = dat
-      //     for (let provider of providerIps) {
-      //       this.uploadsInProgress = true
-      //       activeUploads.push(
-      //         this.uploadFile(`${provider}/upload`, startBlock, file, merkle),
-      //       )
-      //     }
-      //   }
-      // }
-      await Promise.all(activeUploads).then(() => {
-        this.uploadsInProgress = false
-      })
+      this.uploadsInProgress = false
       await this.loadDirectory()
       return postBroadcast
     } catch (err) {
       throw warnError('storageHandler processAllQueues()', err)
     }
+  }
+
+  /**
+   *
+   * @param {IWrappedEncodeObject[]} msgs
+   * @returns {Promise<Promise<IProviderUploadResponse>[]>}
+   * @protected
+   */
+  protected async batchUploads(msgs: IWrappedEncodeObject[]): Promise<Promise<IProviderUploadResponse>[]> {
+    const activeUploads: Promise<IProviderUploadResponse>[] = []
+
+    const startBlock = await this.jackalClient.getJackalBlockHeight()
+    const providerTeams = Object.keys(this.providers)
+    const copies = Math.min(3, providerTeams.length)
+
+    for (let i = 0; i < msgs.length; i++) {
+      const { file, merkle } = msgs[i]
+      if (file && merkle) {
+        this.uploadsInProgress = true
+
+        const used: number[] = []
+        for (let i = 0; i < copies; i++) {
+          while (true) {
+            const seed = Math.floor(Math.random() * providerTeams.length)
+            if (used.includes(seed)) {
+              continue
+            } else {
+              used.push(seed)
+              break
+            }
+          }
+          const [seed] = used.slice(-1)
+          const selected = this.providers[providerTeams[seed]]
+          const one = selected[Math.floor(Math.random() * selected.length)]
+          const uploadUrl = `${one.ip}/upload`
+
+          const uploadPromise = this.uploadFile(
+            uploadUrl,
+            startBlock,
+            file,
+            merkle,
+          )
+          activeUploads.push(uploadPromise)
+        }
+      }
+    }
+
+    return activeUploads
   }
 
   /**
@@ -787,7 +793,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         providerIps,
       }
     } catch (err) {
-      throw warnError('storageHandler getFileProviders()', err)
+      throw warnError('storageHandler getFileParticulars()', err)
     }
   }
 

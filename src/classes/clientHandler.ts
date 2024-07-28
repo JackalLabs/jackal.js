@@ -90,7 +90,7 @@ export class ClientHandler implements IClientHandler {
 
     this.myCosmwasm = null
     this.myContractAddress = null
-    this.myIcaAddress = null
+    this.myIcaAddress = jklAddress
   }
 
   /**

@@ -254,7 +254,7 @@ export class EncodingHandler {
     pkg: IUploadPackage,
   ): Promise<DEncodeObject> {
     const meta = pkg.meta.export()
-    const parentAndChild = await merkleParentAndChild(`${meta.location}/${pkg.meta.getUlid()}`)
+    const parentAndChild = await merkleParentAndChild(`s/ulid/${pkg.meta.getUlid()}`)
     return this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
   }
 
@@ -348,7 +348,7 @@ export class EncodingHandler {
     const mH = pkg.meta as IShareFolderMetaHandler
     const meta = mH.export()
     const parentAndChild = await merkleParentAndIndex(
-      mH.getUlid(),
+      mH.getLocation(),
       mH.getRefString(),
     )
     return this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
