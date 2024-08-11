@@ -65,9 +65,7 @@ export class RnsHandler implements IRnsHandler {
     pagination?: IPageRequest,
   ): Promise<TQueryAllBidsResponseStrict> {
     try {
-      return await this.jackalClient
-        .getQueries()
-        .rns.allBids({ pagination })
+      return await this.jackalClient.getQueries().rns.allBids({ pagination })
     } catch (err) {
       throw err
     }
@@ -98,9 +96,7 @@ export class RnsHandler implements IRnsHandler {
     pagination?: IPageRequest,
   ): Promise<TQueryAllForSaleResponseStrict> {
     try {
-      return await this.jackalClient
-        .getQueries()
-        .rns.allForSale({ pagination })
+      return await this.jackalClient.getQueries().rns.allForSale({ pagination })
     } catch (err) {
       throw err
     }
@@ -115,9 +111,7 @@ export class RnsHandler implements IRnsHandler {
     pagination?: IPageRequest,
   ): Promise<TQueryAllNamesResponseStrict> {
     try {
-      return await this.jackalClient
-        .getQueries()
-        .rns.allNames({ pagination })
+      return await this.jackalClient.getQueries().rns.allNames({ pagination })
     } catch (err) {
       throw err
     }
@@ -176,6 +170,12 @@ export class RnsHandler implements IRnsHandler {
     }
   }
 
+  /**
+   *
+   * @param {string} name
+   * @param {TAddressPrefix} prefix
+   * @returns {Promise<string>}
+   */
   async rnsToAddress(name: string, prefix?: TAddressPrefix): Promise<string> {
     try {
       const details = await this.getNameDetails(name)

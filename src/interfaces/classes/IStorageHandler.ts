@@ -1,6 +1,6 @@
 import type { DDeliverTxResponse } from '@jackallabs/jackal.js-protos'
 import {
-  IChildMetaDataMap,
+  IBuyStorageOptions,
   IDownloadTracker,
   IFileMetaData,
   IFileParticulars,
@@ -13,6 +13,8 @@ import type { TSharedRootMetaDataMap } from '@/types'
 
 export interface IStorageHandler {
   cleanShutdown(): void
+
+  registerPubKey(chain?: true): Promise<IWrappedEncodeObject[]>
 
   loadDirectory(path?: string): Promise<void>
 
@@ -38,13 +40,9 @@ export interface IStorageHandler {
 
   planStatus(): Promise<IStorageStatus>
 
-  buyMyStoragePlan(gb: number, days?: number): Promise<any>
+  estimateStoragePlan(options: IBuyStorageOptions): Promise<number>
 
-  buyOthersStoragePlan(
-    receiver: string,
-    gb: number,
-    days?: number,
-  ): Promise<any>
+  purchaseStoragePlan(options: IBuyStorageOptions): Promise<any>
 
   createFolders(names: string | string[]): Promise<DDeliverTxResponse>
 
@@ -91,6 +89,4 @@ export interface IStorageHandler {
   readSharing(): TSharedRootMetaDataMap
 
   convert(): Promise<any>
-
-  debug(): IChildMetaDataMap
 }

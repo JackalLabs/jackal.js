@@ -40,26 +40,52 @@ export class NullMetaHandler implements INullMetaHandler {
     this.refIndex = refIndex
   }
 
+  /**
+   *
+   * @param {string} path
+   * @param {number} refIndex
+   * @returns {Promise<NullMetaHandler>}
+   */
   static async create(path: string, refIndex: number = 0) {
     return new NullMetaHandler(path, refIndex)
   }
 
+  /**
+   *
+   * @param {number} refIndex
+   */
   setRefIndex(refIndex: number): void {
     this.refIndex = refIndex
   }
 
+  /**
+   *
+   * @returns {number}
+   */
   getRefIndex(): number {
     return this.refIndex
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getRefString(): string {
     return intToHex(this.refIndex)
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getLocation(): string {
     return this.location
   }
 
+  /**
+   *
+   * @returns {INullMetaData}
+   */
   export(): INullMetaData {
     return {
       location: this.location,
@@ -87,6 +113,11 @@ export class FolderMetaHandler implements IFolderMetaHandler {
     this.whoAmI = source.whoAmI
   }
 
+  /**
+   *
+   * @param {IFolderMetaDataSource} source
+   * @returns {Promise<FolderMetaHandler>}
+   */
   static async create(source: IFolderMetaDataSource) {
     const rdy: IFolderMetaFoundationalData = {
       count: source.count,
@@ -99,43 +130,84 @@ export class FolderMetaHandler implements IFolderMetaHandler {
     return new FolderMetaHandler(rdy)
   }
 
+  /**
+   *
+   * @param {number} value
+   * @returns {number}
+   */
   addAndReturnCount(value: number): number {
     this.count += value
     return this.count
   }
 
+  /**
+   *
+   * @param {number} count
+   */
   setCount(count: number): void {
     this.count = count
   }
 
+  /**
+   *
+   * @returns {number}
+   */
   getCount(): number {
     return this.count
   }
 
+  /**
+   *
+   * @param {number} refIndex
+   */
   setRefIndex(refIndex: number): void {
     this.refIndex = refIndex
   }
 
+  /**
+   *
+   * @returns {number}
+   */
   getRefIndex(): number {
     return this.refIndex
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getRefString(): string {
     return intToHex(this.refIndex)
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getUlid(): string {
     return this.ulid
   }
 
+  /**
+   *
+   * @param {string} location
+   */
   setLocation(location: string): void {
     this.location = `s/ulid/${location}`
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getLocation(): string {
     return this.location
   }
 
+  /**
+   *
+   * @returns {IFolderMetaData}
+   */
   export(): IFolderMetaData {
     return {
       count: intToHex(this.count),
@@ -147,6 +219,10 @@ export class FolderMetaHandler implements IFolderMetaHandler {
     }
   }
 
+  /**
+   *
+   * @returns {IRefMetaData}
+   */
   exportRef(): IRefMetaData {
     return {
       location: `${this.location}/${intToHex(this.refIndex)}`,
@@ -180,6 +256,11 @@ export class FileMetaHandler implements IFileMetaHandler {
     this.ulid = source.ulid
   }
 
+  /**
+   *
+   * @param {IFileMetaDataSource} source
+   * @returns {Promise<FileMetaHandler>}
+   */
   static async create(source: IFileMetaDataSource) {
     const rdy: IFileMetaFoundationalData = {
       description: source.description || '',
@@ -211,30 +292,58 @@ export class FileMetaHandler implements IFileMetaHandler {
     return new FileMetaHandler(rdy)
   }
 
+  /**
+   *
+   * @param {number} refIndex
+   */
   setRefIndex(refIndex: number): void {
     this.refIndex = refIndex
   }
 
+  /**
+   *
+   * @returns {number}
+   */
   getRefIndex(): number {
     return this.refIndex
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getRefString(): string {
     return intToHex(this.refIndex)
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getUlid(): string {
     return this.ulid
   }
 
+  /**
+   *
+   * @param {string} location
+   */
   setLocation(location: string): void {
     this.location = `s/ulid/${location}`
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getLocation(): string {
     return this.location
   }
 
+  /**
+   *
+   * @returns {IFileMetaData}
+   */
   export(): IFileMetaData {
     return {
       description: this.description,
@@ -249,6 +358,10 @@ export class FileMetaHandler implements IFileMetaHandler {
     }
   }
 
+  /**
+   *
+   * @returns {IRefMetaData}
+   */
   exportRef(): IRefMetaData {
     return {
       location: `${this.location}/${intToHex(this.refIndex)}`,
@@ -274,6 +387,11 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
     this.whoAmI = source.whoAmI
   }
 
+  /**
+   *
+   * @param {ISharedFolderMetaDataSource} source
+   * @returns {Promise<ShareFolderMetaHandler>}
+   */
   static async create(source: ISharedFolderMetaDataSource) {
     const rdy: ISharedFolderMetaFoundationalData = {
       count: source.count,
@@ -285,35 +403,68 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
     return new ShareFolderMetaHandler(rdy)
   }
 
+  /**
+   *
+   * @param {number} value
+   * @returns {number}
+   */
   addAndReturnCount(value: number): number {
     this.count += value
     return this.count
   }
 
+  /**
+   *
+   * @returns {number}
+   */
   getCount(): number {
     return this.count
   }
 
+  /**
+   *
+   * @param {number} refIndex
+   */
   setRefIndex(refIndex: number): void {
     this.refIndex = refIndex
   }
 
+  /**
+   *
+   * @returns {number}
+   */
   getRefIndex(): number {
     return this.refIndex
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getRefString(): string {
     return intToHex(this.refIndex)
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getUlid(): string {
     return this.ulid
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getLocation(): string {
     return this.location
   }
 
+  /**
+   *
+   * @returns {IShareFolderMetaData}
+   */
   export(): IShareFolderMetaData {
     return {
       count: intToHex(this.count),
@@ -344,6 +495,11 @@ export class ShareMetaHandler implements IShareMetaHandler {
     this.ulid = source.ulid
   }
 
+  /**
+   *
+   * @param {IShareMetaDataSource} source
+   * @returns {Promise<ShareMetaHandler>}
+   */
   static async create(source: IShareMetaDataSource) {
     const rdy: IShareMetaFoundationalData = {
       label: source.label,
@@ -357,34 +513,66 @@ export class ShareMetaHandler implements IShareMetaHandler {
     return new ShareMetaHandler(rdy)
   }
 
+  /**
+   *
+   * @param {number} refIndex
+   */
   setRefIndex(refIndex: number): void {
     this.refIndex = refIndex
   }
 
+  /**
+   *
+   * @returns {number}
+   */
   getRefIndex(): number {
     return this.refIndex
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getRefString(): string {
     return intToHex(this.refIndex)
   }
 
+  /**
+   *
+   * @param {string} label
+   */
   setLabel(label: string): void {
     this.label = label
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getLabel(): string {
     return this.label
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getUlid(): string {
     return this.ulid
   }
 
+  /**
+   *
+   * @returns {string}
+   */
   getLocation(): string {
     return this.location
   }
 
+  /**
+   *
+   * @returns {IShareMetaData}
+   */
   export(): IShareMetaData {
     return {
       label: '',
@@ -396,6 +584,10 @@ export class ShareMetaHandler implements IShareMetaHandler {
     }
   }
 
+  /**
+   *
+   * @returns {IShareRefMetaData}
+   */
   exportRef(): IShareRefMetaData {
     return {
       location: `${this.location}/${intToHex(this.refIndex)}`,

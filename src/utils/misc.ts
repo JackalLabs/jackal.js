@@ -1,8 +1,4 @@
-import {
-  DEncodeObject, findQueryKey,
-  IIbcEngageBundle,
-  TxEvent,
-} from '@jackallabs/jackal.js-protos'
+import { DEncodeObject, findQueryKey, IIbcEngageBundle, TxEvent } from '@jackallabs/jackal.js-protos'
 import { secondToMS } from '@/utils/converters'
 import { sockets } from '@/utils/globalDefaults'
 import type { TSockets, TTidyStringModes } from '@/types'
@@ -84,6 +80,12 @@ export async function setDelay(seconds: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, delay))
 }
 
+/**
+ *
+ * @param {ISharedMetaDataMap} obj
+ * @param {string[]} path
+ * @returns {number}
+ */
 export function findNestedSharedDepth(
   obj: ISharedMetaDataMap,
   path: string[],
@@ -99,6 +101,12 @@ export function findNestedSharedDepth(
   return findings
 }
 
+/**
+ *
+ * @param {ISharedMetaDataMap} obj
+ * @param {string[]} path
+ * @returns {number}
+ */
 export function findNestedContentsCount(
   obj: ISharedMetaDataMap,
   path: string[],
@@ -124,15 +132,46 @@ export function signerNotEnabled(module: string, func: string): string {
   return notice
 }
 
+/**
+ *
+ * @param {number} target
+ * @returns {boolean}
+ */
 export function isItPast(target: number): boolean {
   const dd = Date.now()
   return dd > target
 }
 
+/**
+ *
+ * @param {Date} target
+ * @returns {boolean}
+ */
 export function isItPastDate(target: Date): boolean {
   return isItPast(target.getTime())
 }
 
+/**
+ *
+ * @param {T[]} source
+ * @returns {T[]}
+ */
+export function shuffleArray<T>(source: T[]): T[] {
+  const final: T[] = []
+  for (let i = source.length; i > -1; --i) {
+    final.push(source[Math.floor(Math.random() * i)])
+  }
+  return final
+}
+
+/**
+ *
+ * @param {TSockets[]} networks
+ * @param {TxEvent[]} feed
+ * @param {DEncodeObject[]} msgs
+ * @param {string} addr
+ * @returns {IIbcEngageBundle<TxEvent>[]}
+ */
 export function makeConnectionBundles(
   networks: TSockets[],
   feed: TxEvent[],
@@ -158,8 +197,8 @@ export function makeConnectionBundles(
         return resp
       }
     }
-    const query = `${findQueryKey(url)} = '${addr}'`
 
+    const query = `${findQueryKey(url)} = '${addr}'`
     for (let id of networks) {
       const { chainId, endpoint } = sockets[id]
       console.log('makeConnectionBundles')
@@ -177,36 +216,3 @@ export function makeConnectionBundles(
   }
   return bundles
 }
-
-export function makeConnectionBundle(
-  id: TSockets,
-  feed: TxEvent[],
-  msgKey: string,
-  query?: string,
-): IIbcEngageBundle<TxEvent> {
-  const { chainId, endpoint } = sockets[id]
-  console.log('makeConnectionBundle')
-  console.log('chainId:', chainId)
-  console.log('endpoint:', endpoint)
-
-  function parser(resp: any) {
-    try {
-      // return parseMsgResponse(msgKey, resp)
-      return resp
-    } catch {
-      console.log('msgKey failed:', msgKey)
-      // return null
-      return resp
-    }
-  }
-
-  return {
-    chainId,
-    endpoint,
-    feed,
-    parser,
-    query,
-  }
-}
-
-

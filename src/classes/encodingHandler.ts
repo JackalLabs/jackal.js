@@ -8,6 +8,7 @@ import {
   DMsgCreateNotification,
   DMsgExecuteContract,
   DMsgInstantiateContract,
+  DMsgPostKey,
   DMsgStorageDeleteFile,
   DMsgStoragePostFile,
   DUnifiedFile,
@@ -17,13 +18,15 @@ import {
 } from '@jackallabs/jackal.js-protos'
 import {
   IClientHandler,
+  IFileDeletePackage,
   IFileMetaHandler,
   IFileTreeOptions,
   IFileTreePackage,
   IFiletreeReader,
   IFolderMetaHandler,
   INotificationPackage,
-  INullMetaHandler, IRootLookupMetaData,
+  INullMetaHandler,
+  IRootLookupMetaData,
   IShareFolderMetaHandler,
   IShareMetaHandler,
   IUploadPackage,
@@ -67,21 +70,34 @@ export class EncodingHandler {
       client,
       jackalSigner,
       keyPair,
-      this.jklAddress,
+      client.getICAJackalAddress(),
     )
   }
 
+  /**
+   *
+   * @param {PrivateKey} keyPair
+   * @protected
+   */
   protected resetReader(keyPair: PrivateKey): void {
     this.reader = new FiletreeReader(
       this.jackalClient,
       this.jackalSigner,
       keyPair,
-      this.jklAddress,
+      this.jackalClient.getICAJackalAddress(),
     )
   }
 
   /* cosmwasm */
-
+  /**
+   *
+   * @param {string} connectionIdA
+   * @param {string} connectionIdB
+   * @param {number} codeId
+   * @param {string} label
+   * @returns {DEncodeObject}
+   * @protected
+   */
   protected encodeInstantiateContract(
     connectionIdA: string,
     connectionIdB: string,
@@ -111,6 +127,13 @@ export class EncodingHandler {
     )
   }
 
+  /**
+   *
+   * @param {string} contractAddress
+   * @param {DEncodeObject} execMsg
+   * @returns {DEncodeObject}
+   * @protected
+   */
   protected encodeExecuteContract(
     contractAddress: string,
     execMsg: DEncodeObject,
@@ -139,6 +162,14 @@ export class EncodingHandler {
     return this.hostSigner.txLibrary.cosmwasm.msgExecuteContract(forExecute)
   }
 
+  /**
+   *
+   * @param {string} connectionIdA
+   * @param {string} connectionIdB
+   * @param {number} codeId
+   * @returns {IWrappedEncodeObject[]}
+   * @protected
+   */
   protected instantiateToMsgs(
     connectionIdA: string,
     connectionIdB: string,
@@ -162,6 +193,13 @@ export class EncodingHandler {
     }
   }
 
+  /**
+   *
+   * @param {string} contractAddress
+   * @param {DEncodeObject | DEncodeObject[]} execs
+   * @returns {DEncodeObject[]}
+   * @protected
+   */
   protected executeToSpecialMsgs(
     contractAddress: string,
     execs: DEncodeObject | DEncodeObject[],
@@ -182,6 +220,19 @@ export class EncodingHandler {
   }
 
   /* end cosmwasm */
+  /**
+   *
+   * @param {string} key
+   * @returns {DEncodeObject}
+   * @protected
+   */
+  protected encodePostKey(key: string): DEncodeObject {
+    const forKey: DMsgPostKey = {
+      creator: this.hostAddress,
+      key,
+    }
+    return this.jackalSigner.txLibrary.fileTree.msgPostKey(forKey)
+  }
 
   /**
    *
@@ -254,7 +305,9 @@ export class EncodingHandler {
     pkg: IUploadPackage,
   ): Promise<DEncodeObject> {
     const meta = pkg.meta.export()
-    const parentAndChild = await merkleParentAndChild(`s/ulid/${pkg.meta.getUlid()}`)
+    const parentAndChild = await merkleParentAndChild(
+      `s/ulid/${pkg.meta.getUlid()}`,
+    )
     return this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
   }
 
@@ -297,7 +350,7 @@ export class EncodingHandler {
 
     const lookup: IRootLookupMetaData = {
       metaDataType: 'rootlookup',
-      ulid: mH.getUlid()
+      ulid: mH.getUlid(),
     }
 
     const parentAndChild = await merkleParentAndChild(`s/ulid/${meta.whoAmI}`)
@@ -395,6 +448,12 @@ export class EncodingHandler {
     })
   }
 
+  /**
+   *
+   * @param {INotificationPackage} pkg
+   * @returns {Promise<DEncodeObject>}
+   * @protected
+   */
   protected async encodeCreateNotification(
     pkg: INotificationPackage,
   ): Promise<DEncodeObject> {
@@ -516,7 +575,11 @@ export class EncodingHandler {
         name: 'ulid',
       })
       const parentAndChild = await merkleParentAndChild('s/ulid')
-      const fileTreeFolder =  this.storageEncodeFileTree(parentAndChild, ulidMeta.export(), { aes })
+      const fileTreeFolder = this.storageEncodeFileTree(
+        parentAndChild,
+        ulidMeta.export(),
+        { aes },
+      )
 
       return [
         {
@@ -529,6 +592,12 @@ export class EncodingHandler {
     }
   }
 
+  /**
+   *
+   * @param {IFileTreePackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
   protected async sharedFolderToMsgs(
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
@@ -550,6 +619,12 @@ export class EncodingHandler {
     }
   }
 
+  /**
+   *
+   * @param {IFileTreePackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
   protected async sharedFileToMsgs(
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
@@ -582,41 +657,36 @@ export class EncodingHandler {
   ): Promise<IWrappedEncodeObject[]> {
     try {
       const fileTreeNull = this.encodeFileTreeNull(pkg)
-      const ref = this.encodeFileTreeRef(pkg)
       return [
         {
           encodedObject: await fileTreeNull,
           modifier: 0,
         },
-        {
-          encodedObject: await ref,
-          modifier: 0,
-        },
       ]
     } catch (err) {
-      throw warnError('storageHandler deleteToMsgs()', err)
+      throw warnError('storageHandler filetreeDeleteToMsgs()', err)
     }
   }
 
-  /* TODO - finish */
-  protected async fileDeleteToMsgs(
-    pkg: IFileTreePackage,
-  ): Promise<IWrappedEncodeObject[]> {
+  /**
+   *
+   * @param {IFileDeletePackage} filePkg
+   * @returns {IWrappedEncodeObject[]}
+   * @protected
+   */
+  protected fileDeleteToMsgs(
+    filePkg: IFileDeletePackage,
+  ): IWrappedEncodeObject[] {
     try {
-      const fileTreeNull = this.encodeFileTreeNull(pkg)
-      const ref = this.encodeFileTreeRef(pkg)
       return [
         {
-          encodedObject: await fileTreeNull,
-          modifier: 0,
-        },
-        {
-          encodedObject: await ref,
+          encodedObject:
+            this.jackalSigner.txLibrary.storage.msgDeleteFile(filePkg),
           modifier: 0,
         },
       ]
     } catch (err) {
-      throw warnError('storageHandler deleteToMsgs()', err)
+      throw warnError('storageHandler fileDeleteToMsgs()', err)
     }
   }
 
@@ -656,6 +726,12 @@ export class EncodingHandler {
     }
   }
 
+  /**
+   *
+   * @param {IUploadPackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
   protected async legacyPkgToMsgs(
     pkg: IUploadPackage,
   ): Promise<IWrappedEncodeObject[]> {

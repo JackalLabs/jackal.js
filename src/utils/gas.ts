@@ -1,7 +1,6 @@
 import { IFinalGas, IWrappedEncodeObject } from '@/interfaces'
 import { DEncodeObject } from '@jackallabs/jackal.js-protos'
 
-const gasMultiplier = 1100
 const gasBaselineRate = 56
 const gasFallbackTxCost = 142
 const gasMap: Record<string, number> = {
@@ -36,21 +35,23 @@ USING MODIFIERS
  * @returns {number} - Adjusted number of gas units collection is expected to require.
  */
 export function estimateGas(msgArray: IWrappedEncodeObject[]): number {
-  return calculateGas(msgArray)[0]
+  return calculateGas(msgArray, 0)[0]
 }
 
 /**
  * Return a Gas object for use in a masterBroadcaster()-like call.
  * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @param {number} gasMultiplier - Multiplier for calculating gas.
  * @param {number} gasOverride - Value to replace calculated gas value.
  * @returns {IFinalGas} - Gas object with best estimate based on input.
  * @private
  */
 export function finalizeGas(
   msgArray: IWrappedEncodeObject[],
+  gasMultiplier: number,
   gasOverride?: number,
 ): IFinalGas {
-  const [gas, msgs] = calculateGas(msgArray)
+  const [gas, msgs] = calculateGas(msgArray, gasMultiplier)
   const totalGas = Number(gasOverride) || gas
   return {
     fee: {
@@ -66,11 +67,13 @@ export function finalizeGas(
 /**
  * Calculate gas and unwrap msgs to prepare for broadcasting.
  * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @param {number} gasMultiplier - Multiplier for calculating gas.
  * @returns {[number, DEncodeObject[]]} - Tuple of adjusted number of gas units collection is expected to require and unwrapped msg array.
  * @private
  */
 function calculateGas(
   msgArray: IWrappedEncodeObject[],
+  gasMultiplier: number
 ): [number, DEncodeObject[]] {
   const objects: DEncodeObject[] = []
   let gas = gasBaselineRate

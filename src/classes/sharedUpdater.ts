@@ -55,7 +55,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
 
   /**
    *
-   * @returns {Promise<void>}
+   * @returns {Promise<number>}
    */
   async fetchNotifications(): Promise<number> {
     try {
@@ -73,6 +73,10 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
     }
   }
 
+  /**
+   *
+   * @returns {Promise<void>}
+   */
   async digest(): Promise<void> {
     try {
       for (let one of this.notifications) {
@@ -108,7 +112,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
                 await ShareFolderMetaHandler.create({
                   count: size + 1,
                   location: '',
-                  name: ''
+                  name: '',
                 })
             }
 
@@ -152,6 +156,12 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
     }
   }
 
+  /**
+   *
+   * @param {string} sender
+   * @returns {Promise<void>}
+   * @protected
+   */
   protected async maybeMakeSharer(sender: string): Promise<void> {
     const path = `s/${sharedPath}/${sender}`
     if (path in this.existingPaths) {
@@ -175,6 +185,14 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
     }
   }
 
+  /**
+   *
+   * @param {string} sender
+   * @param {string[]} base
+   * @param {number} offset
+   * @returns {string[]}
+   * @protected
+   */
   protected makeFreshFolders(
     sender: string,
     base: string[],
@@ -188,6 +206,12 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
     return full
   }
 
+  /**
+   *
+   * @param {string} path
+   * @returns {number}
+   * @protected
+   */
   protected findRefIndex(path: string): number {
     const chunks = path.split('/')
     chunks.pop()
@@ -201,6 +225,11 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
     }
   }
 
+  /**
+   *
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
   protected async buildMsgQueue(): Promise<IWrappedEncodeObject[]> {
     try {
       const msgs: IWrappedEncodeObject[] = []

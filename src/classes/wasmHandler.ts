@@ -1,6 +1,7 @@
 import { signerNotEnabled } from '@/utils/misc'
 import type {
-  DDeliverTxResponse, DEncodeObject,
+  DDeliverTxResponse,
+  DEncodeObject,
   DQuerySmartContractStateRequest,
   THostSigningClient,
   TJackalSigningClient,
@@ -17,7 +18,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
     client: IClientHandler,
     jackalSigner: TJackalSigningClient,
     hostSigner: THostSigningClient,
-    keyPair: PrivateKey
+    keyPair: PrivateKey,
   ) {
     super(client, jackalSigner, hostSigner, keyPair)
   }
@@ -25,7 +26,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
   /**
    *
    * @param {IClientHandler} client
-   * @returns {Promise<RnsHandler>}
+   * @returns {Promise<IWasmHandler>}
    */
   static async init(client: IClientHandler): Promise<IWasmHandler> {
     const jackalSigner = client.getJackalSigner()
@@ -43,14 +44,21 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
 
   /**
    * Instantiate a CosmWasm contract.
+   * @param {string} connectionIdA
+   * @param {string} connectionIdB
+   * @param {number} codeId
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async instantiateICA(): Promise<DDeliverTxResponse> {
+  async instantiateICA(
+    connectionIdA: string,
+    connectionIdB: string,
+    codeId: number,
+  ): Promise<DDeliverTxResponse> {
     try {
       const wrapped: IWrappedEncodeObject[] = this.instantiateToMsgs(
-        'connection-0',
-        'connection-0',
-        1
+        connectionIdA,
+        connectionIdB,
+        codeId,
       )
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
@@ -60,7 +68,12 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
     }
   }
 
-  async getICAContractAddress(): Promise<string> {
+  /**
+   *
+   * @param {number} [index]
+   * @returns {Promise<string>}
+   */
+  async getICAContractAddress(index: number = 0): Promise<string> {
     const contractsByCreator =
       await this.hostSigner.queries.cosmwasm.contractsByCreator({
         creatorAddress: this.hostAddress,
@@ -68,15 +81,24 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
 
     const contracts = contractsByCreator.contractAddresses
 
-    return contracts[0] || ''
+    return contracts[index] || ''
   }
 
+  /**
+   *
+   * @returns {Promise<string>}
+   */
   async getICAJackalAddress(): Promise<string> {
     const address = await this.getICAContractAddress()
 
     return this.getJackalAddressFromContract(address)
   }
 
+  /**
+   *
+   * @param {string} contractAddress
+   * @returns {Promise<string>}
+   */
   async getJackalAddressFromContract(contractAddress: string): Promise<string> {
     try {
       const q = { get_contract_state: {} }
@@ -96,7 +118,16 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
     }
   }
 
-  wrapEncodeObjectsForBroadcast(contract: string, msgs: DEncodeObject[]): DEncodeObject[] {
+  /**
+   *
+   * @param {string} contract
+   * @param {DEncodeObject[]} msgs
+   * @returns {DEncodeObject[]}
+   */
+  wrapEncodeObjectsForBroadcast(
+    contract: string,
+    msgs: DEncodeObject[],
+  ): DEncodeObject[] {
     return this.executeToSpecialMsgs(contract, msgs)
   }
 }

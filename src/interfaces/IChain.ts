@@ -38,4 +38,5 @@ export interface IChainCurrency {
 export interface ISocketConfig {
   chainId: string
   endpoint: string
+  gasMultiplier: number
 }

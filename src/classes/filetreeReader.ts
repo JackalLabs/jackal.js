@@ -13,7 +13,8 @@ import {
   INotificationRecord,
   IPrivateNotification,
   IReconstructedFileTree,
-  IRefMetaData, IRootLookupMetaData,
+  IRefMetaData,
+  IRootLookupMetaData,
   ISharedMetaDataMap,
   IShareFolderMetaData,
   IShareMetaData,
@@ -135,6 +136,11 @@ export class FiletreeReader implements IFiletreeReader {
     }
   }
 
+  /**
+   *
+   * @param {string} path
+   * @returns {Promise<IFolderMetaHandler>}
+   */
   async loadFolderMetaHandler(path: string): Promise<IFolderMetaHandler> {
     try {
       const lookup = await this.pathToLookup(path)
@@ -446,6 +452,10 @@ export class FiletreeReader implements IFiletreeReader {
     }
   }
 
+  /**
+   *
+   * @returns {Promise<DMsgProvisionFileTree>}
+   */
   async encodeProvisionFileTree(): Promise<DMsgProvisionFileTree> {
     try {
       const trackingNumber = crypto.randomUUID()
@@ -645,10 +655,16 @@ export class FiletreeReader implements IFiletreeReader {
               const hexRootAddress = await merklePath(`s/ulid/${path}`)
               const rootLookup = {
                 address: hexRootAddress,
-                ownerAddress: await hashAndHexOwner(hexRootAddress, ownerAddress),
+                ownerAddress: await hashAndHexOwner(
+                  hexRootAddress,
+                  ownerAddress,
+                ),
               }
-              const { file } = await this.jackalSigner.queries.fileTree.file(rootLookup)
-              const lookup = await this.decryptAndParseContents(file) as IRootLookupMetaData
+              const { file } =
+                await this.jackalSigner.queries.fileTree.file(rootLookup)
+              const lookup = (await this.decryptAndParseContents(
+                file,
+              )) as IRootLookupMetaData
               console.log(lookup)
               if (!(ownerAddress in this.redpages)) {
                 this.redpages[ownerAddress] = {}
@@ -657,7 +673,11 @@ export class FiletreeReader implements IFiletreeReader {
               if (!(ownerAddress in this.yellowpages)) {
                 this.yellowpages[ownerAddress] = {}
               }
-              await this.setYellowpages(path, ownerAddress, this.redpages[ownerAddress][path])
+              await this.setYellowpages(
+                path,
+                ownerAddress,
+                this.redpages[ownerAddress][path],
+              )
               await this.pathToLookupPostProcess(
                 path,
                 ownerAddress,
@@ -669,7 +689,6 @@ export class FiletreeReader implements IFiletreeReader {
             if (this.yellowpages[ownerAddress][path]) {
               return this.yellowpages[ownerAddress][path]
             } else {
-
               const parentPath = path.split('/').slice(0, -1).join('/')
               await this.pathToLookup(parentPath, ownerAddress)
               await this.pathToLookupPostProcess(
@@ -678,9 +697,7 @@ export class FiletreeReader implements IFiletreeReader {
                 this.yellowpages[ownerAddress][path],
               )
               return this.yellowpages[ownerAddress][path]
-
             }
-
         }
       }
     } catch (err) {
@@ -721,12 +738,20 @@ export class FiletreeReader implements IFiletreeReader {
             if (meta.metaDataType === 'folder') {
               const loopPath = `${path}/${meta.whoAmI}`
               this.redpages[ownerAddress][loopPath] = refMeta.pointsTo
-              await this.setYellowpages(loopPath, ownerAddress, refMeta.pointsTo)
+              await this.setYellowpages(
+                loopPath,
+                ownerAddress,
+                refMeta.pointsTo,
+              )
               this.bluepages[ownerAddress][path].folders[i] = meta
             } else if (meta.metaDataType === 'file') {
               const loopPath = `${path}/${meta.fileMeta.name}`
               this.redpages[ownerAddress][loopPath] = refMeta.pointsTo
-              await this.setYellowpages(loopPath, ownerAddress, refMeta.pointsTo)
+              await this.setYellowpages(
+                loopPath,
+                ownerAddress,
+                refMeta.pointsTo,
+              )
               this.bluepages[ownerAddress][path].files[i] = meta
             } else if (meta.metaDataType === 'null') {
               const handler = await NullMetaHandler.create(meta.location, i)
@@ -755,11 +780,9 @@ export class FiletreeReader implements IFiletreeReader {
   protected async setYellowpages(
     path: string,
     ownerAddress: string,
-    pointsTo: string
+    pointsTo: string,
   ): Promise<void> {
-    const hexAddress = await merklePath(
-      `s/ulid/${pointsTo}`,
-    )
+    const hexAddress = await merklePath(`s/ulid/${pointsTo}`)
     this.yellowpages[ownerAddress][path] = {
       address: hexAddress,
       ownerAddress: await hashAndHexOwner(hexAddress, ownerAddress),

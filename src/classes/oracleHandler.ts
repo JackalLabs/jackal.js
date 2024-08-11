@@ -34,9 +34,7 @@ export class OracleHandler implements IOracleHandler {
    */
   async getFeed(name: string): Promise<DFeed> {
     try {
-      const result = await this.jackalClient
-        .getQueries()
-        .oracle.feed({ name })
+      const result = await this.jackalClient.getQueries().oracle.feed({ name })
       return result.feed
     } catch (err) {
       throw err
@@ -145,6 +143,12 @@ export class OracleHandler implements IOracleHandler {
     })
   }
 
+  /**
+   *
+   * @param {Record<string, any>} data
+   * @returns {string}
+   * @protected
+   */
   protected stringifyDataContents(data: Record<string, any> = {}): string {
     try {
       return JSON.stringify(data)

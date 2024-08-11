@@ -4,7 +4,9 @@ import {
   connectJackalQueryClient,
   connectJackalSigningClient,
   IIbcEngageBundle,
-  ITxLibrary, THostQueryClient, THostSigningClient,
+  ITxLibrary,
+  THostQueryClient,
+  THostSigningClient,
   TJackalQueryClient,
   TJackalSigningClient,
   TMergedSigner,
@@ -15,6 +17,7 @@ import {
   jackalTestnetChainConfig,
   jackalTestnetChainId,
   jackalTestnetRpc,
+  sockets,
 } from '@/utils/globalDefaults'
 import {
   makeConnectionBundles,
@@ -30,7 +33,7 @@ import {
   WasmHandler,
 } from '@/classes'
 import { finalizeGas } from '@/utils/gas'
-import type {
+import {
   IAvailableWallets,
   IBroadcastOptions,
   IBroadcastResults,
@@ -38,7 +41,9 @@ import type {
   IClientSetup,
   IOracleHandler,
   IRnsHandler,
-  IStorageHandler, IWasmHandler,
+  IStorageHandler,
+  IWalletDetails,
+  IWasmHandler,
   IWrappedEncodeObject,
 } from '@/interfaces'
 import type { TSockets } from '@/types'
@@ -54,8 +59,9 @@ export class ClientHandler implements IClientHandler {
   protected readonly hostChainId: string
   protected readonly proofWindow: number
   protected readonly selectedWallet: string
-  protected readonly isLedger: boolean
+  protected readonly details: IWalletDetails
   protected readonly networks: TSockets[]
+  protected readonly gasMultiplier: number
 
   protected myCosmwasm: IWasmHandler | null
   protected myContractAddress: string | null
@@ -72,8 +78,9 @@ export class ClientHandler implements IClientHandler {
     hostChainId: string,
     proofWindow: number,
     selectedWallet: string,
-    isLedger: boolean,
-    networks: TSockets[]
+    details: IWalletDetails,
+    networks: TSockets[],
+    gasMultiplier: number,
   ) {
     this.jklQuery = jklQuery
     this.hostQuery = hostQuery
@@ -85,8 +92,9 @@ export class ClientHandler implements IClientHandler {
     this.hostChainId = hostChainId
     this.proofWindow = proofWindow
     this.selectedWallet = selectedWallet
-    this.isLedger = isLedger
+    this.details = details
     this.networks = networks
+    this.gasMultiplier = gasMultiplier
 
     this.myCosmwasm = null
     this.myContractAddress = null
@@ -107,16 +115,26 @@ export class ClientHandler implements IClientHandler {
         chainId = jackalTestnetChainId,
         mnemonic = '' /* options = {}, */,
         selectedWallet = 'leap',
-        networks = ['jackal']
+        networks = ['jackal'],
+        gasMultiplier,
       } = setup
       const jklQuery = connectJackalQueryClient(endpoint, {})
-      const hostQuery = (!host) ? jklQuery : connectHostQueryClient(host.endpoint, {})
+      const hostQuery = !host
+        ? jklQuery
+        : connectHostQueryClient(host.endpoint, {})
       let jklSigner: TJackalSigningClient | null = null
       let hostSigner: THostSigningClient | null = null
       let jklAddress = ''
       let hostAddress = ''
       let proofWindow: number = 7200
-      let isLedger = false
+      let details: IWalletDetails = {
+        name: '',
+        algo: '',
+        pubKey: new Uint8Array(),
+        address: new Uint8Array(),
+        bech32Address: '',
+        isNanoLedger: false,
+      }
 
       switch (selectedWallet) {
         case 'keplr':
@@ -128,14 +146,9 @@ export class ClientHandler implements IClientHandler {
             const signer = (await window.keplr.getOfflineSignerAuto(
               chainId,
             )) as TMergedSigner
-            jklSigner = await connectJackalSigningClient(
-              endpoint,
-              signer,
-              {},
-            )
+            jklSigner = await connectJackalSigningClient(endpoint, signer, {})
             jklAddress = (await signer.getAccounts())[0].address
-            const details = await window.keplr.getKey(chainId)
-            isLedger = details.isNanoLedger
+            details = await window.keplr.getKey(chainId)
 
             if (host) {
               await window.keplr.experimentalSuggestChain(host.chainConfig)
@@ -166,14 +179,9 @@ export class ClientHandler implements IClientHandler {
               {},
             )) as TMergedSigner
             if ('signAmino' in signer) {
-              jklSigner = await connectJackalSigningClient(
-                endpoint,
-                signer,
-                {},
-              )
+              jklSigner = await connectJackalSigningClient(endpoint, signer, {})
               jklAddress = (await signer.getAccounts())[0].address
-              const details = await window.leap.getKey(chainId)
-              isLedger = details.isNanoLedger
+              details = await window.leap.getKey(chainId)
 
               if (host) {
                 await window.leap.experimentalSuggestChain(host.chainConfig)
@@ -207,11 +215,7 @@ export class ClientHandler implements IClientHandler {
           } else {
             const wallet = await MnemonicWallet.init(mnemonic)
             const signer = wallet.getOfflineSigner()
-            jklSigner = await connectJackalSigningClient(
-              endpoint,
-              signer,
-              {},
-            )
+            jklSigner = await connectJackalSigningClient(endpoint, signer, {})
             jklAddress = wallet.getAddress()
             hostSigner = jklSigner
             hostAddress = jklAddress
@@ -228,6 +232,18 @@ export class ClientHandler implements IClientHandler {
           .proofWindow
       }
 
+      let myGasMultiplier = 0
+      if (networks.includes('jackal')) {
+        if (networks.length === 1) {
+          myGasMultiplier = sockets['jackal'].gasMultiplier
+        } else {
+          const subset = networks.filter((value) => value !== 'jackal')
+          myGasMultiplier = sockets[subset[0]].gasMultiplier
+        }
+      } else {
+        myGasMultiplier = sockets[networks[0]].gasMultiplier
+      }
+
       return new ClientHandler(
         await jklQuery,
         await hostQuery,
@@ -239,8 +255,9 @@ export class ClientHandler implements IClientHandler {
         host?.chainId || chainId,
         proofWindow,
         selectedWallet,
-        isLedger,
-        networks
+        details,
+        networks,
+        gasMultiplier || myGasMultiplier,
       )
     } catch (err) {
       throw warnError('ClientHandler connect()', err)
@@ -277,13 +294,21 @@ export class ClientHandler implements IClientHandler {
   async createWasmStorageHandler(): Promise<IStorageHandler> {
     try {
       this.myCosmwasm = await WasmHandler.init(this)
-      this.myContractAddress = await this.myCosmwasm.getICAContractAddress()
+      this.myContractAddress = await this.myCosmwasm.getICAContractAddress(1)
       if (!this.myContractAddress) {
-        await this.myCosmwasm.instantiateICA()
-        this.myContractAddress = await this.myCosmwasm.getICAContractAddress()
+        await this.myCosmwasm.instantiateICA(
+          'connection-18',
+          'connection-50',
+          546,
+        )
+        this.myContractAddress = await this.myCosmwasm.getICAContractAddress(1)
       }
-      this.myIcaAddress = await this.myCosmwasm.getJackalAddressFromContract(this.myContractAddress)
-      return await StorageHandler.init(this, { accountAddress: this.myIcaAddress })
+      this.myIcaAddress = await this.myCosmwasm.getJackalAddressFromContract(
+        this.myContractAddress,
+      )
+      return await StorageHandler.init(this, {
+        accountAddress: this.myIcaAddress,
+      })
     } catch (err) {
       console.warn(err)
       throw warnError('ClientHandler createWasmStorageHandler()', err)
@@ -335,7 +360,15 @@ export class ClientHandler implements IClientHandler {
    * @returns {boolean}
    */
   getIsLedger(): boolean {
-    return this.isLedger
+    return this.details.isNanoLedger
+  }
+
+  /**
+   *
+   * @returns {IWalletDetails}
+   */
+  getWalletDetails(): IWalletDetails {
+    return this.details
   }
 
   /**
@@ -448,6 +481,10 @@ export class ClientHandler implements IClientHandler {
     }
   }
 
+  /**
+   *
+   * @returns {Promise<boolean>}
+   */
   async myPubKeyIsPublished(): Promise<boolean> {
     try {
       const key = await this.findPubKey(this.myIcaAddress || this.hostAddress)
@@ -473,35 +510,49 @@ export class ClientHandler implements IClientHandler {
       )
     }
     try {
-      let chosenSigner: THostSigningClient | TJackalSigningClient = this.jklSigner
+      let chosenSigner: THostSigningClient | TJackalSigningClient =
+        this.jklSigner
+      if (this.networks.length > 1) {
+        chosenSigner = this.hostSigner
+        console.log('Switching to ' + this.hostAddress)
+      }
 
       const {
         gasOverride,
         memo,
         broadcastTimeoutHeight,
-        monitorTimeout = 30
+        monitorTimeout = 30,
       } = options
       const events: TxEvent[] = []
       const ready: IWrappedEncodeObject[] =
         wrappedMsgs instanceof Array ? [...wrappedMsgs] : [wrappedMsgs]
-      let { fee, msgs } = finalizeGas(ready, gasOverride)
+      let { fee, msgs } = finalizeGas(ready, this.gasMultiplier, gasOverride)
 
-      const connectionBundles: IIbcEngageBundle<TxEvent>[] = makeConnectionBundles(this.networks, events, msgs, this.myIcaAddress || this.hostAddress)
+      const connectionBundles: IIbcEngageBundle<TxEvent>[] =
+        makeConnectionBundles(
+          this.networks,
+          events,
+          msgs,
+          this.myIcaAddress || this.hostAddress,
+        )
       console.log('connectionBundles:', connectionBundles)
 
       if (this.myContractAddress && this.myCosmwasm) {
         chosenSigner = this.hostSigner
-        msgs = this.myCosmwasm.wrapEncodeObjectsForBroadcast(this.myContractAddress, msgs)
+        msgs = this.myCosmwasm.wrapEncodeObjectsForBroadcast(
+          this.myContractAddress,
+          msgs,
+        )
       }
       chosenSigner.monitor(connectionBundles)
       const broadcastResult = chosenSigner.selfSignAndBroadcast(msgs, {
         fee,
         memo,
-        timeoutHeight: broadcastTimeoutHeight
+        timeoutHeight: broadcastTimeoutHeight,
       })
 
       return new Promise((resolve, reject) => {
-        (async () => {
+        ;(async () => {
           let eventsAreFinished = false
           let rejected = false
           const broadcastTimeout = setTimeout(async () => {

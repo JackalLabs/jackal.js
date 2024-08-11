@@ -3,12 +3,12 @@ import {
   TJackalSigningClient,
   TQueryExtensions,
 } from '@jackallabs/jackal.js-protos'
-import type {
+import {
   IBroadcastOptions,
   IBroadcastResults,
   IOracleHandler,
   IRnsHandler,
-  IStorageHandler,
+  IStorageHandler, IWalletDetails,
   IWrappedEncodeObject,
 } from '@/interfaces'
 
@@ -26,6 +26,8 @@ export interface IClientHandler {
   getHostChainId(): string
 
   getIsLedger(): boolean
+
+  getWalletDetails(): IWalletDetails
 
   getSelectedWallet(): string
 

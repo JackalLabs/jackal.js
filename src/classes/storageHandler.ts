@@ -9,6 +9,7 @@ import { PrivateKey } from 'eciesjs'
 import { extractFileMetaData } from '@/utils/converters'
 import {
   isItPastDate,
+  shuffleArray,
   signerNotEnabled,
   tidyString,
   warnError,
@@ -26,16 +27,20 @@ import { SharedUpdater } from '@/classes/sharedUpdater'
 import { bech32 } from '@jackallabs/bech32'
 import {
   IAesBundle,
+  IBuyStorageOptions,
   IChecks,
   IChildMetaDataMap,
   IClientHandler,
   IDownloadTracker,
   IFileMetaData,
   IFileParticulars,
+  IFileTreePackage,
   IFolderMetaData,
   IFolderMetaHandler,
   INotification,
-  INotificationPackage, IProviderIpSet, IProviderPool,
+  INotificationPackage,
+  IProviderIpSet,
+  IProviderPool,
   IProviderUploadResponse,
   IRnsHandler,
   IStagedUploadPackage,
@@ -155,6 +160,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     }
   }
 
+  /**
+   *
+   * @param {IClientHandler} client
+   * @returns {Promise<TFullSignerState>}
+   */
   static async enableFullSigner(
     client: IClientHandler,
   ): Promise<TFullSignerState> {
@@ -221,11 +231,40 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
+   * @param {true} chain
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   */
+  async registerPubKey(chain?: true): Promise<IWrappedEncodeObject[]> {
+    if (await this.checkLocked({ signer: true })) {
+      throw new Error('Locked.')
+    }
+    try {
+      const msgs: IWrappedEncodeObject[] = [
+        {
+          encodedObject: this.encodePostKey(this.keyPair.publicKey.toHex()),
+          modifier: 0,
+        },
+      ]
+      if (chain) {
+        return msgs
+      } else {
+        const postBroadcast =
+          await this.jackalClient.broadcastAndMonitorMsgs(msgs)
+        console.log('registerPubKey:', postBroadcast.txEvents[0])
+        return []
+      }
+    } catch (err) {
+      throw warnError('storageHandler registerPubKey()', err)
+    }
+  }
+
+  /**
+   *
    * @param {string} [path]
    * @returns {Promise<void>}
    */
   async loadDirectory(path?: string): Promise<void> {
-    if (this.checkLocked({ noConvert: true, signer: true })) {
+    if (await this.checkLocked({ noConvert: true, signer: true })) {
       throw new Error('Locked.')
     }
     try {
@@ -242,7 +281,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<void>}
    */
   async loadShared(): Promise<void> {
-    if (this.checkLocked({ signer: true })) {
+    if (await this.checkLocked({ signer: true })) {
       throw new Error('Locked.')
     }
     try {
@@ -297,7 +336,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    */
   async upgradeSigner(): Promise<void> {
     try {
-      [this.keyPair, this.fullSigner] = await StorageHandler.enableFullSigner(
+      ;[this.keyPair, this.fullSigner] = await StorageHandler.enableFullSigner(
         this.jackalClient,
       )
     } catch (err) {
@@ -310,7 +349,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<string[]>}
    */
   async getAvailableProviders(): Promise<string[]> {
-    const data =  await this.jackalClient.getQueries().storage.activeProviders()
+    const data = await this.jackalClient.getQueries().storage.activeProviders()
     console.log(data)
     const final: string[] = []
     for (let value of data.providers) {
@@ -328,7 +367,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     const ips: Record<string, string> = {}
     for (let address of providers) {
       console.log(address)
-      const details = await this.jackalClient.getQueries().storage.provider({ address })
+      const details = await this.jackalClient
+        .getQueries()
+        .storage.provider({ address })
       console.log(details)
       ips[details.provider.address] = details.provider.ip
     }
@@ -338,22 +379,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @returns {Promise<IProviderIpSet>}
-   * @protected
-   */
-  protected async loadProvidersFromChain(): Promise<IProviderIpSet> {
-    const providers = await this.getAvailableProviders()
-    console.log(providers)
-    return await this.findProviderIps(providers)
-  }
-
-  /**
-   *
    * @param {IProviderIpSet} providers
    * @returns {Promise<void>}
    */
   async loadProviderPool(providers?: IProviderIpSet): Promise<void> {
-    providers = providers || await this.loadProvidersFromChain()
+    providers = providers || (await this.loadProvidersFromChain())
     console.log(providers)
     for (let ip of Object.values(providers)) {
       console.log(ip)
@@ -365,7 +395,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
       this.providers[root].push({
         ip,
-        failures: 0
+        failures: 0,
       })
       console.log(this.providers)
     }
@@ -376,17 +406,21 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<any>}
    */
   async initStorage(): Promise<any> {
-    if (this.checkLocked({ signer: true })) {
+    if (await this.checkLocked({ signer: true })) {
       throw new Error('Locked.')
     }
-    // await this.loadDirectory()
     try {
-      const msgs = await this.initUlidHome()
-      const postBroadcast =
-        await this.jackalClient.broadcastAndMonitorMsgs(msgs)
-      return postBroadcast
-    } catch (err) {
-      throw warnError('storageHandler initStorage()', err)
+      await this.loadDirectory()
+    } catch {
+      try {
+        const msgs = await this.initUlidHome()
+        const postBroadcast =
+          await this.jackalClient.broadcastAndMonitorMsgs(msgs)
+        await this.loadDirectory()
+        return postBroadcast
+      } catch (err) {
+        throw warnError('storageHandler initStorage()', err)
+      }
     }
   }
 
@@ -414,30 +448,26 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {number} gb
-   * @param {number} [days]
-   * @returns {Promise<any>}
+   * @param {IBuyStorageOptions} options
+   * @returns {Promise<number>}
    */
-  async buyMyStoragePlan(gb: number, days?: number): Promise<any> {
-    const wrappedBuyMsg = this.buyStoragePlan(this.jklAddress, gb, days)
-    const postBroadcast =
-      await this.jackalClient.broadcastAndMonitorMsgs(wrappedBuyMsg)
-    return postBroadcast
+  async estimateStoragePlan(options: IBuyStorageOptions): Promise<number> {
+    const { gb, days = 30 } = options
+    const result = await this.jackalClient.getQueries().storage.priceCheck({
+      duration: Number(days) > 30 ? Number(days) : 30,
+      bytes: 3 * 1000000000 * (Number(gb) || 1),
+    })
+    return result.price
   }
 
   /**
    *
-   * @param {string} receiver
-   * @param {number} gb
-   * @param {number} [days]
+   * @param {IBuyStorageOptions} options
    * @returns {Promise<any>}
    */
-  async buyOthersStoragePlan(
-    receiver: string,
-    gb: number,
-    days?: number,
-  ): Promise<any> {
-    const wrappedBuyMsg = this.buyStoragePlan(receiver, gb, days)
+  async purchaseStoragePlan(options: IBuyStorageOptions): Promise<any> {
+    const { gb, days = 30, receiver = this.jklAddress, referrer = '' } = options
+    const wrappedBuyMsg = this.buyStoragePlan(receiver, referrer, gb, days)
     const postBroadcast =
       await this.jackalClient.broadcastAndMonitorMsgs(wrappedBuyMsg)
     return postBroadcast
@@ -449,7 +479,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<DDeliverTxResponse>}
    */
   async createFolders(names: string | string[]): Promise<DDeliverTxResponse> {
-    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({ noConvert: true, exists: true, signer: true })
+    ) {
       throw new Error('Locked.')
     }
     try {
@@ -492,7 +524,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   async saveFolder(
     bundle: IStagedUploadPackage,
   ): Promise<IWrappedEncodeObject[]> {
-    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({ noConvert: true, exists: true, signer: true })
+    ) {
       throw new Error('Locked.')
     }
     try {
@@ -641,7 +675,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     toQueue: File | File[],
     duration: number = 0,
   ): Promise<number> {
-    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({ noConvert: true, exists: true, signer: true })
+    ) {
       throw new Error('Locked.')
     }
     if (toQueue instanceof Array) {
@@ -665,7 +701,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     toQueue: File | File[],
     duration: number = 0,
   ): Promise<number> {
-    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({ noConvert: true, exists: true, signer: true })
+    ) {
       throw new Error('Locked.')
     }
     if (toQueue instanceof Array) {
@@ -684,7 +722,14 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<any>}
    */
   async processAllQueues(): Promise<any> {
-    if (this.checkLocked({ needsProviders: true, noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({
+        needsProviders: true,
+        noConvert: true,
+        exists: true,
+        signer: true,
+      })
+    ) {
       throw new Error('Locked.')
     }
     try {
@@ -698,9 +743,13 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         await this.jackalClient.broadcastAndMonitorMsgs(msgs)
 
       if (!postBroadcast.error) {
+        if (!postBroadcast.txEvents.length) {
+          throw Error('tx has no events')
+        }
         let remaining = [...msgs]
+        const uploadHeight = postBroadcast.txEvents[0].height
         while (remaining.length > 0) {
-          const activeUploads = await this.batchUploads(remaining)
+          const activeUploads = await this.batchUploads(remaining, uploadHeight)
           const results = await Promise.allSettled(activeUploads)
 
           const loop: IWrappedEncodeObject[] = []
@@ -722,59 +771,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {IWrappedEncodeObject[]} msgs
-   * @returns {Promise<Promise<IProviderUploadResponse>[]>}
-   * @protected
-   */
-  protected async batchUploads(msgs: IWrappedEncodeObject[]): Promise<Promise<IProviderUploadResponse>[]> {
-    const activeUploads: Promise<IProviderUploadResponse>[] = []
-
-    const startBlock = await this.jackalClient.getJackalBlockHeight()
-    const providerTeams = Object.keys(this.providers)
-    const copies = Math.min(3, providerTeams.length)
-
-    for (let i = 0; i < msgs.length; i++) {
-      const { file, merkle } = msgs[i]
-      if (file && merkle) {
-        this.uploadsInProgress = true
-
-        const used: number[] = []
-        for (let i = 0; i < copies; i++) {
-          while (true) {
-            const seed = Math.floor(Math.random() * providerTeams.length)
-            if (used.includes(seed)) {
-              continue
-            } else {
-              used.push(seed)
-              break
-            }
-          }
-          const [seed] = used.slice(-1)
-          const selected = this.providers[providerTeams[seed]]
-          const one = selected[Math.floor(Math.random() * selected.length)]
-          const uploadUrl = `${one.ip}/upload`
-
-          const uploadPromise = this.uploadFile(
-            uploadUrl,
-            startBlock,
-            file,
-            merkle,
-          )
-          activeUploads.push(uploadPromise)
-        }
-      }
-    }
-
-    return activeUploads
-  }
-
-  /**
-   *
    * @param {string} filePath
    * @returns {Promise<IFileParticulars>}
    */
   async getFileParticulars(filePath: string): Promise<IFileParticulars> {
-    if (this.checkLocked({ signer: true })) {
+    if (await this.checkLocked({ signer: true })) {
       throw new Error('Locked.')
     }
     try {
@@ -822,18 +823,19 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     filePath: string, // /cat_turtle.png
     trackers: IDownloadTracker,
   ): Promise<File> {
-    if (this.checkLocked({ signer: true })) {
+    if (await this.checkLocked({ signer: true })) {
       throw new Error('Locked.')
     }
     try {
       const particulars = await this.getFileParticulars(filePath)
+      const providerList = shuffleArray(particulars.providerIps)
       const provider =
-        particulars.providerIps[
-          Math.floor(Math.random() * particulars.providerIps.length)
-        ]
+        providerList[Math.floor(Math.random() * providerList.length)]
       const url = `${provider}/download/${particulars.merkleLocation}`
-      return await fetch(url, { method: 'GET' }).then(
-        async (resp): Promise<File> => {
+
+      for (let i = providerList.length; i < providerList.length; i++) {
+        try {
+          const resp = await fetch(url, { method: 'GET' })
           const contentLength = resp.headers.get('Content-Length')
           if (resp.status !== 200) {
             throw new Error(`Status Message: ${resp.statusText}`)
@@ -874,8 +876,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             }
             return baseFile
           }
-        },
-      )
+        } catch (err) {
+          console.warn(`Error fetching from provider ${provider}: ${err}`)
+        }
+      }
+      throw new Error('Download Failure')
     } catch (err) {
       throw warnError('storageHandler downloadFile()', err)
     }
@@ -887,7 +892,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<DDeliverTxResponse>}
    */
   async deleteTargets(targets: string | string[]): Promise<DDeliverTxResponse> {
-    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({ noConvert: true, exists: true, signer: true })
+    ) {
       throw new Error('Locked.')
     }
     try {
@@ -907,10 +914,6 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     }
   }
 
-  debug(): IChildMetaDataMap {
-    return this.children
-  }
-
   /**
    *
    * @param {string} receiver
@@ -921,7 +924,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     receiver: string,
     paths: string | string[],
   ): Promise<DDeliverTxResponse> {
-    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({ noConvert: true, exists: true, signer: true })
+    ) {
       throw new Error('Locked.')
     }
     try {
@@ -955,7 +960,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<number>}
    */
   async checkNotifications(): Promise<number> {
-    if (this.checkLocked({ signer: true })) {
+    if (await this.checkLocked({ signer: true })) {
       throw new Error('Locked.')
     }
     try {
@@ -977,7 +982,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<TSharedRootMetaDataMap>}
    */
   async processPendingNotifications(): Promise<TSharedRootMetaDataMap> {
-    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({ noConvert: true, exists: true, signer: true })
+    ) {
       throw new Error('Locked.')
     }
     try {
@@ -1014,7 +1021,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<any>}
    */
   async convert(): Promise<any> {
-    if (this.checkLocked({ mustConvert: true, signer: true })) {
+    if (await this.checkLocked({ mustConvert: true, signer: true })) {
       throw new Error('Not Locked. Convert Not Available.')
     }
     try {
@@ -1040,6 +1047,70 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
+   * @returns {Promise<IProviderIpSet>}
+   * @protected
+   */
+  protected async loadProvidersFromChain(): Promise<IProviderIpSet> {
+    const providers = await this.getAvailableProviders()
+    console.log(providers)
+    return await this.findProviderIps(providers)
+  }
+
+  /**
+   *
+   * @param {IWrappedEncodeObject[]} msgs
+   * @param {number} uploadHeight
+   * @returns {Promise<Promise<IProviderUploadResponse>[]>}
+   * @protected
+   */
+  protected async batchUploads(
+    msgs: IWrappedEncodeObject[],
+    uploadHeight: number,
+  ): Promise<Promise<IProviderUploadResponse>[]> {
+    const activeUploads: Promise<IProviderUploadResponse>[] = []
+
+    const providerTeams = Object.keys(this.providers)
+    const copies = Math.min(3, providerTeams.length)
+
+    for (let i = 0; i < msgs.length; i++) {
+      if (!msgs[i]) {
+        warnError('storageHandler batchUploads()', `msg at ${i} is undefined`)
+        continue
+      }
+      const { file, merkle } = msgs[i]
+      if (file && merkle) {
+        this.uploadsInProgress = true
+
+        const used: number[] = []
+        for (let i = 0; i < copies; i++) {
+          while (true) {
+            const seed = Math.floor(Math.random() * providerTeams.length)
+            if (used.includes(seed)) {
+            } else {
+              used.push(seed)
+              break
+            }
+          }
+          const [seed] = used.slice(-1)
+          const selected = this.providers[providerTeams[seed]]
+          const one = selected[Math.floor(Math.random() * selected.length)]
+          const uploadUrl = `${one.ip}/upload`
+
+          const uploadPromise = this.uploadFile(
+            uploadUrl,
+            uploadHeight,
+            file,
+            merkle,
+          )
+          activeUploads.push(uploadPromise)
+        }
+      }
+    }
+    return activeUploads
+  }
+
+  /**
+   *
    * @param {string} url
    * @param {number} startBlock
    * @param {File} file
@@ -1053,7 +1124,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     file: File,
     merkle: string,
   ): Promise<IProviderUploadResponse> {
-    if (this.checkLocked({ noConvert: true, exists: true, signer: true })) {
+    if (
+      await this.checkLocked({ noConvert: true, exists: true, signer: true })
+    ) {
       throw new Error('Locked.')
     }
     try {
@@ -1063,8 +1136,12 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       fileFormData.set('sender', this.jklAddress)
       fileFormData.set('start', startBlock.toString())
 
+      console.log('startBlock:', startBlock.toString())
       return await fetch(url, { method: 'POST', body: fileFormData }).then(
         async (resp): Promise<IProviderUploadResponse> => {
+          if (typeof resp === 'undefined' || resp === null) {
+            throw new Error(`Status Message: Empty Response`)
+          }
           if (resp.status !== 200) {
             throw new Error(`Status Message: ${resp.statusText}`)
           } else {
@@ -1133,14 +1210,15 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    *
    * @param {string} receiver
    * @param {number} gb
-   * @param {number} [days]
+   * @param {number} days
    * @returns {IWrappedEncodeObject}
    * @protected
    */
   protected buyStoragePlan(
     receiver: string,
+    referrer: string,
     gb: number,
-    days?: number,
+    days: number,
   ): IWrappedEncodeObject {
     const durationDays = Number(days) > 30 ? Number(days) : 30
     const bytes = 3 * 1000000000 * (Number(gb) || 1)
@@ -1150,6 +1228,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       durationDays,
       bytes,
       paymentDenom: 'ujkl',
+      referral: referrer,
     }
     return {
       encodedObject: this.jackalSigner.txLibrary.storage.msgBuyStorage(toBuy),
@@ -1229,12 +1308,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           merkle: details.merkle,
           start: details.start,
         }
-        const wrapped = {
-          encodedObject:
-            this.jackalSigner.txLibrary.storage.msgDeleteFile(deletePkg),
-          modifier: 0,
-        }
-        msgs.push(wrapped)
+        const wrapped = this.fileDeleteToMsgs(deletePkg)
+        msgs.push(...wrapped)
       } else if (ft.metaDataType === 'folder') {
         const data = this.reader.readFolderContents(target)
         for (let file of Object.values(data.files)) {
@@ -1246,7 +1321,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           msgs.push(...(await this.prepDelete(path)))
         }
       }
-      const pkg = {
+      const pkg: IFileTreePackage = {
         meta: await NullMetaHandler.create(target),
         aes: await genAesBundle(),
       }
@@ -1369,14 +1444,15 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   /**
    *
    * @param {IChecks} checkSet
-   * @returns {boolean}
+   * @returns {Promise<boolean>}
    * @protected
    */
-  protected checkLocked(checkSet: IChecks): boolean {
+  protected async checkLocked(checkSet: IChecks): Promise<boolean> {
     try {
       if (checkSet.bought) {
+        const status = await this.planStatus()
         // TODO - add bought check
-        if (!this.mustConvert) {
+        if (!status.active) {
           throw true
         }
       }
@@ -1404,8 +1480,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         }
       }
       if (checkSet.keys) {
-        // TODO - add keys check
-        if (this.meta.getCount() === -1) {
+        const status = await this.jackalClient.myPubKeyIsPublished()
+        if (!status) {
           throw true
         }
       }
