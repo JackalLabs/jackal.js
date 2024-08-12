@@ -1,6 +1,6 @@
 {
   "name": "@jackallabs/jackal.js",
-  "version": "3.0.0-rc.7",
+  "version": "3.0.0-rc.8",
   "description": "Javascript library for interacting with the Jackal Chain",
   "keywords": [
     "jackal",
@@ -61,7 +61,7 @@
     "@cosmjs/stargate": "^0.32.2",
     "@jackallabs/bech32": "^1.2.0",
     "@jackallabs/dogwood-tree": "^1.0.1",
-    "@jackallabs/jackal.js-protos": "2.0.0",
+    "@jackallabs/jackal.js-protos": "2.0.2",
     "@karnthis/plzsu": "^1.0.0",
     "@keplr-wallet/types": "^0.12.44",
     "browserify-aes": "^1.2.0",

@@ -2,7 +2,7 @@ import {
   connectHostQueryClient,
   connectHostSigningClient,
   connectJackalQueryClient,
-  connectJackalSigningClient,
+  connectJackalSigningClient, DCoin,
   IIbcEngageBundle,
   ITxLibrary,
   THostQueryClient,
@@ -432,6 +432,21 @@ export class ClientHandler implements IClientHandler {
       throw new Error(signerNotEnabled('ClientHandler', 'getTxs'))
     }
     return this.jklSigner.txLibrary as unknown as ITxLibrary
+  }
+
+  /**
+   *
+   * @returns {Promise<DCoin>}
+   */
+  async getJklBalance(): Promise<DCoin> {
+    if (!this.jklSigner) {
+      throw new Error(signerNotEnabled('ClientHandler', 'getJklBalance'))
+    }
+    const res = await this.jklQuery.queries.bank.balance({
+      address: this.getJackalAddress(),
+      denom: 'ujkl'
+    })
+    return res.balance as DCoin
   }
 
   /**

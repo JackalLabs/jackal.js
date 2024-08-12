@@ -1,4 +1,5 @@
 import {
+  DCoin,
   ITxLibrary, THostSigningClient,
   TJackalSigningClient,
   TQueryExtensions,
@@ -42,6 +43,8 @@ export interface IClientHandler {
   getQueries(): TQueryExtensions
 
   getTxs(): ITxLibrary
+
+  getJklBalance(): Promise<DCoin>
 
   getJackalAddress(): string
 
