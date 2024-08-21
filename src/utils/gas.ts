@@ -1,128 +1,121 @@
-import { EncodeObject } from '@cosmjs/proto-signing'
-import { IGasHashMap, IGasRate, IWrappedEncodeObject } from '@/interfaces'
+import { IFinalGas, IWrappedEncodeObject } from '@/interfaces'
+import { DEncodeObject } from '@jackallabs/jackal.js-protos'
 
-const hashMap: IGasHashMap = {
+const gasBaselineRate = 56
+const gasFallbackTxCost = 142
+const gasMap: Record<string, number> = {
   /** Filetree */
   '/canine_chain.filetree.MsgPostFile': 110,
-  '/canine_chain.filetree.MsgAddViewers': 142,
-  '/canine_chain.filetree.MsgPostkey': 12,
+  '/canine_chain.filetree.MsgPostKey': 12,
   '/canine_chain.filetree.MsgDeleteFile': 9,
-  '/canine_chain.filetree.MsgRemoveViewers': 142,
-  '/canine_chain.filetree.MsgMakeRoot': 46,
-  '/canine_chain.filetree.MsgMakeRootV2': 48,
-  '/canine_chain.filetree.MsgAddEditors': 142,
-  '/canine_chain.filetree.MsgRemoveEditors': 142,
-  '/canine_chain.filetree.MsgResetEditors': 142,
-  '/canine_chain.filetree.MsgResetViewers': 142,
-  '/canine_chain.filetree.MsgChangeOwner': 142,
   /** Notifications */
-  '/canine_chain.notifications.MsgCreateNotifications': 142,
-  '/canine_chain.notifications.MsgUpdateNotifications': 142,
-  '/canine_chain.notifications.MsgDeleteNotifications': 142,
-  '/canine_chain.notifications.MsgSetCounter': 142,
-  '/canine_chain.notifications.MsgBlockSenders': 142,
   /** Oracle */
-  '/canine_chain.oracle.MsgCreateFeed': 142,
-  '/canine_chain.oracle.MsgUpdateFeed': 142,
   /** RNS */
-  '/canine_chain.rns.MsgAcceptBid': 142,
-  '/canine_chain.rns.MsgAddRecord': 142,
   '/canine_chain.rns.MsgBid': 23,
   '/canine_chain.rns.MsgBuy': 35,
-  '/canine_chain.rns.MsgCancelBid': 142,
-  '/canine_chain.rns.MsgDelist': 142,
-  '/canine_chain.rns.MsgDelRecord': 142,
   '/canine_chain.rns.MsgInit': 15,
   '/canine_chain.rns.MsgList': 14,
   '/canine_chain.rns.MsgRegister': 37,
-  '/canine_chain.rns.MsgTransfer': 142,
-  '/canine_chain.rns.MsgUpdate': 142,
   /** Storage */
-  '/canine_chain.storage.MsgPostContract': 126,
-  '/canine_chain.storage.MsgPostproof': 142,
-  '/canine_chain.storage.MsgSignContract': 82,
-  '/canine_chain.storage.MsgSetProviderIP': 142,
-  '/canine_chain.storage.MsgSetProviderKeybase': 142,
-  '/canine_chain.storage.MsgSetProviderTotalspace': 142,
-  '/canine_chain.storage.MsgInitProvider': 142,
-  '/canine_chain.storage.MsgCancelContract': 29,
-  '/canine_chain.storage.MsgBuyStorage': 142,
-  '/canine_chain.storage.MsgClaimStray': 142,
-  '/canine_chain.storage.MsgUpgradeStorage': 142,
   /** Bank */
-  '/cosmos.bank.v1beta1.MsgMultiSend': 142,
-  '/cosmos.bank.v1beta1.MsgSend': 142,
   /** Distribution */
-  '/cosmos.distribution.v1beta1.MsgFundCommunityPool': 142,
-  '/cosmos.distribution.v1beta1.MsgSetWithdrawAddress': 142,
-  '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward': 142,
-  '/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission': 142,
   /** Gov */
-  '/cosmos.gov.v1beta1.MsgDeposit': 142,
-  '/cosmos.gov.v1beta1.MsgSubmitProposal': 142,
-  '/cosmos.gov.v1beta1.MsgVote': 142,
-  '/cosmos.gov.v1beta1.MsgVoteWeighted': 142,
   /** Slashing */
-  '/cosmos.slashing.v1beta1.MsgUnjail': 142,
   /** Staking */
-  '/cosmos.staking.v1beta1.MsgBeginRedelegate': 142,
-  '/cosmos.staking.v1beta1.MsgCreateValidator': 142,
-  '/cosmos.staking.v1beta1.MsgDelegate': 142,
-  '/cosmos.staking.v1beta1.MsgEditValidator': 142,
-  '/cosmos.staking.v1beta1.MsgUndelegate': 142
 }
-const baseRate = 56
+
+/*
+USING MODIFIERS
+/canine_chain.filetree.MsgProvisionFileTree
+ */
 
 /**
  * Generates gas total estimate from list of Tx instances.
- * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
  * @returns {number} - Adjusted number of gas units collection is expected to require.
  */
-export function estimateGas (
-  msgArray: (EncodeObject | IWrappedEncodeObject)[]
-): number {
-  const gas = msgArray.reduce((acc, curr) => {
-    if (isIWrappedEncodeObject(curr)) {
-      switch (true) {
-        case curr.encodedObject.typeUrl.includes('MsgMakeRoot'):
-          const baseValue = 15
-          const modified = 0.04 * Number(curr.modifier) || 0
-          return acc + (baseValue + modified)
-        default:
-          return acc + (hashMap[curr.encodedObject.typeUrl] || 142)
-      }
-    } else {
-      return acc + (hashMap[curr.typeUrl] || 142)
-    }
-  }, 0)
-  return (gas + baseRate) * 1100
+export function estimateGas(msgArray: IWrappedEncodeObject[]): number {
+  return calculateGas(msgArray, 0)[0]
 }
 
 /**
  * Return a Gas object for use in a masterBroadcaster()-like call.
- * @param {(EncodeObject | IWrappedEncodeObject)[]} msgArray - Collection of Tx instances to calculate gas from.
- * @param {number | string} gasOverride - Number or number-like string to replace calculated gas value.
- * @returns {IGasRate} - Gas object with best estimate based on input.
+ * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @param {number} gasMultiplier - Multiplier for calculating gas.
+ * @param {number} [gasOverride] - Value to replace calculated gas value.
+ * @returns {IFinalGas} - Gas object with best estimate based on input.
  * @private
  */
-export function finalizeGas (
-  msgArray: (EncodeObject | IWrappedEncodeObject)[],
-  gasOverride?: number | string
-): IGasRate {
-  const totalGas = Number(gasOverride) || estimateGas(msgArray)
+export function finalizeGas(
+  msgArray: IWrappedEncodeObject[],
+  gasMultiplier: number,
+  gasOverride?: number,
+): IFinalGas {
+  const [gas, msgs] = calculateGas(msgArray, gasMultiplier)
+  const totalGas = Number(gasOverride) || gas
   return {
-    amount: [],
-    gas: totalGas.toString()
+    fee: {
+      amount: [
+        { denom: 'ujkl', amount: Math.ceil(totalGas * 0.002).toString() },
+      ],
+      gas: totalGas.toString(),
+    },
+    msgs,
   }
 }
 
 /**
- * Check if an input is a wrapped or raw EncodeObject.
- * @param {EncodeObject | IWrappedEncodeObject} toCheck - Source value.
- * @returns {toCheck is IWrappedEncodeObject} - Boolean indicating if source is a IWrappedEncodeObject.
+ * Calculate gas and unwrap msgs to prepare for broadcasting.
+ * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
+ * @param {number} gasMultiplier - Multiplier for calculating gas.
+ * @returns {[number, DEncodeObject[]]} - Tuple of adjusted number of gas units collection is expected to require and unwrapped msg array.
+ * @private
  */
-function isIWrappedEncodeObject (
-  toCheck: EncodeObject | IWrappedEncodeObject
+function calculateGas(
+  msgArray: IWrappedEncodeObject[],
+  gasMultiplier: number
+): [number, DEncodeObject[]] {
+  const objects: DEncodeObject[] = []
+  let gas = gasBaselineRate
+  for (let item of msgArray) {
+    if (!isIWrappedEncodeObject(item)) {
+      throw new Error('Only wrapped EncodeObjects are accepted')
+    } else {
+      switch (true) {
+        case item.encodedObject.typeUrl.includes(
+          'filetree.MsgProvisionFileTree',
+        ):
+          gas += calculateModifier(18, item.modifier)
+          break
+        default:
+          gas += gasMap[item.encodedObject.typeUrl] || gasFallbackTxCost
+      }
+      objects.push(item.encodedObject)
+    }
+  }
+  return [gas * gasMultiplier, objects]
+}
+
+/**
+ * Check if an input is a wrapped or raw EncodeObject.
+ * @param {any | IWrappedEncodeObject} toCheck - Source value.
+ * @returns {toCheck is IWrappedEncodeObject} - Boolean indicating if source is a IWrappedEncodeObject.
+ * @private
+ */
+function isIWrappedEncodeObject(
+  toCheck: any | IWrappedEncodeObject,
 ): toCheck is IWrappedEncodeObject {
-  return Object.keys(toCheck).includes('encodedObject')
+  return 'encodedObject' in toCheck
+}
+
+/**
+ * Calculates gas from modifier.
+ * @param {number} buffer - Base amount to use for msg gas calculation.
+ * @param {number} modifier - Modifier to use for calculating gas.
+ * @returns {number}
+ * @private
+ */
+function calculateModifier(buffer: number, modifier: number): number {
+  const sanitizedModifier = Number(modifier) || 0
+  return buffer + sanitizedModifier * 0.04
 }

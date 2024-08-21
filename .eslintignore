@@ -1,0 +1,7 @@
+.github/
+.idea/
+dist/
+node_modules/
+packs/
+.prettierrc
+tslint.json

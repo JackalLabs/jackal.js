@@ -1,18 +1,25 @@
-import { keyAlgo } from '@/utils/globals'
-import { hashAndHex } from '@/utils/hash'
-import { compressData, decompressData, sanitizeCompressionForAmino } from '@/utils/compression'
-import { IWalletHandler } from '@/interfaces/classes'
-import { IAesBundle } from '@/interfaces'
-import { stringToUint16, uint16ToString } from '@/utils/misc'
-
-const {crypto} = window ? window : globalThis
+import type { PrivateKey } from 'eciesjs'
+import { decrypt, encrypt } from 'eciesjs'
+import { keyAlgo } from '@/utils/globalDefaults'
+import {
+  prepDecompressionForAmino,
+  safeCompressData,
+  safeDecompressData,
+  sanitizeCompressionForAmino,
+  stringToUint16Array,
+  uintArrayToString,
+} from '@/utils/converters'
+import { warnError } from '@/utils/misc'
+import { hexToBuffer } from '@/utils/hash'
+import type { IAesBundle } from '@/interfaces'
 
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
  * @param {CryptoKey} key - CryptoKey to convert.
  * @returns {Promise<Uint8Array>} - CryptoKey as Uint8Array.
+ * @private
  */
-export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
+export async function exportJackalKey(key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
 }
 
@@ -20,298 +27,238 @@ export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
  * Convert stored format to CryptoKey (see exportJackalKey()).
  * @param {Uint8Array} rawExport - Uint8Array to recover to CryptoKey.
  * @returns {Promise<CryptoKey>} - Recovered CryptoKey.
+ * @private
  */
-export function importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
+export function importJackalKey(rawExport: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, [
     'encrypt',
-    'decrypt'
+    'decrypt',
   ])
 }
 
 /**
  * Generate a new CryptoKey from scratch. Compatible with AES-256 and exportJackalKey(). Supports encrypt and decrypt.
  * @returns {Promise<CryptoKey>} - Fresh random CryptoKey.
+ * @private
  */
-export function genKey (): Promise<CryptoKey> {
+export function genKey(): Promise<CryptoKey> {
   return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])
 }
 
 /**
  * Generate a new iv from scratch. Compatible with AES-256.
  * @returns {Uint8Array} - Fresh random iv.
+ * @private
  */
-export function genIv (): Uint8Array {
+export function genIv(): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(16))
+}
+
+/**
+ * Generate AES bundle of IV and Key.
+ * @returns {Promise<IAesBundle>} - AES bundle.
+ * @private
+ */
+export async function genAesBundle(): Promise<IAesBundle> {
+  return {
+    iv: genIv(),
+    key: await genKey(),
+  }
 }
 
 /**
  * Encrypt or decrypt a Blob using AES-256 (AES-GCM).
  * @param {Blob} data - Source to encrypt or decrypt.
- * @param {CryptoKey} key - Key to use. Decryption key must match encryption key that was used.
- * @param {Uint8Array} iv - Iv to use. Decryption iv must match encryption iv that was used.
+ * @param {IAesBundle} aes - AES iv/CryptoKey set. Must match encryption AES set that was used.
  * @param {'encrypt' | 'decrypt'} mode - Toggle between encryption and decryption.
  * @returns {Promise<Blob>} - Processed result.
+ * @private
  */
-export async function aesCrypt (
+export async function aesBlobCrypt(
   data: Blob,
-  key: CryptoKey,
-  iv: Uint8Array,
-  mode: 'encrypt' | 'decrypt'
+  aes: IAesBundle,
+  mode: 'encrypt' | 'decrypt',
 ): Promise<Blob> {
+  const workingData = await data.arrayBuffer()
+  const result = await aesCrypt(workingData, aes, mode).catch((err) => {
+    warnError('aesBlobCrypt()', err)
+    throw err
+  })
+  return new Blob([result])
+}
+
+/**
+ * Encrypt or decrypt an ArrayBuffer using AES-256 (AES-GCM).
+ * @param {ArrayBuffer} data - Source to encrypt or decrypt.
+ * @param {IAesBundle} aes - AES iv/CryptoKey set. Must match encryption AES set that was used.
+ * @param {'encrypt' | 'decrypt'} mode - Toggle between encryption and decryption.
+ * @returns {Promise<ArrayBuffer>} - Processed result.
+ * @private
+ */
+export async function aesCrypt(
+  data: ArrayBuffer,
+  aes: IAesBundle,
+  mode: 'encrypt' | 'decrypt',
+): Promise<ArrayBuffer> {
   const algo = {
     name: 'AES-GCM',
-    iv
+    iv: aes.iv,
   }
-  const workingData = await data.arrayBuffer()
-  if (workingData.byteLength < 1) {
-    return new Blob([])
+  if (data.byteLength < 1) {
+    return new ArrayBuffer(0)
   } else if (mode?.toLowerCase() === 'encrypt') {
-    return await crypto.subtle
-      .encrypt(algo, key, workingData)
-      .then((res) => {
-        return new Blob([res])
-      })
-      .catch((err) => {
-        console.error(`aesCrypt(encrypt) - ${err}`)
-        throw err
-      })
+    return await crypto.subtle.encrypt(algo, aes.key, data).catch((err) => {
+      throw warnError('aesCrypt(encrypt)', err)
+    })
   } else {
-    return await crypto.subtle
-      .decrypt(algo, key, workingData)
-      .then((res) => {
-        return new Blob([res])
-      })
-      .catch((err) => {
-        console.error(`aesCrypt(decrypt) - ${err}`)
-        throw err
-      })
+    return await crypto.subtle.decrypt(algo, aes.key, data).catch((err) => {
+      throw warnError('aesCrypt(decrypt)', err)
+    })
   }
 }
 
 /**
+ * Encrypt value using arbitrary ECIES public key.
+ * @param {string} pubKey - Public key as hex value.
+ * @param {ArrayBuffer} toEncrypt - Value to encrypt.
+ * @returns {string} - Encrypted value as hex string.
+ * @private
+ */
+export function eciesEncryptWithPubKey(
+  pubKey: string,
+  toEncrypt: ArrayBuffer | Uint8Array,
+): string {
+  if ('buffer' in toEncrypt) {
+    return encrypt(pubKey, toEncrypt).toString('hex')
+  } else {
+    return encrypt(pubKey, new Uint8Array(toEncrypt)).toString('hex')
+  }
+}
+
+/**
+ * Decrypt value using ECIES private key.
+ * @param {PrivateKey} key - Private key as ECIES PrivateKey instance.
+ * @param {string | Uint8Array} toDecrypt - Value to decrypt.
+ * @returns {Uint8Array} - Decrypted value.
+ * @private
+ */
+export function eciesDecryptWithPrivateKey(
+  key: PrivateKey,
+  toDecrypt: string | Uint8Array,
+): Uint8Array {
+  const ready =
+    toDecrypt instanceof Uint8Array ? toDecrypt : hexToBuffer(toDecrypt)
+  return new Uint8Array(decrypt(key.toHex(), ready))
+}
+
+/**
  * Encrypts AES iv/CryptoKey set to string using receiver's ECIES public key.
- * @param {IWalletHandler} wallet - Wallet instance for accessing functions.
  * @param {string} pubKey - Receiver's ECIES public key.
  * @param {IAesBundle} aes - AES iv/CryptoKey set to encrypt.
  * @returns {Promise<string>} - Encrypted string with pipe "|" delimiter.
+ * @private
  */
-export async function aesToString (
-  wallet: IWalletHandler,
+export async function aesToString(
   pubKey: string,
-  aes: IAesBundle
+  aes: IAesBundle,
 ): Promise<string> {
-  const theIv = wallet.asymmetricEncrypt(aes.iv, pubKey)
+  const theIv = eciesEncryptWithPubKey(pubKey, aes.iv)
   const key = await exportJackalKey(aes.key)
-  const theKey = wallet.asymmetricEncrypt(key, pubKey)
+  const theKey = eciesEncryptWithPubKey(pubKey, key)
   return `${theIv}|${theKey}`
 }
 
 /**
  * Decrypts AES iv/CryptoKey set from string using owner's ECIES private key.
- * @param {IWalletHandler} wallet - Wallet instance for accessing functions and owner's private key.
+ * @param {PrivateKey} privateKey - Private key as ECIES PrivateKey instance.
  * @param {string} source - String containing encrypted AES iv/CryptoKey set with pipe "|" delimiter.
  * @returns {Promise<IAesBundle>} - Decrypted AES iv/CryptoKey set.
+ * @private
  */
-export async function stringToAes (
-  wallet: IWalletHandler,
-  source: string
+export async function stringToAes(
+  privateKey: PrivateKey,
+  source: string,
 ): Promise<IAesBundle> {
-  if (source.indexOf('|') < 0) {
-    throw new Error('stringToAes() : Invalid source string')
-  }
-  const parts = source.split('|')
-  return {
-    iv: new Uint8Array(wallet.asymmetricDecrypt(parts[0])),
-    key: await importJackalKey(
-      new Uint8Array(wallet.asymmetricDecrypt(parts[1]))
-    )
-  }
-}
-
-/**
- * Converts raw File to Public-mode File.
- * @param {File} workingFile - Source File.
- * @returns {Promise<File>} - Public-mode File.
- */
-export async function convertToPublicFile (workingFile: File): Promise<File> {
-  const chunkSize = 32 * Math.pow(1024, 2) /* in bytes */
-  const details = {
-    name: workingFile.name,
-    lastModified: workingFile.lastModified,
-    type: workingFile.type,
-    size: workingFile.size
-  }
-  const detailsBlob = new Blob([JSON.stringify(details)])
-  const publicArray: Blob[] = [
-    new Blob([(detailsBlob.size + 16).toString().padStart(8, '0')]),
-    detailsBlob
-  ]
-  for (let i = 0; i < workingFile.size; i += chunkSize) {
-    const blobChunk = workingFile.slice(i, i + chunkSize)
-    publicArray.push(
-      new Blob([(blobChunk.size + 16).toString().padStart(8, '0')]),
-      blobChunk
-    )
-  }
-  const finalName = `${await hashAndHex(
-    details.name + Date.now().toString()
-  )}.jkl`
-  return new File(publicArray, finalName, {type: 'text/plain'})
-}
-
-/**
- * Converts raw Public-mode Blob to File.
- * @param {Blob} source - Source raw Blob.
- * @returns {Promise<File>} - Decrypted File.
- */
-export async function convertFromPublicFile (source: Blob): Promise<File> {
-  let detailsBlob = new Blob([])
-  const blobParts: Blob[] = []
-  for (let i = 0; i < source.length;) {
-    const offset = i + 8
-    const segSize = Number(source.slice(i, offset).toString())
-    const last = offset + segSize
-    const segment = source.slice(offset, last)
-    if (i === 0) {
-      detailsBlob = segment
-    } else {
-      blobParts.push(segment)
+  try {
+    if (source.indexOf('|') < 0) {
+      throw new Error('Invalid source string')
     }
-    i = last
-  }
-  const details = JSON.parse(detailsBlob.toString())
-  return new File(blobParts, details.name, details)
-}
-
-/**
- * Converts raw File to encrypted File.
- * @param {File} workingFile - Source File.
- * @param {CryptoKey} key - AES-256 CryptoKey.
- * @param {Uint8Array} iv - AES-256 iv.
- * @returns {Promise<File>} - Encrypted File.
- */
-export async function convertToEncryptedFile (
-  workingFile: File,
-  key: CryptoKey,
-  iv: Uint8Array
-): Promise<File> {
-  const chunkSize = 32 * Math.pow(1024, 2) /* in bytes */
-  const details = {
-    name: workingFile.name,
-    lastModified: workingFile.lastModified,
-    type: workingFile.type,
-    size: workingFile.size
-  }
-  const detailsBlob = new Blob([JSON.stringify(details)])
-  const encryptedArray: Blob[] = [
-    new Blob([(detailsBlob.size + 16).toString().padStart(8, '0')]),
-    await aesCrypt(detailsBlob, key, iv, 'encrypt')
-  ]
-  for (let i = 0; i < workingFile.size; i += chunkSize) {
-    const blobChunk = workingFile.slice(i, i + chunkSize)
-    encryptedArray.push(
-      new Blob([(blobChunk.size + 16).toString().padStart(8, '0')]),
-      await aesCrypt(blobChunk, key, iv, 'encrypt')
-    )
-  }
-  const finalName = `${await hashAndHex(
-    details.name + Date.now().toString()
-  )}.jkl`
-  return new File(encryptedArray, finalName, {type: 'text/plain'})
-}
-
-/**
- * Converts raw Blob to decrypted File.
- * @param {Blob} source - Source raw Blob.
- * @param {CryptoKey} key - AES-256 CryptoKey.
- * @param {Uint8Array} iv - AES-256 iv.
- * @returns {Promise<File>} - Decrypted File.
- */
-export async function convertFromEncryptedFile (
-  source: Blob,
-  key: CryptoKey,
-  iv: Uint8Array
-): Promise<File> {
-  let detailsBlob = new Blob([])
-  const blobParts: Blob[] = []
-  for (let i = 0; i < source.size;) {
-    const offset = i + 8
-    const segSize = Number(await source.slice(i, offset).text())
-    const last = offset + segSize
-    const segment = source.slice(offset, last)
-
-    const rawBlob = await aesCrypt(segment, key, iv, 'decrypt')
-    if (i === 0) {
-      detailsBlob = rawBlob
-    } else {
-      blobParts.push(rawBlob)
+    const [iv, key] = source.split('|')
+    return {
+      iv: eciesDecryptWithPrivateKey(privateKey, iv),
+      key: await importJackalKey(eciesDecryptWithPrivateKey(privateKey, key)),
     }
-    i = last
+  } catch (err) {
+    throw warnError('stringToAes()', err)
   }
-  const details = JSON.parse(await detailsBlob.text())
-  return new File(blobParts, details.name, details)
 }
 
 /**
  * Compresses source string using PLZSU and then encrypts it using AES-256 (AEG-GCM).
  * @param {string} input - Source string.
- * @param {CryptoKey} key - AES-256 CryptoKey.
- * @param {Uint8Array} iv - AES-256 iv.
- * @param {boolean} isLedger - Flag declaring string must be Ledger Amino safe.
+ * @param {IAesBundle} aes - AES iv/CryptoKey set.
+ * @param {boolean} isLedger
  * @returns {Promise<string>} - Compressed and encrypted string.
+ * @private
  */
-export async function compressEncryptString (
+export async function compressEncryptString(
   input: string,
-  key: CryptoKey,
-  iv: Uint8Array,
-  isLedger?: boolean
+  aes: IAesBundle,
+  isLedger: boolean,
 ): Promise<string> {
-  return await cryptString(compressData(input), key, iv, 'encrypt', isLedger)
+  const compressedString = safeCompressData(input)
+  return await cryptString(compressedString, aes, 'encrypt', isLedger).catch(
+    (err) => {
+      warnError('compressEncryptString(encrypt)', err)
+      throw err
+    },
+  )
 }
 
 /**
  * Decrypts source string using AES-256 (AEG-GCM) and then decompresses it using PLZSU.
  * @param {string} input - Compressed and encrypted string.
- * @param {CryptoKey} key - AES-256 CryptoKey.
- * @param {Uint8Array} iv - AES-256 iv.
+ * @param {IAesBundle} aes - AES iv/CryptoKey set.
  * @returns {Promise<string>} - Decrypted and decompressed string.
+ * @private
  */
-export async function decryptDecompressString (
+export async function decryptDecompressString(
   input: string,
-  key: CryptoKey,
-  iv: Uint8Array
+  aes: IAesBundle,
 ): Promise<string> {
-  if (input.startsWith('jklpc2|')) {
-    const wasBase64 = atob(input.substring(7))
-    const asArray = [...wasBase64].map((str) => str.codePointAt(0) || 0)
-    const safe = Uint8Array.from(asArray)
-    input = uint16ToString(new Uint16Array(safe.buffer))
-  }
-  return decompressData(await cryptString(input, key, iv, 'decrypt'))
+  const safe = prepDecompressionForAmino(input)
+  const ready = await cryptString(safe, aes, 'decrypt').catch((err) => {
+    warnError('decryptDecompressString(decrypt)', err)
+    throw err
+  })
+  return safeDecompressData(ready)
 }
 
 /**
  * Encrypt or decrypt a string using AES-256 (AES-GCM).
  * @param {string} input - Source string to encrypt or decrypt.
- * @param {CryptoKey} key - CryptoKey to use. Decryption CryptoKey must match encryption CryptoKey that was used.
- * @param {Uint8Array} iv - Iv to use. Decryption iv must match encryption iv that was used.
+ * @param {IAesBundle} aes - AES iv/CryptoKey set. Must match encryption AES set that was used.
  * @param {'encrypt' | 'decrypt'} mode - Toggle between encryption and decryption.
  * @param {boolean} isLedger
  * @returns {Promise<string>} - Processed result.
+ * @private
  */
-export async function cryptString (
+export async function cryptString(
   input: string,
-  key: CryptoKey,
-  iv: Uint8Array,
+  aes: IAesBundle,
   mode: 'encrypt' | 'decrypt',
-  isLedger?: boolean
+  isLedger?: boolean,
 ): Promise<string> {
-  const uint16 = stringToUint16(input)
-  const result = await aesCrypt(new Blob([uint16]), key, iv, mode)
-  const processed = uint16ToString(new Uint16Array(await result.arrayBuffer()))
-  if (mode === 'encrypt' && isLedger) {
-    return sanitizeCompressionForAmino(processed)
-  } else {
-    return processed
+  try {
+    const uint16 = stringToUint16Array(input)
+    const result = await aesCrypt(uint16.buffer, aes, mode)
+    const processed = uintArrayToString(new Uint16Array(result))
+    if (mode === 'encrypt' && isLedger) {
+      return sanitizeCompressionForAmino(processed)
+    } else {
+      return processed
+    }
+  } catch (err) {
+    throw warnError('cryptString()', err)
   }
 }

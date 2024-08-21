@@ -1,13 +1,10 @@
-import { IChainConfig } from '@/interfaces'
-import { OfflineDirectSigner } from '@cosmjs/proto-signing'
-import { StdSignature } from '@cosmjs/amino'
+import type { StdSignature } from '@cosmjs/amino'
+import type { TMergedSigner } from '@jackallabs/jackal.js-protos'
 
-export default interface IMnemonicWallet {
-  enable(chainIds: string | string[]): Promise<void>
+export interface IMnemonicWallet {
+  getOfflineSigner(): TMergedSigner
 
-  experimentalSuggestChain(chainConfig: IChainConfig): Promise<void>
+  getAddress(): string
 
-  getOfflineSignerAuto(chainId: string): Promise<OfflineDirectSigner>
-
-  signArbitrary(_: any, address: string, message: string): Promise<StdSignature>
+  signArbitrary(address: string, message: string): Promise<StdSignature>
 }

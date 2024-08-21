@@ -4,7 +4,7 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "node"],
+    "types": ["vite/client"],
     "skipLibCheck": true,
     "allowJs": false,
     "esModuleInterop": true,
@@ -16,11 +16,10 @@
     "outDir": "dist",
     "sourceMap": true,
     "declaration": true,
-    //    "declarationDir": "dist/dts",
     "declarationMap": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
-    "isolatedModules": false,
+    "isolatedModules": true,
     "noEmit": true,
 
     /* Linting */
@@ -38,7 +37,10 @@
       "./src/types"
     ]
   },
-  "include": ["src/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts"
+  ],
   "exclude": [
     "node_modules"
   ]

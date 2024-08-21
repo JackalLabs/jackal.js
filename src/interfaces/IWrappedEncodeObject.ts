@@ -1,6 +1,8 @@
-import { EncodeObject } from '@cosmjs/proto-signing'
+import type { DEncodeObject } from '@jackallabs/jackal.js-protos'
 
-export default interface IWrappedEncodeObject {
-  encodedObject: EncodeObject
-  modifier?: number
+export interface IWrappedEncodeObject {
+  encodedObject: DEncodeObject
+  modifier: number
+  file?: File
+  merkle?: string
 }

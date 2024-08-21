@@ -1,108 +1,88 @@
-import {
-  OfflineAminoSigner,
-  Secp256k1HdWallet,
-  StdSignature
-} from '@cosmjs/amino'
-import {
-  DirectSecp256k1HdWallet,
-  OfflineDirectSigner
-} from '@cosmjs/proto-signing'
-import { IChainConfig } from '@/interfaces'
-import { IMnemonicWallet } from '@/interfaces/classes'
+import type { StdSignature } from '@cosmjs/amino'
+import { Secp256k1HdWallet } from '@cosmjs/amino'
+import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
+import type { IMnemonicWallet } from '@/interfaces/classes'
+import { TMergedSigner } from '@jackallabs/jackal.js-protos'
 
-export default class MnemonicWallet implements IMnemonicWallet {
-  private directWallet: OfflineDirectSigner
-  private aminoWallet: OfflineAminoSigner
+export class MnemonicWallet implements IMnemonicWallet {
+  private readonly mergedSigner: TMergedSigner
+  private readonly address: string
 
   /**
-   * Receives properties from create() to instantiate CustomWallet for us in creating WalletHandler instance.
-   * @param {OfflineDirectSigner} directWallet
-   * @param {OfflineAminoSigner} aminoWallet
+   * Receives properties from init() to instantiate MnemonicWallet for use in creating a CustomWallet instance.
+   * @param {TMergedSigner} mergedSigner
+   * @param {string} address
    * @private
    */
-  private constructor(
-    directWallet: OfflineDirectSigner,
-    aminoWallet: OfflineAminoSigner
-  ) {
-    this.directWallet = directWallet
-    this.aminoWallet = aminoWallet
+  private constructor(mergedSigner: TMergedSigner, address: string) {
+    this.mergedSigner = mergedSigner
+    this.address = address
   }
 
   /**
-   * Async wrapper to create a CustomWallet instance.
-   * @param {string} mnemonic - Seed phrase to use to generate the wallet sessions.
-   * @returns {Promise<MnemonicWallet>} - Instance of CustomWallet.
+   * Async wrapper to create a MnemonicWallet instance.
+   * @param {string} mnemonic - Seed phrase to use to generate the wallet session.
+   * @returns {Promise<MnemonicWallet>} - Instance of MnemonicWallet.
    */
-  static async create(mnemonic: string) {
+  static async init(mnemonic: string): Promise<MnemonicWallet> {
     let directWallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
-      prefix: 'jkl'
+      prefix: 'jkl',
     })
     let aminoWallet = await Secp256k1HdWallet.fromMnemonic(mnemonic, {
-      prefix: 'jkl'
+      prefix: 'jkl',
     })
+
     /* Destroy mnemonic */
     mnemonic = ''
 
-    return new MnemonicWallet(directWallet, aminoWallet)
+    const mergedSigner = {
+      ...aminoWallet,
+      ...directWallet,
+    } as TMergedSigner
+    const { address } = (await mergedSigner.getAccounts())[0]
+    return new MnemonicWallet(mergedSigner, address)
   }
 
   /**
-   * Placeholder for WalletHandler compatibility.
-   * @param {string | string[]} _ - Not Used, typed for compatibility.
-   * @returns {Promise<void>}
+   * Expose Signer for use in ClientHandler.
+   * @returns {TMergedSigner}
    */
-  async enable(_: string | string[]): Promise<void> {
-    /* Nothing to do */
+  getOfflineSigner(): TMergedSigner {
+    return this.mergedSigner
   }
 
   /**
-   * Placeholder for WalletHandler compatibility.
-   * @param {string | string[]} _ - Not Used, typed for compatibility.
-   * @returns {Promise<void>}
+   * Expose Signer's Jackal address.
+   * @returns {string}
    */
-  async experimentalSuggestChain(_: IChainConfig): Promise<void> {
-    /* Nothing to do */
+  getAddress(): string {
+    return this.address
   }
 
   /**
-   * Expose DirectSigner for use in WalletHandler.
-   * @param {string} _ - Not Used, typed for compatibility.
-   * @returns {Promise<OfflineDirectSigner>}
-   */
-  async getOfflineSignerAuto(_: string): Promise<OfflineDirectSigner> {
-    return this.directWallet
-  }
-
-  /**
-   * Generate signature used by WalletHandler to create session secret.
-   * @param _ - Not Used, typed for compatibility.
-   * @param {string} address - Jkl address to use for signature.
+   * Generate signature used by ClientHandler to create session.
    * @param {string} message - Value to use as signature base.
    * @returns {Promise<StdSignature>} - Resulting AminoSignResponse.signature.
    */
-  async signArbitrary(
-    _: any,
-    address: string,
-    message: string
-  ): Promise<StdSignature> {
-    const signed = await this.aminoWallet.signAmino(address, {
+  async signArbitrary(message: string): Promise<StdSignature> {
+    const signed = await this.mergedSigner.signAmino(this.address, {
       chain_id: '',
       account_number: '0',
       sequence: '0',
       fee: {
         gas: '0',
-        amount: []
+        amount: [],
       },
       msgs: [
         {
           type: 'sign/MsgSignData',
           value: {
-            signer: address,
-            data: btoa(message)
-          }
-        }
+            signer: this.address,
+            data: btoa(message),
+          },
+        },
       ],
-      memo: ''
+      memo: '',
     })
     return signed.signature
   }

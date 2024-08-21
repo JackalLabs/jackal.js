@@ -1,47 +1,75 @@
-import { EncodeObject } from '@cosmjs/proto-signing'
-import {
-  IPaginatedMap,
-  IPagination,
-  IRnsBidHashMap,
-  IRnsBidItem,
-  IRnsExpandedForSaleHashMap,
-  IRnsForSaleHashMap,
-  IRnsForSaleItem,
-  IRnsItem,
-  IRnsOwnedHashMap,
-  IRnsRecordItem,
-  IRnsRegistrationItem
-} from '@/interfaces'
+import type {
+  DBid,
+  DCoin,
+  DDeliverTxResponse,
+  DForsale,
+  DName,
+  TQueryAllBidsResponseStrict,
+  TQueryAllForSaleResponseStrict,
+  TQueryAllNamesResponseStrict,
+  TQueryListOwnedNamesResponseStrict,
+} from '@jackallabs/jackal.js-protos'
+import type { IPageRequest, IRnsData } from '@/interfaces'
+import type { TAddressPrefix } from '@/types'
 
-export default interface IRnsHandler {
-  makeAcceptBidMsg(rns: string, from: string): EncodeObject
-  makeAddRecordMsg(recordValues: IRnsRecordItem): EncodeObject
-  makeBidMsg(rns: string, bid: string): EncodeObject
-  makeBuyMsg(rns: string): EncodeObject
-  makeCancelBidMsg(rns: string): EncodeObject
-  makeDelistMsg(rns: string): EncodeObject
-  makeDelRecordMsg(rns: string): EncodeObject
-  makeRnsInitMsg(): EncodeObject
-  makeListMsg(rns: string, price: string): EncodeObject
-  makeNewRegistrationMsg(registrationValues: IRnsRegistrationItem): EncodeObject
-  makeTransferMsg(rns: string, receiver: string): EncodeObject
-  makeUpdateMsg(rns: string, data: string): EncodeObject
+export interface IRnsHandler {
+  getBidForSingleName(name: string): Promise<DBid>
 
-  findSingleBid(index: string): Promise<IRnsBidItem>
-  findAllBids(): Promise<IRnsBidHashMap>
-  findSingleForSaleName(rnsName: string): Promise<IRnsForSaleItem>
-  findSomeForSaleNames(
-    options?: IPagination
-  ): Promise<IPaginatedMap<IRnsForSaleHashMap>>
-  findAllForSaleNames(blockTime?: number): Promise<IRnsExpandedForSaleHashMap>
-  findExpandedForSaleNames(
-    blockTime?: number
-  ): Promise<IRnsExpandedForSaleHashMap>
-  findMyExistingNames(blockTime?: number): Promise<IRnsOwnedHashMap>
-  findYourExistingNames(
+  getBidsForAllNames(
+    pagination?: IPageRequest,
+  ): Promise<TQueryAllBidsResponseStrict>
+
+  getNameForSale(name: string): Promise<DForsale>
+
+  getAllNamesForSale(
+    pagination?: IPageRequest,
+  ): Promise<TQueryAllForSaleResponseStrict>
+
+  getAllNames(pagination?: IPageRequest): Promise<TQueryAllNamesResponseStrict>
+
+  getAllMyNames(
+    pagination?: IPageRequest,
+  ): Promise<TQueryListOwnedNamesResponseStrict>
+
+  getAllNamesInWallet(
     address: string,
-    blockTime?: number
-  ): Promise<IRnsOwnedHashMap>
-  findSingleRns(rns: string): Promise<IRnsItem>
-  findMatchingAddress(rns: string): Promise<string>
+    pagination?: IPageRequest,
+  ): Promise<TQueryListOwnedNamesResponseStrict>
+
+  getNameDetails(name: string): Promise<DName>
+
+  rnsToAddress(name: string, prefix?: TAddressPrefix): Promise<string>
+
+  bid(rns: string, bid: DCoin): Promise<DDeliverTxResponse>
+
+  acceptBid(rns: string, from: string): Promise<DDeliverTxResponse>
+
+  cancelBid(rns: string): Promise<DDeliverTxResponse>
+
+  list(rns: string, price: DCoin): Promise<DDeliverTxResponse>
+
+  delist(rns: string): Promise<DDeliverTxResponse>
+
+  buy(rns: string): Promise<DDeliverTxResponse>
+
+  init(): Promise<DDeliverTxResponse>
+
+  register(
+    rns: string,
+    yearsToRegister: number,
+    data?: IRnsData,
+  ): Promise<DDeliverTxResponse>
+
+  update(rns: string, data?: IRnsData): Promise<DDeliverTxResponse>
+
+  transfer(rns: string, receiver: string): Promise<DDeliverTxResponse>
+
+  addSubRns(
+    rns: string,
+    linkedWallet: string,
+    subRns: string,
+    data?: IRnsData,
+  ): Promise<DDeliverTxResponse>
+
+  removeSubRns(rns: string): Promise<DDeliverTxResponse>
 }

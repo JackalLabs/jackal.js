@@ -1,4 +1,6 @@
-const {crypto} = window ? window : globalThis
+import { intToHex, stringToUint8Array } from '@/utils/converters'
+import { warnError } from '@/utils/misc'
+import type { TMerkleParentChild } from '@/types'
 
 /**
  * Hash input using SHA-256, then convert to hex string.
@@ -6,10 +8,41 @@ const {crypto} = window ? window : globalThis
  * @returns {Promise<string>} - Resulting Hex string.
  * @private
  */
-export async function hashAndHex (input: string): Promise<string> {
+export async function hashAndHex(input: string): Promise<string> {
   const algo = 'SHA-256'
-  const raw = await crypto.subtle.digest(algo, new TextEncoder().encode(input))
+  const raw = await crypto.subtle.digest(algo, stringToUint8Array(input))
   return bufferToHex(new Uint8Array(raw))
+}
+
+/**
+ * Merkle hash owner string for Filetree.
+ * @param {string} hexedAddress - Merkled hex string of address.
+ * @param {string} owner - Raw owner
+ * @returns {Promise<string>} - Merkled, address plus hashed owner.
+ * @private
+ */
+export async function hashAndHexOwner(
+  hexedAddress: string,
+  owner: string,
+): Promise<string> {
+  const prefix = 'o'
+  return await hashAndHex(`${prefix}${hexedAddress}${await hashAndHex(owner)}`)
+}
+
+/**
+ * Hash access lookup string for Filetree.
+ * @param {string} prefix - Prefix letter.
+ * @param {string} trackingNumber - UUID of resource.
+ * @param {string} user - Account address.
+ * @returns {Promise<string>} - Hashed hex string of inputs.
+ * @private
+ */
+export async function hashAndHexUserAccess(
+  prefix: string,
+  trackingNumber: string,
+  user: string,
+): Promise<string> {
+  return await hashAndHex(`${prefix}${trackingNumber}${user}`)
 }
 
 /**
@@ -19,9 +52,9 @@ export async function hashAndHex (input: string): Promise<string> {
  * @returns {Promise<string>} - Resulting Merkle Hex string.
  * @private
  */
-export async function hexFullPath (
+export async function hexFullPath(
   path: string,
-  fileName: string
+  fileName: string,
 ): Promise<string> {
   return await hashAndHex(`${path}${await hashAndHex(fileName)}`)
 }
@@ -32,8 +65,13 @@ export async function hexFullPath (
  * @returns {Promise<string>} - Resulting Merkle Hex string.
  * @private
  */
-export async function merkleMeBro (path: string): Promise<string> {
-  const pathArray = path.split('/')
+export async function merklePath(path: string | string[]): Promise<string> {
+  const pathArray = []
+  if (path instanceof Array) {
+    pathArray.push(...path)
+  } else {
+    pathArray.push(...path.split('/'))
+  }
   let merkle = ''
   for (let i = 0; i < pathArray.length; i++) {
     merkle = await hexFullPath(merkle, pathArray[i])
@@ -42,18 +80,101 @@ export async function merkleMeBro (path: string): Promise<string> {
 }
 
 /**
- * Converts hashed values into strings.
- * @param {Uint8Array} buf - ArrayBuffy view contained hash results.
+ * Create a Merkle Hex string from a directory path with an index.
+ * @param {string} path - Directory path as delimited by slashes "/".
+ * @param {number} index - Ref index.
+ * @returns {Promise<string>} - Resulting Merkle Hex string.
+ * @private
+ */
+export async function merklePathPlusIndex(
+  path: string,
+  index: number,
+): Promise<string> {
+  return await hashAndHex(`${await merklePath(path)}${intToHex(index)}`)
+}
+
+/**
+ * Create a Merkle Hex string and child string from a directory path.
+ * @param {string} path - Directory path as delimited by slashes "/".
+ * @returns {Promise<TMerkleParentChild>}
+ * @private
+ */
+export async function merkleParentAndChild(
+  path: string,
+): Promise<TMerkleParentChild> {
+  const pathArray: string[] = path.split('/')
+  if (pathArray.length < 2) {
+    throw new Error(warnError('merkleParentAndChild()', 'Path too short'))
+  }
+  const [child] = pathArray.slice(-1)
+  let parentMerkle = await merklePath(pathArray.slice(0, -1))
+  return [parentMerkle, await hashAndHex(child)]
+}
+
+/**
+ * Create a Merkle Hex string and child string from a directory path and index.
+ * @param {string | string[]} path - Directory path as delimited by slashes "/".
+ * @param {string} index - Index to use as child.
+ * @returns {Promise<TMerkleParentChild>}
+ * @private
+ */
+export async function merkleParentAndIndex(
+  path: string | string[],
+  index: string,
+): Promise<TMerkleParentChild> {
+  const pathArray: string[] = []
+  if (path instanceof Array) {
+    pathArray.push(...path)
+  } else {
+    const workingPath = path.split('/')
+    pathArray.push(...workingPath)
+  }
+  let parentMerkle = await merklePath(pathArray)
+  return [parentMerkle, index]
+}
+
+/**
+ * SHA256 hash source string to hex encoded value.
+ * @param {string} source - Source string for hashing.
+ * @returns {Promise<string>} - Hex encoded SHA string.
+ * @private
+ */
+export async function stringToShaHex(source: string) {
+  const safe = atob(source)
+  const postProcess = await crypto.subtle.digest(
+    'SHA-256',
+    stringToUint8Array(safe),
+  )
+  return bufferToHex(new Uint8Array(postProcess))
+}
+
+/**
+ * Converts hashed Uint8Array values into hex strings.
+ * @param {Uint8Array} buf - Uint8Array containing hash results.
  * @returns {string} - Hex string converted from source.
  * @private
  */
-export function bufferToHex (buf: Uint8Array): string {
+export function bufferToHex(buf: Uint8Array): string {
   return buf.reduce((acc: string, curr: number) => {
-    return acc + hashMap[curr]
+    return acc + hexMap[curr]
   }, '')
 }
 
-const hashMap: string[] = [
+/**
+ * Converts hex strings into hashed Uint8Array values.
+ * @param {string} source - Hex string containing hash results.
+ * @returns {Uint8Array} - Uint8Array converted from source.
+ * @private
+ */
+export function hexToBuffer(source: string): Uint8Array {
+  const found: number[] = []
+  for (let i = 0; i < source.length; i += 2) {
+    found.push(hexMap.indexOf(`${source[i]}${source[i + 1]}`))
+  }
+  return new Uint8Array(found)
+}
+
+const hexMap: string[] = [
   '00',
   '01',
   '02',
@@ -309,5 +430,5 @@ const hashMap: string[] = [
   'fc',
   'fd',
   'fe',
-  'ff'
+  'ff',
 ]

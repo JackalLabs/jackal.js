@@ -1,6 +1,11 @@
-import { Coin } from '@cosmjs/amino/build/coins'
+import { DCoin, DEncodeObject } from '@jackallabs/jackal.js-protos'
 
-export default interface IGasRate {
-  amount: Coin[]
+export interface IGasRate {
+  amount: DCoin[]
   gas: string
+}
+
+export interface IFinalGas {
+  fee: IGasRate
+  msgs: DEncodeObject[]
 }

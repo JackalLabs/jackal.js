@@ -1,223 +1,631 @@
-import { EncodeObject } from '@cosmjs/proto-signing'
-import {
-  IQueryHandler,
+import { bech32 } from '@jackallabs/bech32'
+import { signerNotEnabled, warnError } from '@/utils/misc'
+import type {
+  DBid,
+  DCoin,
+  DDeliverTxResponse,
+  DEncodeObject,
+  DForsale,
+  DName,
+  TJackalSigningClient,
+  TQueryAllBidsResponseStrict,
+  TQueryAllForSaleResponseStrict,
+  TQueryAllNamesResponseStrict,
+  TQueryListOwnedNamesResponseStrict,
+} from '@jackallabs/jackal.js-protos'
+import type {
+  IClientHandler,
+  IPageRequest,
+  IRnsData,
   IRnsHandler,
-  IWalletHandler
-} from '@/interfaces/classes'
-import {
-  IPaginatedMap,
-  IPagination,
-  IRnsBidHashMap,
-  IRnsBidItem,
-  IRnsExistsHashMap,
-  IRnsExpandedForSaleHashMap,
-  IRnsForSaleHashMap,
-  IRnsForSaleItem,
-  IRnsItem,
-  IRnsOwnedHashMap,
-  IRnsRecordItem,
-  IRnsRegistrationItem
+  IWrappedEncodeObject,
 } from '@/interfaces'
-import {
-  blockToDateFixed,
-  handlePagination,
-  signerNotEnabled
-} from '@/utils/misc'
-import IRnsExpandedItem from '@/interfaces/rns/IRnsExpandedItem'
+import type { TAddressPrefix } from '@/types'
 
-/**
- * Class encompassing basic and advanced methods needed for interaction with RNS addresses on the chain.
- */
-export default class RnsHandler implements IRnsHandler {
-  private readonly walletRef: IWalletHandler
-  private readonly qH: IQueryHandler
+export class RnsHandler implements IRnsHandler {
+  protected readonly jackalClient: IClientHandler
+  protected readonly signingClient: TJackalSigningClient | null
 
-  /**
-   * Create an RNS instance.
-   * @param {IWalletHandler} wallet - Instance of WalletHandler from WalletHandler.trackWallet().
-   * @private
-   */
-  private constructor(wallet: IWalletHandler) {
-    this.walletRef = wallet
-    this.qH = wallet.getQueryHandler()
+  protected constructor(client: IClientHandler) {
+    this.jackalClient = client
+    this.signingClient = client.getJackalSigner()
   }
 
   /**
-   * Async wrapper to create an RNS instance.
-   * @param {IWalletHandler} wallet - Instance of WalletHandler from WalletHandler.trackWallet().
-   * @returns {Promise<IRnsHandler>} - Instance of RnsHandler.
+   * Initialize RNS handler.
+   * @param {IClientHandler} client - Instance of ClientHandler.
+   * @returns {Promise<RnsHandler>} - Instance of RnsHandler.
    */
-  static async trackRns(wallet: IWalletHandler): Promise<IRnsHandler> {
-    return new RnsHandler(wallet)
+  static async init(client: IClientHandler): Promise<IRnsHandler> {
+    return new RnsHandler(client)
+  }
+
+  /**
+   * Find a specific RNS bid by name.
+   * @param {string} name - RNS name to search for.
+   * @returns {Promise<DBid>}
+   */
+  async getBidForSingleName(name: string): Promise<DBid> {
+    try {
+      const result = await this.jackalClient
+        .getQueries()
+        .rns.bid({ name: this.sanitizeRns(name) })
+      return result.bids
+    } catch (err) {
+      throw warnError('rnsHandler getBidForSingleName()', err)
+    }
+  }
+
+  /**
+   * List all outstanding bids on all names for all users.
+   * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
+   * @returns {Promise<TQueryAllBidsResponseStrict>}
+   */
+  async getBidsForAllNames(
+    pagination?: IPageRequest,
+  ): Promise<TQueryAllBidsResponseStrict> {
+    try {
+      return await this.jackalClient.getQueries().rns.allBids({ pagination })
+    } catch (err) {
+      throw warnError('rnsHandler getBidsForAllNames()', err)
+    }
+  }
+
+  /**
+   * Get RNS market details for a single listed name.
+   * @param {string} name - RNS name to find.
+   * @returns {Promise<DForsale>}
+   */
+  async getNameForSale(name: string): Promise<DForsale> {
+    try {
+      const result = await this.jackalClient
+        .getQueries()
+        .rns.forSale({ name: this.sanitizeRns(name) })
+      return result.forSale
+    } catch (err) {
+      throw warnError('rnsHandler getNameForSale()', err)
+    }
+  }
+
+  /**
+   * Finds all RNS names listed on market.
+   * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
+   * @returns {Promise<TQueryAllForSaleResponseStrict>}
+   */
+  async getAllNamesForSale(
+    pagination?: IPageRequest,
+  ): Promise<TQueryAllForSaleResponseStrict> {
+    try {
+      return await this.jackalClient.getQueries().rns.allForSale({ pagination })
+    } catch (err) {
+      throw warnError('rnsHandler getAllNamesForSale()', err)
+    }
+  }
+
+  /**
+   * Finds all currently registered RNS names.
+   * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
+   * @returns {Promise<TQueryAllNamesResponseStrict>} - Pagination and array of DName.
+   */
+  async getAllNames(
+    pagination?: IPageRequest,
+  ): Promise<TQueryAllNamesResponseStrict> {
+    try {
+      return await this.jackalClient.getQueries().rns.allNames({ pagination })
+    } catch (err) {
+      throw warnError('rnsHandler getAllNames()', err)
+    }
+  }
+
+  /**
+   * Get all RNS names registered to user.
+   * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
+   * @returns {Promise<TQueryListOwnedNamesResponseStrict>} - Pagination and array of DName.
+   */
+  async getAllMyNames(
+    pagination?: IPageRequest,
+  ): Promise<TQueryListOwnedNamesResponseStrict> {
+    try {
+      return await this.getAllNamesInWallet(
+        this.jackalClient.getJackalAddress(),
+        pagination,
+      )
+    } catch (err) {
+      throw warnError('rnsHandler getAllMyNames()', err)
+    }
+  }
+
+  /**
+   * Get all RNS names registered to target address.
+   * @param {string} address - Jackal address to check.
+   * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
+   * @returns {Promise<TQueryListOwnedNamesResponseStrict>} - Pagination and array of DName.
+   */
+  async getAllNamesInWallet(
+    address: string,
+    pagination?: IPageRequest,
+  ): Promise<TQueryListOwnedNamesResponseStrict> {
+    try {
+      return await this.jackalClient
+        .getQueries()
+        .rns.listOwnedNames({ address, pagination })
+    } catch (err) {
+      throw warnError('rnsHandler getAllNamesInWallet()', err)
+    }
+  }
+
+  /**
+   * Get specifics on target RNS name.
+   * @param {string} name - RNS name to check.
+   * @returns {Promise<DName>}
+   */
+  async getNameDetails(name: string): Promise<DName> {
+    try {
+      const result = await this.jackalClient
+        .getQueries()
+        .rns.name({ name: this.sanitizeRns(name) })
+      return result.name
+    } catch (err) {
+      throw warnError('rnsHandler getNameDetails()', err)
+    }
+  }
+
+  /**
+   * Convert RNS address to wallet address.
+   * @param {string} name - RNS name to convert.
+   * @param {TAddressPrefix} prefix - Optional wallet prefix, defaults to jkl.
+   * @returns {Promise<string>} - Wallet address of RNS owner.
+   */
+  async rnsToAddress(name: string, prefix?: TAddressPrefix): Promise<string> {
+    try {
+      const details = await this.getNameDetails(name)
+      if (prefix) {
+        return bech32.swapPrefixAsync(prefix, details.value)
+      } else {
+        return details.value
+      }
+    } catch (err) {
+      throw warnError('rnsHandler rnsToAddress()', err)
+    }
+  }
+
+  /**
+   * Submit an offer on another user's RNS.
+   * @param {string} rns - RNS to submit offer on.
+   * @param {DCoin} bid - Value of offer as DCoin instance.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async bid(rns: string, bid: DCoin): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'bid'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeBidMsg(rns, bid),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler bid()', err)
+    }
+  }
+
+  /**
+   * Accept a bid on the user's RNS.
+   * @param {string} rns -  The RNS to accept the bid for.
+   * @param {string} from - The Jackal address to accept the bid from.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async acceptBid(rns: string, from: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'acceptBid'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeAcceptBidMsg(rns, from),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler acceptBid()', err)
+    }
+  }
+
+  /**
+   * Retract offer on another user's RNS.
+   * @param {string} rns - RNS to retract offer from.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async cancelBid(rns: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'cancelBid'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeCancelBidMsg(rns),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler cancelBid()', err)
+    }
+  }
+
+  /**
+   * Add user's RNS to the market.
+   * @param {string} rns - RNS to list on market.
+   * @param {DCoin} price - Value to buy as DCoin instance.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async list(rns: string, price: DCoin): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'list'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeListMsg(rns, price),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler list()', err)
+    }
+  }
+
+  /**
+   * Remove user's RNS from the market.
+   * @param {string} rns - RNS to remove.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async delist(rns: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'delist'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeDelistMsg(rns),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler delist()', err)
+    }
+  }
+
+  /**
+   * Purchase RNS listed on market.
+   * @param {string} rns
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async buy(rns: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'buy'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeBuyMsg(rns),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler buy()', err)
+    }
+  }
+
+  /**
+   * Activate user in the RNS system and to generate free account RNS.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async init(): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'init'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeInitMsg(),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler init()', err)
+    }
+  }
+
+  /**
+   * Register new RNS.
+   * @param {string} rns - RNS address to register.
+   * @param {number} yearsToRegister - Duration to register for in years.
+   * @param {IRnsData} [data] - Optional object to include in data field.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async register(
+    rns: string,
+    yearsToRegister: number,
+    data?: IRnsData,
+  ): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'register'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeRegisterMsg(rns, yearsToRegister, data),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler register()', err)
+    }
+  }
+
+  /**
+   * Update RNS metadata.
+   * @param {string} rns - RNS address to update.
+   * @param {IRnsData} [data] - Optional object to replace existing contents of data field.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async update(rns: string, data?: IRnsData): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'update'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeUpdateMsg(rns, data),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler update()', err)
+    }
+  }
+
+  /**
+   * Transfer user's RNS to another user.
+   * @param {string} rns - RNS to transfer.
+   * @param {string} receiver - Jackal address to transfer to.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async transfer(rns: string, receiver: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'transfer'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeTransferMsg(rns, receiver),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler transfer()', err)
+    }
+  }
+
+  /**
+   * Add a subdomain entry to an RNS.
+   * @param {string} rns - RNS to transfer.
+   * @param {string} linkedWallet - Jackal address to link new sub RNS to.
+   * @param {string} subRns - Sub RNS to create.
+   * @param {IRnsData} [data] - Optional object to include in sub RNS data field.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async addSubRns(
+    rns: string,
+    linkedWallet: string,
+    subRns: string,
+    data?: IRnsData,
+  ): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'addSubRns'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeAddRecordMsg(rns, linkedWallet, subRns, data),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler addSubRns()', err)
+    }
+  }
+
+  /**
+   * Delete an RNS subdomain entry.
+   * @param {string} rns - Full RNS to remove.
+   * @returns {Promise<DDeliverTxResponse>}
+   */
+  async removeSubRns(rns: string): Promise<DDeliverTxResponse> {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'removeSubRns'))
+    }
+    try {
+      const wrapped: IWrappedEncodeObject = {
+        encodedObject: this.makeDelRecordMsg(rns),
+        modifier: 0,
+      }
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('rnsHandler removeSubRns()', err)
+    }
+  }
+
+  /**
+   * Create Msg for submitting an offer on another user's RNS.
+   * @param {string} rns - RNS to submit offer on.
+   * @param {DCoin} bid - Value of offer as DCoin instance.
+   * @returns {DEncodeObject}
+   * @protected
+   */
+  protected makeBidMsg(rns: string, bid: DCoin): DEncodeObject {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'makeBidMsg'))
+    }
+    return this.signingClient.txLibrary.rns.msgBid({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+      bid,
+    })
   }
 
   /**
    * Create Msg for accepting a bid on the user's RNS.
    * @param {string} rns -  The RNS to accept the bid for.
    * @param {string} from - The Jackal address to accept the bid from.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
+   * @returns {DEncodeObject}
+   * @protected
    */
-  makeAcceptBidMsg(rns: string, from: string): EncodeObject {
-    if (!this.walletRef.traits)
+  protected makeAcceptBidMsg(rns: string, from: string): DEncodeObject {
+    if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeAcceptBidMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgAcceptBid({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns,
-      from
-    })
-  }
-
-  /**
-   * Create Msg for adding a subdomain entry on the user's RNS.
-   * @param {IRnsRecordItem} recordValues - New subdomain's values.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
-   */
-  makeAddRecordMsg(recordValues: IRnsRecordItem): EncodeObject {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'makeAddRecordMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(recordValues.name)
-    return pH.rnsTx.msgAddRecord({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns,
-      value: recordValues.value,
-      data: sanitizeRnsData(recordValues.data, 'makeAddRecordMsg'),
-      record: recordValues.record
-    })
-  }
-
-  /**
-   * Create Msg for submitting an offer on another user's RNS.
-   * @param {string} rns - RNS to submit offer on.
-   * @param {string} bid - Value of offer in ujkl. Example: "1000000ujkl" (1 $JKL).
-   * @returns {EncodeObject} - The Msg for processing by the chain.
-   */
-  makeBidMsg(rns: string, bid: string): EncodeObject {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'makeBidMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgBid({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns,
-      bid
-    })
-  }
-
-  /**
-   * Create Msg for purchasing RNS listed on market.
-   * @param {string} rns - RNS to purchase.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
-   */
-  makeBuyMsg(rns: string): EncodeObject {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'makeBuyMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgBuy({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns
+    }
+    return this.signingClient.txLibrary.rns.msgAcceptBid({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+      from,
     })
   }
 
   /**
    * Create Msg to retract offer on another user's RNS.
    * @param {string} rns - RNS to retract offer from.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
+   * @returns {DEncodeObject}
+   * @protected
    */
-  makeCancelBidMsg(rns: string): EncodeObject {
-    if (!this.walletRef.traits)
+  protected makeCancelBidMsg(rns: string): DEncodeObject {
+    if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeCancelBidMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgCancelBid({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns
-    })
-  }
-
-  /**
-   * Create Msg to remove user's RNS from the market.
-   * @param {string} rns - RNS to remove.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
-   */
-  makeDelistMsg(rns: string): EncodeObject {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'makeDelistMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgDelist({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns
-    })
-  }
-
-  /**
-   * Create Msg to delete user's RNS.
-   * @param {string} rns - RNS to delete.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
-   */
-  makeDelRecordMsg(rns: string): EncodeObject {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'makeDelRecordMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgDelRecord({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns
-    })
-  }
-
-  /**
-   * Create Msg to activate user in the RNS system and to generate free account RNS.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
-   */
-  makeRnsInitMsg(): EncodeObject {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'makeRnsInitMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    return pH.rnsTx.msgInit({
-      creator: this.walletRef.getJackalAddress()
+    }
+    return this.signingClient.txLibrary.rns.msgCancelBid({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
     })
   }
 
   /**
    * Create Msg to add user's RNS to the market.
    * @param {string} rns - RNS to list on market.
-   * @param {string} price - Price of offer in ujkl. Example: "1000000ujkl" (1 $JKL).
-   * @returns {EncodeObject} - The Msg for processing by the chain.
+   * @param {DCoin} price - Value to buy as DCoin instance.
+   * @returns {DEncodeObject}
+   * @protected
    */
-  makeListMsg(rns: string, price: string): EncodeObject {
-    if (!this.walletRef.traits)
+  protected makeListMsg(rns: string, price: DCoin): DEncodeObject {
+    if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeListMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgList({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns,
-      price
+    }
+    return this.signingClient.txLibrary.rns.msgList({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+      price,
+    })
+  }
+
+  /**
+   * Create Msg to remove user's RNS from the market.
+   * @param {string} rns - RNS to remove.
+   * @returns {DEncodeObject}
+   * @protected
+   */
+  protected makeDelistMsg(rns: string): DEncodeObject {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'makeDelistMsg'))
+    }
+    return this.signingClient.txLibrary.rns.msgDelist({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+    })
+  }
+
+  /**
+   * Create Msg for purchasing RNS listed on market.
+   * @param {string} rns - RNS to purchase.
+   * @returns {DEncodeObject}
+   * @protected
+   */
+  protected makeBuyMsg(rns: string): DEncodeObject {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'makeBuyMsg'))
+    }
+    return this.signingClient.txLibrary.rns.msgBuy({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+    })
+  }
+
+  /**
+   * Create Msg to activate user in the RNS system and to generate free account RNS.
+   * @returns {DEncodeObject}
+   * @protected
+   */
+  protected makeInitMsg(): DEncodeObject {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'makeInitMsg'))
+    }
+    return this.signingClient.txLibrary.rns.msgInit({
+      creator: this.jackalClient.getJackalAddress(),
     })
   }
 
   /**
    * Create Msg to register new RNS.
-   * @param {IRnsRegistrationItem} registrationValues - Bundle containing RNS name, duration in years, and JSON.stringified metadata.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
+   * @param {string} rns - RNS address to register.
+   * @param {number} yearsToRegister - Duration to register for in years.
+   * @param {IRnsData} [data] - Optional object to include in data field.
+   * @returns {DEncodeObject}
+   * @protected
    */
-  makeNewRegistrationMsg(
-    registrationValues: IRnsRegistrationItem
-  ): EncodeObject {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'makeNewRegistrationMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(registrationValues.nameToRegister)
-    return pH.rnsTx.msgRegister({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns,
-      years: (Number(registrationValues.yearsToRegister) || 1).toString(),
-      data: sanitizeRnsData(registrationValues.data, 'makeNewRegistrationMsg')
+  protected makeRegisterMsg(
+    rns: string,
+    yearsToRegister: number,
+    data?: IRnsData,
+  ): DEncodeObject {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'makeRegisterMsg'))
+    }
+    return this.signingClient.txLibrary.rns.msgRegister({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+      years: Number(yearsToRegister) || 1,
+      data: this.standardizeDataContents(data),
+    })
+  }
+
+  /**
+   * Create Msg to update RNS metadata.
+   * @param {string} rns - RNS address to update.
+   * @param {IRnsData} [data] - Optional object to replace existing contents of data field.
+   * @returns {DEncodeObject}
+   * @protected
+   */
+  protected makeUpdateMsg(rns: string, data?: IRnsData): DEncodeObject {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'makeUpdateMsg'))
+    }
+    return this.signingClient.txLibrary.rns.msgUpdate({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+      data: this.standardizeDataContents(data),
     })
   }
 
@@ -225,317 +633,91 @@ export default class RnsHandler implements IRnsHandler {
    * Create Msg to transfer user's RNS to another user.
    * @param {string} rns - RNS to transfer.
    * @param {string} receiver - Jackal address to transfer to.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
+   * @returns {DEncodeObject}
+   * @protected
    */
-  makeTransferMsg(rns: string, receiver: string): EncodeObject {
-    if (!this.walletRef.traits)
+  protected makeTransferMsg(rns: string, receiver: string): DEncodeObject {
+    if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeTransferMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgTransfer({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns,
-      receiver
+    }
+    return this.signingClient.txLibrary.rns.msgTransfer({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+      receiver,
     })
   }
 
   /**
-   * Create Msg to update RNS metadata.
-   * @param {string} rns - User's RNS to update.
-   * @param {string} data - JSON.stringified new metadata to replace existing data.
-   * @returns {EncodeObject} - The Msg for processing by the chain.
+   * Create Msg for adding a subdomain entry to an RNS.
+   * @param {string} rns - RNS to transfer.
+   * @param {string} linkedWallet - Jackal address to link new sub RNS to.
+   * @param {string} subRns - Sub RNS to create.
+   * @param {IRnsData} [data] - Optional object to include in sub RNS data field.
+   * @returns {DEncodeObject}
+   * @protected
    */
-  makeUpdateMsg(rns: string, data: string): EncodeObject {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'makeUpdateMsg'))
-    const pH = this.walletRef.getProtoHandler()
-    const trueRns = sanitizeRns(rns)
-    return pH.rnsTx.msgUpdate({
-      creator: this.walletRef.getJackalAddress(),
-      name: trueRns,
-      data: sanitizeRnsData(data, 'makeUpdateMsg')
+  protected makeAddRecordMsg(
+    rns: string,
+    linkedWallet: string,
+    subRns: string,
+    data?: IRnsData,
+  ): DEncodeObject {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'makeAddRecordMsg'))
+    }
+    return this.signingClient.txLibrary.rns.msgAddRecord({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
+      value: linkedWallet,
+      data: this.standardizeDataContents(data),
+      record: subRns,
     })
   }
 
   /**
-   * Find a specific RNS bid by global index.
-   * @param {string} index - Index to find.
-   * @returns {Promise<IRnsBidItem>} - Bid if found, defaults to bid item with empty values if no match found.
+   * Create Msg to delete an RNS subdomain entry.
+   * @param {string} rns - Full RNS to remove.
+   * @returns {DEncodeObject}
+   * @protected
    */
-  async findSingleBid(index: string): Promise<IRnsBidItem> {
-    const trueIndex = sanitizeRns(index)
-    return (await this.qH.rnsQuery.queryBids({ index: trueIndex })).value
-      .bids as IRnsBidItem
-  }
-
-  /**
-   * List all outstanding bids for all users.
-   * @returns {Promise<IRnsBidHashMap>} - Object map of bid arrays by RNS name.
-   */
-  async findAllBids(): Promise<IRnsBidHashMap> {
-    const data: IRnsBidItem[] = (
-      await handlePagination(this.qH.rnsQuery, 'queryBidsAll', {})
-    ).reduce((acc: IRnsBidItem[], curr: any) => {
-      acc.push(...curr.bids)
-      return acc
-    }, [])
-
-    return data.reduce((acc: IRnsBidHashMap, curr: IRnsBidItem) => {
-      if (!acc[curr.name]?.length) {
-        acc[curr.name] = [curr]
-      } else {
-        acc[curr.name].push(curr)
-      }
-      return acc
-    }, {})
-  }
-
-  /**
-   * Get RNS market details for a single listed RNS.
-   * @param {string} rns - RNS address to find.
-   * @returns {Promise<IRnsForSaleItem>} - Listing if found, defaults to list item with empty values if no match found.
-   */
-  async findSingleForSaleName(rns: string): Promise<IRnsForSaleItem> {
-    const trueRns = sanitizeRns(rns)
-    return (await this.qH.rnsQuery.queryForsale({ name: trueRns })).value
-      .forsale as IRnsForSaleItem
-  }
-
-  /**
-   * Finds paginated RNS listed on market
-   * @returns {Promise<IPaginatedMap<IRnsForSaleHashMap>>}
-   */
-  async findSomeForSaleNames(
-    options?: IPagination
-  ): Promise<IPaginatedMap<IRnsForSaleHashMap>> {
-    const data = await this.qH.rnsQuery.queryForsaleAll({
-      pagination: {
-        key: options?.nextPage,
-        limit: options?.limit || 100
-      }
+  protected makeDelRecordMsg(rns: string): DEncodeObject {
+    if (!this.signingClient) {
+      throw new Error(signerNotEnabled('RnsHandler', 'makeDelRecordMsg'))
+    }
+    return this.signingClient.txLibrary.rns.msgDelRecord({
+      creator: this.jackalClient.getJackalAddress(),
+      name: this.sanitizeRns(rns),
     })
-    const condensed = data.value.forsale.reduce(
-      (acc: IRnsForSaleHashMap, curr: IRnsForSaleItem) => {
-        acc[curr.name] = curr
-        return acc
-      },
-      {}
-    )
+  }
 
-    return {
-      data: condensed,
-      nextPage: data.value.pagination?.nextKey
+  /**
+   * Ensures RNS address ends with ".jkl".
+   * @param {string} name - RNS address to process.
+   * @returns {string} - Source RNS address with ".jkl" included.
+   * @protected
+   */
+  protected sanitizeRns(name: string): string {
+    return name.endsWith('.jkl') ? name : `${name}.jkl`
+  }
+
+  /**
+   * Enforces data field is valid JSON with fallback of '{}'. Used by:
+   * - makeRegisterMsg()
+   * - makeUpdateMsg()
+   * - makeAddRecordMsg()
+   * @param {IRnsData} [data]
+   * @returns {string}
+   * @protected
+   */
+  protected standardizeDataContents(data: IRnsData = {}): string {
+    try {
+      return JSON.stringify(data)
+    } catch (err) {
+      console.error('standardizeDataContents() failed')
+      console.log('data')
+      console.log(data)
+      console.error(err)
+      return '{}'
     }
   }
-
-  /**
-   * Finds all RNS listed on market.
-   * @param {number} blockTime - Block length in milliseconds.
-   * @returns {Promise<IRnsExpandedForSaleHashMap>} - Object map of list items by RNS name.
-   */
-  async findAllForSaleNames(
-    blockTime?: number
-  ): Promise<IRnsExpandedForSaleHashMap> {
-    const extendData: Promise<IRnsExistsHashMap> = this.findAllNames()
-    const data: IRnsForSaleItem[] = (
-      await handlePagination(this.qH.rnsQuery, 'queryForsaleAll', {})
-    ).reduce((acc: IRnsForSaleItem[], curr: any) => {
-      acc.push(...curr.forsale)
-      return acc
-    }, [])
-    const ready = await extendData
-    return data.reduce(
-      (acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
-        const cleanName = curr.name.replace('.jkl', '')
-        const { expires } = ready[cleanName]
-
-        acc[curr.name] = {
-          ...curr,
-          expires,
-          expireDate: parseExpires(blockTime || 6000, expires),
-          mine: false
-        }
-        return acc
-      },
-      {}
-    )
-  }
-
-  async findAllNames(): Promise<IRnsExistsHashMap> {
-    const data: IRnsItem[] = (
-      await handlePagination(this.qH.rnsQuery, 'queryNamesAll', {})
-    ).reduce((acc: IRnsItem[], curr: any) => {
-      acc.push(...curr.names)
-      return acc
-    }, [])
-    return data.reduce((acc: IRnsExistsHashMap, curr: IRnsItem) => {
-      acc[curr.name] = curr
-      return acc
-    }, {})
-  }
-
-  /**
-   * Finds all RNS listed on market and flags "mine" boolean if the user owns the RNS.
-   * @param {number} blockTime - Block length in milliseconds.
-   * @returns {Promise<IRnsExpandedForSaleHashMap>} - Object map of list items by RNS name.
-   */
-  async findExpandedForSaleNames(
-    blockTime?: number
-  ): Promise<IRnsExpandedForSaleHashMap> {
-    if (!this.walletRef.traits)
-      throw new Error(
-        signerNotEnabled('RnsHandler', 'findExpandedForSaleNames')
-      )
-    const address = this.walletRef.getJackalAddress()
-    const fullData = this.findAllNames()
-    const data: IRnsForSaleItem[] = (
-      await handlePagination(this.qH.rnsQuery, 'queryForsaleAll', {})
-    ).reduce((acc: IRnsForSaleItem[], curr: any) => {
-      acc.push(...curr.forsale)
-      return acc
-    }, [])
-    const ready = await fullData
-    return data.reduce(
-      (acc: IRnsExpandedForSaleHashMap, curr: IRnsForSaleItem) => {
-        const cleanName = curr.name.replace('.jkl', '')
-        const { expires } = ready[cleanName]
-
-        acc[curr.name] = {
-          ...curr,
-          expires,
-          expireDate: parseExpires(blockTime || 6000, expires),
-          mine: curr.owner === address
-        }
-        return acc
-      },
-      {}
-    )
-  }
-
-  /**
-   * Finds all RNS the current user owns.
-   * @param {number} blockTime - Block length in milliseconds.
-   * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
-   */
-  async findMyExistingNames(blockTime?: number): Promise<IRnsOwnedHashMap> {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'findMyExistingNames'))
-    const address = this.walletRef.getJackalAddress()
-    return this.findYourExistingNames(address, blockTime)
-  }
-
-  /**
-   * Finds all RNS the target user owns.
-   * @param {string} address - JKL address to check for RNS names.
-   * @param {number} blockTime - Block length in milliseconds.
-   * @returns {Promise<IRnsOwnedHashMap>} - Object map of entries by RNS name, locked RNS is stored as "free" instead.
-   */
-  async findYourExistingNames(
-    address: string,
-    blockTime?: number
-  ): Promise<IRnsOwnedHashMap> {
-    if (!this.walletRef.traits)
-      throw new Error(signerNotEnabled('RnsHandler', 'findYourExistingNames'))
-    const data: IRnsItem[] = (
-      await handlePagination(this.qH.rnsQuery, 'queryListOwnedNames', {
-        address
-      })
-    ).reduce((acc: IRnsItem[], curr: any) => {
-      acc.push(...curr.names)
-      return acc
-    }, [])
-    return data.reduce((acc: IRnsOwnedHashMap, curr: IRnsItem) => {
-      const item: IRnsExpandedItem = {
-        ...curr,
-        expireDate: parseExpires(blockTime || 6000, curr.expires)
-      }
-      if (curr.locked) {
-        acc.free = item
-      } else {
-        acc[curr.name] = item
-      }
-      return acc
-    }, {})
-  }
-
-  /**
-   * Find RNS details using RNS address.
-   * @param {string} rns - RNS address to search.
-   * @returns {Promise<IRnsItem>} - Data if found, defaults to item with empty values if no match found.
-   */
-  async findSingleRns(rns: string): Promise<IRnsItem> {
-    const trueRns = sanitizeRns(rns)
-    return (await this.qH.rnsQuery.queryNames({ index: trueRns })).value
-      .names as IRnsItem
-  }
-
-  /**
-   * Find owner's address using RNS address.
-   * @param {string} rns - RNS address to search.
-   * @returns {Promise<string>} - Owner's address if found, defaults to empty string if no match found.
-   */
-  async findMatchingAddress(rns: string): Promise<string> {
-    return (await this.findSingleRns(rns)).value || ''
-  }
-}
-
-/**
- * Ensures RNS address ends with ".jkl".
- * @param {string} rns - RNS address to process.
- * @returns {string} - Source RNS address with ".jkl" included.
- * @private
- */
-function sanitizeRns(rns: string): string {
-  const allowedExtensions = /\.(jkl|ibc)$/
-  return rns.match(allowedExtensions) ? rns : `${rns}.jkl`
-}
-
-// /**
-//  * Strip ".jkl" and ".ibc" endings from RNS address.
-//  * @param {string} rns - RNS address to process.
-//  * @returns {string} - Source RNS address with ".jkl" and ".ibc" excluded.
-//  */
-// function reverseSanitizeRns (rns: string): string {
-//   const strippedExtensions = /\.(jkl|ibc)$/
-//   return rns.replace(strippedExtensions, '')
-// }
-
-/**
- * Enforces JSON.stringify on data. Used by: makeUpdateMsg(), makeNewRegistrationMsg(), and makeAddRecordMsg().
- * @param {string} data - Data to force to JSON.stringify compliant string.
- * @param {string} caller - Function calling sanitizeRnsData() in case error is logged.
- * @returns {string} - JSON.stringify safe string.
- * @private
- */
-function sanitizeRnsData(data: string, caller: string) {
-  try {
-    return typeof data === 'string'
-      ? JSON.stringify(JSON.parse(data))
-      : JSON.stringify(data)
-  } catch (err) {
-    console.error(`sanitizeRnsData() failed for ${caller}`)
-    console.error(err)
-    return '{}'
-  }
-}
-
-/**
- * Convert RNS blockheight-based expiration to formatted Date string.
- * @param {number} blockTime - Duration of a block in milliseconds.
- * @param {number} expires - Blockheight of RNS expiration
- * @returns {string} - Localized date using 4 digit year, 2 digit day, and month name.
- * @private
- */
-function parseExpires(blockTime: number, expires: number): string {
-  const dd = blockToDateFixed({
-    /** Block time in milliseconds */
-    blockTime: blockTime,
-    currentBlockHeight: 2000000,
-    targetBlockHeight: expires
-  })
-  return dd.toLocaleString('default', {
-    year: 'numeric',
-    month: 'long',
-    day: '2-digit'
-  })
 }

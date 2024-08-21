@@ -1,6 +1,6 @@
 {
   "name": "@jackallabs/jackal.js",
-  "version": "2.3.3",
+  "version": "3.0.0",
   "description": "Javascript library for interacting with the Jackal Chain",
   "keywords": [
     "jackal",
@@ -8,14 +8,14 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.es.js",
-      "require": "./dist/index.umd.js"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.es.js"
+      }
     }
   },
-  "type": "module",
-  "main": "./dist/index.umd.js",
-  "module": "./dist/index.es.js",
   "types": "./dist/index.d.ts",
+  "module": "./dist/index.es.js",
   "files": [
     "dist"
   ],
@@ -57,41 +57,39 @@
   },
   "homepage": "https://github.com/JackalLabs/jackal.js/#README",
   "dependencies": {
-    "@cosmjs/launchpad": "^0.27.1",
-    "@cosmjs/proto-signing": "0.31.0",
-    "@cosmjs/stargate": "0.31.0",
-    "@jackallabs/jackal.js-protos": "1.4.1",
+    "@cosmjs/proto-signing": "^0.31.3",
+    "@cosmjs/stargate": "^0.32.2",
+    "@jackallabs/bech32": "^1.2.0",
+    "@jackallabs/dogwood-tree": "^1.0.1",
+    "@jackallabs/jackal.js-protos": "2.0.2",
     "@karnthis/plzsu": "^1.0.0",
-    "bech32": "^2.0.0",
-    "bip32": "^3.0.1",
-    "bip39": "3.1.0",
-    "bs58check": "3.0.1",
-    "eciesjs": "0.4.2",
-    "make-random": "^3.0.2"
+    "@keplr-wallet/types": "^0.12.44",
+    "browserify-aes": "^1.2.0",
+    "browserify-des": "^1.0.2",
+    "browserify-sign": "^4.2.2",
+    "create-hash": "^1.2.0",
+    "eciesjs": "^0.4.2",
+    "for-each": "^0.3.3",
+    "ripemd160": "^2.0.2",
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
-    "@keplr-wallet/types": "^0.11.0",
-    "@rollup/plugin-commonjs": "^25.0.0",
-    "@rollup/plugin-typescript": "^11.1.1",
-    "@types/bs58check": "^2.1.0",
-    "@types/jest": "^29.2.2",
-    "@types/node": "^18.7.18",
-    "@typescript-eslint/eslint-plugin": "^4.18.0",
-    "@typescript-eslint/parser": "^4.18.0",
-    "eslint": "^6.7.2",
-    "eslint-plugin-import": "^2.20.2",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.0",
-    "jest": "^29.3.0",
-    "prettier": "^2.8.8",
+    "@btmills/prettier": "3.0.3",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-typescript": "^11.1.5",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vitest/coverage-v8": "0.34.6",
+    "eslint": "8.53.0",
+    "eslint-config-prettier": "9.0.0",
     "rollup-plugin-typescript-paths": "^1.4.0",
-    "ts-jest": "^29.0.3",
-    "tslib": "^2.4.0",
-    "typedoc": "^0.24.8",
-    "typescript": "~4.9.4",
-    "vite": "^4.3.2",
-    "vite-plugin-dts": "^2.3.0",
-    "vite-tsconfig-paths": "^4.2.0"
+    "tslib": "^2.6.2",
+    "typedoc": "^0.25.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.1.5",
+    "vite-plugin-dts": "^4.0.3",
+    "vite-plugin-node-polyfills": "^0.17.0",
+    "vite-tsconfig-paths": "^4.2.1",
+    "vitest": "0.34.6"
   }
 }
