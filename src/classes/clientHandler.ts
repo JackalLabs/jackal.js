@@ -47,7 +47,7 @@ import {
   IWasmHandler,
   IWrappedEncodeObject,
 } from '@/interfaces'
-import type { TSockets } from '@/types'
+import { TSockets, TSocketSet } from '@/types'
 
 export class ClientHandler implements IClientHandler {
   protected readonly jklQuery: TJackalQueryClient
@@ -451,7 +451,7 @@ export class ClientHandler implements IClientHandler {
     }
     try {
       const res = await this.jklQuery.queries.bank.balance({
-        address: this.getJackalAddress(),
+        address: this.getICAJackalAddress(),
         denom: 'ujkl'
       })
       return res.balance as DCoin
@@ -548,6 +548,7 @@ export class ClientHandler implements IClientHandler {
         memo,
         broadcastTimeoutHeight,
         monitorTimeout = 30,
+        socketOverrides = {} as TSocketSet
       } = options
       const events: TxEvent[] = []
       const ready: IWrappedEncodeObject[] =
@@ -560,6 +561,7 @@ export class ClientHandler implements IClientHandler {
           events,
           msgs,
           this.myIcaAddress || this.hostAddress,
+          socketOverrides
         )
       console.log('connectionBundles:', connectionBundles)
 

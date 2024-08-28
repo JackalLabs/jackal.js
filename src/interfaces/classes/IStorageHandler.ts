@@ -1,92 +1,97 @@
-import type { DDeliverTxResponse } from '@jackallabs/jackal.js-protos'
 import {
   IBuyStorageOptions,
+  ICreateFolderOptions,
+  IDeleteTargetOptions,
   IDownloadTracker,
   IFileMetaData,
   IFileParticulars,
-  IFolderMetaData, IProviderIpSet,
+  IFolderMetaData,
+  IInitStorageOptions,
+  IProviderIpSet,
+  IRegisterPubKeyOptions,
+  IShareOptions,
   IStagedUploadPackage,
   IStorageStatus,
-  IWrappedEncodeObject,
+  IWrappedEncodeObject
 } from '@/interfaces'
 import type { TSharedRootMetaDataMap } from '@/types'
 
 export interface IStorageHandler {
-  cleanShutdown(): void
+  cleanShutdown (): void
 
-  registerPubKey(chain?: true): Promise<IWrappedEncodeObject[]>
+  registerPubKey (options?: IRegisterPubKeyOptions): Promise<IWrappedEncodeObject[]>
 
-  loadDirectory(path?: string): Promise<void>
+  loadDirectory (path?: string): Promise<void>
 
-  loadShared(): Promise<void>
+  loadShared (): Promise<void>
 
-  listChildFolders(): string[]
+  listChildFolders (): string[]
 
-  listChildFolderMetas(): IFolderMetaData[]
+  listChildFolderMetas (): IFolderMetaData[]
 
-  listChildFiles(): string[]
+  listChildFiles (): string[]
 
-  listChildFileMetas(): IFileMetaData[]
+  listChildFileMetas (): IFileMetaData[]
 
-  upgradeSigner(): Promise<void>
+  upgradeSigner (): Promise<void>
 
-  getAvailableProviders(): Promise<string[]>
+  getAvailableProviders (): Promise<string[]>
 
-  findProviderIps(providers: string[]): Promise<IProviderIpSet>
+  findProviderIps (providers: string[]): Promise<IProviderIpSet>
 
-  loadProviderPool(providers?: IProviderIpSet): Promise<void>
+  loadProviderPool (providers?: IProviderIpSet): Promise<void>
 
-  initStorage(): Promise<any>
+  initStorage (options?: IInitStorageOptions): Promise<any>
 
-  planStatus(): Promise<IStorageStatus>
+  planStatus (): Promise<IStorageStatus>
 
-  estimateStoragePlan(options: IBuyStorageOptions): Promise<number>
+  estimateStoragePlan (options: IBuyStorageOptions): Promise<number>
 
-  purchaseStoragePlan(options: IBuyStorageOptions): Promise<any>
+  purchaseStoragePlan (options: IBuyStorageOptions): Promise<any>
 
-  createFolders(names: string | string[]): Promise<DDeliverTxResponse>
+  createFolders (options: ICreateFolderOptions): Promise<IWrappedEncodeObject[]>
 
-  saveFolder(bundle: IStagedUploadPackage): Promise<IWrappedEncodeObject[]>
+  saveFolder (bundle: IStagedUploadPackage): Promise<IWrappedEncodeObject[]>
 
-  readActivePath(): string
+  readActivePath (): string
 
-  readCurrentLocation(): string
+  readCurrentLocation (): string
 
-  readCurrentUlid(): string
+  readCurrentUlid (): string
 
-  readChildCount(): number
+  readChildCount (): number
 
-  readMustConvertStatus(): boolean
+  readMustConvertStatus (): boolean
 
-  readCurrentQueue(): string[]
+  readCurrentQueue (): string[]
 
-  removeFromQueue(name: string): void
+  removeFromQueue (name: string): void
 
-  queuePrivate(toQueue: File | File[], duration?: number): Promise<number>
+  queuePrivate (toQueue: File | File[], duration?: number): Promise<number>
 
-  queuePublic(toQueue: File | File[], duration?: number): Promise<number>
+  queuePublic (toQueue: File | File[], duration?: number): Promise<number>
 
-  processAllQueues(): Promise<any>
+  processAllQueues (): Promise<any>
 
-  getFileParticulars(filePath: string): Promise<IFileParticulars>
+  getFileParticulars (filePath: string): Promise<IFileParticulars>
 
-  downloadFile(filePath: string, trackers: IDownloadTracker): Promise<File>
+  downloadFile (filePath: string, trackers: IDownloadTracker): Promise<File>
 
-  downloadExternalFile(
+  downloadExternalFile (
     userAddress: string,
     filePath: string,
-    trackers: IDownloadTracker,
+    trackers: IDownloadTracker
   ): Promise<File>
 
-  deleteTargets(targets: string | string[]): Promise<DDeliverTxResponse>
+  deleteTargets (options: IDeleteTargetOptions): Promise<IWrappedEncodeObject[]>
 
-  share(receiver: string, paths: string | string[]): Promise<DDeliverTxResponse>
+  share (options: IShareOptions): Promise<IWrappedEncodeObject[]>
 
-  checkNotifications(): Promise<number>
+  checkNotifications (): Promise<number>
 
-  processPendingNotifications(): Promise<TSharedRootMetaDataMap>
+  processPendingNotifications (): Promise<TSharedRootMetaDataMap>
 
-  readSharing(): TSharedRootMetaDataMap
+  readSharing (): TSharedRootMetaDataMap
 
-  convert(): Promise<any>
+  convert (): Promise<any>
 }

@@ -3,7 +3,7 @@ import {
   IFileMetaHandler,
   IFolderMetaHandler, INullMetaHandler,
   IShareFolderMetaHandler,
-  IShareMetaHandler,
+  IShareMetaHandler, type ISocketConfig
 } from '@/interfaces'
 
 export type TTidyStringModes = 'start' | 'end' | 'both'
@@ -23,3 +23,5 @@ export type TSockets =
   | 'archway'
   | 'archwaytest'
   | 'wasm'
+
+export type TSocketSet = Record<TSockets, ISocketConfig>

@@ -1,7 +1,8 @@
 import PLZSU from '@karnthis/plzsu'
 import { warnError } from '@/utils/misc'
 import { assumedBlockTime } from '@/utils/globalDefaults'
-import type { IBlockTimeOptions, IFileMeta } from '@/interfaces'
+import { IBlockTimeOptions, IFileContents, IFileMeta } from '@/interfaces'
+import type { TMetaDataSets } from '@/types'
 
 const Plzsu = new PLZSU()
 const OneSecondMs = 1000
@@ -226,5 +227,76 @@ export async function maybeMakeThumbnail(source: File): Promise<string> {
     return ''
   } else {
     return ''
+  }
+}
+
+/**
+ * Safely stringify FileTree contents for saving to chain.
+ * @param {TMetaDataSets} source - Meta data handler export to save.
+ * @returns {string}
+ */
+export function safeStringifyFileTree(source: TMetaDataSets): string {
+  try {
+    if ('merkleRoot' in source) {
+      return JSON.stringify({
+        ...source,
+        merkleRoot: Array.from(source.merkleRoot)
+      })
+    } else {
+      return JSON.stringify(source)
+    }
+  } catch (err) {
+    throw warnError('safeStringifyFileTree()', err)
+  }
+}
+
+/**
+ * Safely parse JSON stringified contents back to data set including UInt8Array.
+ * @param {string} source - JSON stringified contents from FileTree.
+ * @returns {TMetaDataSets}
+ */
+export function safeParseFileTree(source: string): TMetaDataSets {
+  try {
+    const base = JSON.parse(source)
+    if (base.merkleRoot) {
+      if (Array.isArray(base.merkleRoot)) {
+        base.merkleRoot = new Uint8Array(base.merkleRoot)
+      } else {
+        const sub: number[] = []
+        for (const index of Object.keys(base.merkleRoot)) {
+          sub.push(base.merkleRoot[index])
+        }
+        base.merkleRoot = new Uint8Array(sub)
+      }
+    }
+    return base as TMetaDataSets
+  } catch (err) {
+    throw warnError('safeParseFileTree()', err)
+  }
+}
+
+/**
+ * Safely parse legacy merkle data from FileTree.
+ * @param {string} source - JSON stringified contents from FileTree.
+ * @returns {IFileContents}
+ */
+export function safeParseLegacyMerkles(source: string): IFileContents {
+  try {
+    const base = JSON.parse(source)
+
+    for (let i = 0; i < base.legacyMerkles.lengeth; i++) {
+      if (Array.isArray(base.legacyMerkles[i])) {
+        base.legacyMerkles[i] = new Uint8Array(base.legacyMerkles[i])
+      } else {
+        const sub: number[] = []
+        for (const index of Object.keys(base.legacyMerkles[i])) {
+          sub.push(base.legacyMerkles[i][index])
+        }
+        base.legacyMerkles[i] = new Uint8Array(sub)
+      }
+    }
+    return base as IFileContents
+  } catch (err) {
+    throw warnError('safeParseLegacyMerkles()', err)
   }
 }

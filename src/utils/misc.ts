@@ -1,7 +1,7 @@
 import { DEncodeObject, findQueryKey, IIbcEngageBundle, TxEvent } from '@jackallabs/jackal.js-protos'
 import { secondToMS } from '@/utils/converters'
 import { sockets } from '@/utils/globalDefaults'
-import type { TSockets, TTidyStringModes } from '@/types'
+import { TSockets, TSocketSet, TTidyStringModes } from '@/types'
 import type { ISharedMetaDataMap } from '@/interfaces'
 
 /**
@@ -170,6 +170,7 @@ export function shuffleArray<T>(source: T[]): T[] {
  * @param {TxEvent[]} feed - Reference to array to capture events.
  * @param {DEncodeObject[]} msgs - Messages to broadcast to chain.
  * @param {string} addr - Address of signer.
+ * @param {Record<TSockets, ISocketConfig>} socketOverrides - Object of possible override values for sockets.
  * @returns {IIbcEngageBundle<TxEvent>[]} - Broadcast result.
  */
 export function makeConnectionBundles(
@@ -177,6 +178,7 @@ export function makeConnectionBundles(
   feed: TxEvent[],
   msgs: DEncodeObject[],
   addr: string,
+  socketOverrides: TSocketSet
 ): IIbcEngageBundle<TxEvent>[] {
   const bundles: IIbcEngageBundle<TxEvent>[] = []
 
@@ -200,7 +202,7 @@ export function makeConnectionBundles(
 
     const query = `${findQueryKey(url)} = '${addr}'`
     for (let id of networks) {
-      const { chainId, endpoint } = sockets[id]
+      const { chainId, endpoint } = socketOverrides[id] || sockets[id]
       console.log('makeConnectionBundles')
       console.log('chainId:', chainId)
       console.log('endpoint:', endpoint)

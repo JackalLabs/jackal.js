@@ -2,7 +2,6 @@ import {
   IAesBundle,
   IChildMetaDataMap,
   IClientHandler,
-  IFileContents,
   IFileMeta,
   IFileMetaData,
   IFileMetaHandler,
@@ -18,7 +17,7 @@ import {
   IRootLookupMetaData,
   ISharedMetaDataMap,
   IShareFolderMetaData,
-  IShareMetaData,
+  IShareMetaData
 } from '@/interfaces'
 import type { PrivateKey } from 'eciesjs'
 import type {
@@ -27,33 +26,21 @@ import type {
   DMsgProvisionFileTree,
   DNotification,
   DQueryFileTreeFile,
-  TJackalSigningClient,
+  TJackalSigningClient
 } from '@jackallabs/jackal.js-protos'
 import { warnError } from '@/utils/misc'
-import {
-  hashAndHex,
-  hashAndHexOwner,
-  hashAndHexUserAccess,
-  merklePath,
-  merklePathPlusIndex,
-} from '@/utils/hash'
+import { hashAndHex, hashAndHexOwner, hashAndHexUserAccess, merklePath, merklePathPlusIndex } from '@/utils/hash'
 import {
   hexToInt,
   prepDecompressionForAmino,
   safeDecompressData,
+  safeParseFileTree,
+  safeParseLegacyMerkles,
+  safeStringifyFileTree
 } from '@/utils/converters'
-import {
-  aesToString,
-  compressEncryptString,
-  cryptString,
-  stringToAes,
-} from '@/utils/crypt'
+import { aesToString, compressEncryptString, cryptString, stringToAes } from '@/utils/crypt'
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
-import {
-  FileMetaHandler,
-  FolderMetaHandler,
-  NullMetaHandler,
-} from '@/classes/metaHandlers'
+import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
 
 export class FiletreeReader implements IFiletreeReader {
   protected readonly jackalClient: IClientHandler
@@ -130,7 +117,7 @@ export class FiletreeReader implements IFiletreeReader {
       if (access) {
         const parsed = !contents.includes('metaDataType')
           ? await this.decryptAndParseContents(file)
-          : (JSON.parse(contents) as TMetaDataSets)
+          : safeParseFileTree(contents)
         if (parsed.metaDataType === 'folder') {
           return parsed
         } else {
@@ -158,7 +145,7 @@ export class FiletreeReader implements IFiletreeReader {
       if (access) {
         const parsed = !contents.includes('metaDataType')
           ? await this.decryptAndParseContents(file)
-          : (JSON.parse(contents) as TMetaDataSets)
+          : safeParseFileTree(contents)
         if (parsed.metaDataType === 'folder') {
           const { count, description, location, whoAmI } = parsed
           return await FolderMetaHandler.create({
@@ -193,7 +180,7 @@ export class FiletreeReader implements IFiletreeReader {
       if (access) {
         const parsed = !contents.includes('metaDataType')
           ? await this.decryptAndParseContents(file)
-          : (JSON.parse(contents) as TMetaDataSets)
+          : safeParseFileTree(contents)
         if (parsed.metaDataType === 'sharefolder') {
           return parsed
         } else {
@@ -221,7 +208,7 @@ export class FiletreeReader implements IFiletreeReader {
       if (access) {
         const parsed = !contents.includes('metaDataType')
           ? await this.decryptAndParseContents(file)
-          : (JSON.parse(contents) as TMetaDataSets)
+          : safeParseFileTree(contents)
         if (parsed.metaDataType === 'share') {
           return parsed
         } else {
@@ -357,7 +344,7 @@ export class FiletreeReader implements IFiletreeReader {
       const access = await this.extractEditAccess(file)
 
       if (access) {
-        const { legacyMerkles } = JSON.parse(contents) as IFileContents
+        const { legacyMerkles } = safeParseLegacyMerkles(contents)
         return await FileMetaHandler.create({
           fileMeta,
           legacyMerkles,
@@ -511,7 +498,7 @@ export class FiletreeReader implements IFiletreeReader {
         trackingNumber: '',
       }
       const trackingNumber = crypto.randomUUID()
-      const stringedMeta = JSON.stringify(meta)
+      const stringedMeta = safeStringifyFileTree(meta)
       if (aes) {
         forFileTree.contents = await compressEncryptString(
           stringedMeta,
@@ -819,12 +806,12 @@ export class FiletreeReader implements IFiletreeReader {
       if (access) {
         switch (true) {
           case contents.includes('metaDataType'):
-            return JSON.parse(contents)
+            return safeParseFileTree(contents)
           case contents.includes('legacyMerkles'):
             if (!legacyPath) {
               throw new Error('legacyMerkles requires legacyPath')
             }
-            const { legacyMerkles } = JSON.parse(contents) as IFileContents
+            const { legacyMerkles } = safeParseLegacyMerkles(contents)
             return this.loadLegacyMeta(legacyMerkles, legacyPath)
           case contents.length > 0:
             return await this.decryptAndParseContents(file)
@@ -989,7 +976,7 @@ export class FiletreeReader implements IFiletreeReader {
       if (decrypted.startsWith('jklpc1')) {
         decrypted = safeDecompressData(decrypted)
       }
-      return JSON.parse(decrypted) as TMetaDataSets
+      return safeParseFileTree(decrypted)
     } catch (err) {
       throw warnError('filetreeReader decryptAndParseContents()', err)
     }
