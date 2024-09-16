@@ -12,7 +12,7 @@ import {
   IFileTreeOptions,
   IFolderMetaData,
   IFolderMetaHandler,
-  INotificationRecord,
+  INotificationRecord, IReadFolderContentOptions,
   IReconstructedFileTree,
   IRefMetaData,
   ISharedMetaDataMap,
@@ -24,7 +24,7 @@ import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 export interface IFiletreeReader {
   ulidLookup(path: string, owner?: string): string
 
-  readFolderContents(path: string, owner?: string): IChildMetaDataMap
+  readFolderContents(path: string, options?: IReadFolderContentOptions): Promise<IChildMetaDataMap>
 
   loadFolderMeta(path: string): Promise<IFolderMetaData>
 

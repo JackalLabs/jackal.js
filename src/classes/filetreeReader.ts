@@ -12,12 +12,13 @@ import {
   ILegacyFolderMetaData,
   INotificationRecord,
   IPrivateNotification,
+  IReadFolderContentOptions,
   IReconstructedFileTree,
   IRefMetaData,
   IRootLookupMetaData,
   ISharedMetaDataMap,
   IShareFolderMetaData,
-  IShareMetaData
+  IShareMetaData,
 } from '@/interfaces'
 import type { PrivateKey } from 'eciesjs'
 import type {
@@ -26,7 +27,7 @@ import type {
   DMsgProvisionFileTree,
   DNotification,
   DQueryFileTreeFile,
-  TJackalSigningClient
+  TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
 import { warnError } from '@/utils/misc'
 import { hashAndHex, hashAndHexOwner, hashAndHexUserAccess, merklePath, merklePathPlusIndex } from '@/utils/hash'
@@ -36,7 +37,7 @@ import {
   safeDecompressData,
   safeParseFileTree,
   safeParseLegacyMerkles,
-  safeStringifyFileTree
+  safeStringifyFileTree,
 } from '@/utils/converters'
 import { aesToString, compressEncryptString, cryptString, stringToAes } from '@/utils/crypt'
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
@@ -53,7 +54,7 @@ export class FiletreeReader implements IFiletreeReader {
   protected yellowpages: Record<string, Record<string, DQueryFileTreeFile>>
   protected whitepages: Record<string, ILegacyFolderMetaData>
 
-  constructor(
+  constructor (
     jackalClient: IClientHandler,
     jackalSigner: TJackalSigningClient,
     keyPair: PrivateKey,
@@ -79,7 +80,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} [owner] - Optional owner in case of 3rd party owner.
    * @returns {string} - Found ulid.
    */
-  ulidLookup(path: string, owner?: string): string {
+  ulidLookup (path: string, owner?: string): string {
     const ownerAddress = owner || this.clientAddress
     if (this.redpages[ownerAddress][path]) {
       return this.redpages[ownerAddress][path]
@@ -91,15 +92,25 @@ export class FiletreeReader implements IFiletreeReader {
   /**
    * Look up contents of folder.
    * @param {string} path - Path of resource.
-   * @param {string} [owner] - Optional owner in case of 3rd party owner.
+   * @param {IReadFolderContentOptions} [options] - Optional options of owner in case of 3rd party owner and if folder contents should be refreshed.
    * @returns {IChildMetaDataMap} - Contents structure.
    */
-  readFolderContents(path: string, owner?: string): IChildMetaDataMap {
-    const ownerAddress = owner || this.clientAddress
-    if (this.bluepages[ownerAddress][path]) {
-      return this.bluepages[ownerAddress][path]
-    } else {
-      throw warnError('filetreeReader readFolderContents()', new Error('No Resource Found'))
+  async readFolderContents (path: string, options: IReadFolderContentOptions = {}): Promise<IChildMetaDataMap> {
+    const {
+      owner = this.clientAddress,
+      refresh = false,
+    } = options
+    try {
+      if (this.bluepages[owner][path]) {
+        if (refresh) {
+          await this.pathToLookupPostProcess(path, owner, this.yellowpages[owner][path])
+        }
+        return this.bluepages[owner][path]
+      } else {
+        throw new Error('No Resource Found')
+      }
+    } catch (err) {
+      throw warnError('filetreeReader readFolderContents()', err)
     }
   }
 
@@ -108,7 +119,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} path - Path of resource.
    * @returns {Promise<IFolderMetaData>}
    */
-  async loadFolderMeta(path: string): Promise<IFolderMetaData> {
+  async loadFolderMeta (path: string): Promise<IFolderMetaData> {
     try {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
@@ -136,7 +147,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} path - Path of resource.
    * @returns {Promise<IFolderMetaHandler>}
    */
-  async loadFolderMetaHandler(path: string): Promise<IFolderMetaHandler> {
+  async loadFolderMetaHandler (path: string): Promise<IFolderMetaHandler> {
     try {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
@@ -171,7 +182,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} path - Path of resource.
    * @returns {Promise<IShareFolderMetaData>}
    */
-  async loadShareFolderMeta(path: string): Promise<IShareFolderMetaData> {
+  async loadShareFolderMeta (path: string): Promise<IShareFolderMetaData> {
     try {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
@@ -199,7 +210,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} path - Path of resource.
    * @returns {Promise<IShareMetaData>}
    */
-  async loadShareMeta(path: string): Promise<IShareMetaData> {
+  async loadShareMeta (path: string): Promise<IShareMetaData> {
     try {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
@@ -228,7 +239,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {number} ref
    * @returns {Promise<IRefMetaData>}
    */
-  async loadRefMeta(ulid: string, ref: number): Promise<IRefMetaData> {
+  async loadRefMeta (ulid: string, ref: number): Promise<IRefMetaData> {
     try {
       const hexAddress = await merklePathPlusIndex(`s/ulid/${ulid}`, ref)
       const lookup = {
@@ -248,7 +259,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {[string, string]} legacyPath - Tuple of legacy path structure.
    * @returns {Promise<IFileMetaData>}
    */
-  async loadLegacyMeta(
+  async loadLegacyMeta (
     legacyMerkles: Uint8Array[],
     legacyPath: [string, string],
   ): Promise<IFileMetaData> {
@@ -276,7 +287,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} ulid
    * @returns {Promise<TMetaDataSets>}
    */
-  async loadMetaByUlid(ulid: string): Promise<TMetaDataSets> {
+  async loadMetaByUlid (ulid: string): Promise<TMetaDataSets> {
     try {
       const hexAddress = await merklePath(`s/ulid/${ulid}`)
       const lookup = {
@@ -295,7 +306,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} path - Path of resource.
    * @returns {Promise<TMetaDataSets>}
    */
-  async loadMetaByPath(path: string): Promise<TMetaDataSets> {
+  async loadMetaByPath (path: string): Promise<TMetaDataSets> {
     return await this.loadMetaByExternalPath(path, this.clientAddress)
   }
 
@@ -305,7 +316,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} ownerAddress
    * @returns {Promise<TMetaDataSets>}
    */
-  async loadMetaByExternalPath(
+  async loadMetaByExternalPath (
     path: string,
     ownerAddress: string,
   ): Promise<TMetaDataSets> {
@@ -332,7 +343,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {IFileMeta} fileMeta - File details.
    * @returns {Promise<IFileMetaHandler>} - File meta data handler.
    */
-  async loadFromLegacyMerkles(
+  async loadFromLegacyMerkles (
     path: string,
     location: string,
     fileMeta: IFileMeta,
@@ -364,7 +375,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string[]} additionalViewers - Array of wallet addresses.
    * @returns {Promise<IReconstructedFileTree>}
    */
-  async setMetaViewers(
+  async setMetaViewers (
     path: string,
     additionalViewers: string[],
   ): Promise<IReconstructedFileTree> {
@@ -411,7 +422,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} ownerAddress - Owner of resource.
    * @returns {Promise<IAesBundle>}
    */
-  async loadKeysByPath(
+  async loadKeysByPath (
     path: string,
     ownerAddress: string,
   ): Promise<IAesBundle> {
@@ -430,7 +441,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} ownerAddress - Owner of resource.
    * @returns {Promise<IAesBundle>}
    */
-  async loadKeysByUlid(
+  async loadKeysByUlid (
     ulid: string,
     ownerAddress: string,
   ): Promise<IAesBundle> {
@@ -451,7 +462,7 @@ export class FiletreeReader implements IFiletreeReader {
    *
    * @returns {Promise<DMsgProvisionFileTree>}
    */
-  async encodeProvisionFileTree(): Promise<DMsgProvisionFileTree> {
+  async encodeProvisionFileTree (): Promise<DMsgProvisionFileTree> {
     try {
       const trackingNumber = crypto.randomUUID()
       const forFileTree: DMsgProvisionFileTree = {
@@ -477,7 +488,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {IFileTreeOptions} [options]
    * @returns {Promise<DMsgFileTreePostFile>}
    */
-  async encodePostFile(
+  async encodePostFile (
     location: TMerkleParentChild,
     meta: TMetaDataSets,
     options: IFileTreeOptions = {},
@@ -534,7 +545,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string[]} additionalViewers
    * @returns {Promise<DMsgFileTreePostFile>}
    */
-  async encodeExistingPostFile(
+  async encodeExistingPostFile (
     path: string,
     location: TMerkleParentChild,
     additionalViewers: string[],
@@ -560,7 +571,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {IAesBundle} aes
    * @returns {Promise<string>}
    */
-  async protectNotification(
+  async protectNotification (
     receiverAddress: string,
     aes: IAesBundle,
   ): Promise<string> {
@@ -576,7 +587,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {DNotification} notificationData
    * @returns {Promise<INotificationRecord>}
    */
-  async readShareNotification(
+  async readShareNotification (
     notificationData: DNotification,
   ): Promise<INotificationRecord> {
     try {
@@ -608,7 +619,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} ulid
    * @returns {Promise<ISharedMetaDataMap>}
    */
-  async loadSharingFolder(ulid: string): Promise<ISharedMetaDataMap> {
+  async loadSharingFolder (ulid: string): Promise<ISharedMetaDataMap> {
     try {
       const bundle = await this.loadMetaByUlid(ulid)
       if (bundle.metaDataType === 'sharefolder') {
@@ -628,7 +639,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<DQueryFileTreeFile>}
    * @protected
    */
-  protected async pathToLookup(
+  protected async pathToLookup (
     path: string,
     owner?: string,
   ): Promise<DQueryFileTreeFile> {
@@ -708,7 +719,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<void>}
    * @protected
    */
-  protected async pathToLookupPostProcess(
+  protected async pathToLookupPostProcess (
     path: string,
     ownerAddress: string,
     lookup: DQueryFileTreeFile,
@@ -772,7 +783,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<void>}
    * @protected
    */
-  protected async setYellowpages(
+  protected async setYellowpages (
     path: string,
     ownerAddress: string,
     pointsTo: string,
@@ -795,7 +806,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<TMetaDataSets>}
    * @protected
    */
-  protected async loadMeta(
+  protected async loadMeta (
     file: DFile,
     legacyPath?: [string, string],
   ): Promise<TMetaDataSets> {
@@ -832,7 +843,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<ISharedMetaDataMap>}
    * @protected
    */
-  protected async metaToSharingFolder(
+  protected async metaToSharingFolder (
     meta: IShareFolderMetaData,
   ): Promise<ISharedMetaDataMap> {
     try {
@@ -863,7 +874,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<string>}
    * @protected
    */
-  protected async createViewAccess(
+  protected async createViewAccess (
     trackingNumber: string,
     viewers: string[],
     aes?: IAesBundle,
@@ -901,7 +912,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<string>}
    * @protected
    */
-  protected async createEditAccess(
+  protected async createEditAccess (
     trackingNumber: string,
     editors?: string[],
   ): Promise<string> {
@@ -924,7 +935,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<IAesBundle>}
    * @protected
    */
-  protected async extractViewAccess(data: DFile): Promise<IAesBundle> {
+  protected async extractViewAccess (data: DFile): Promise<IAesBundle> {
     try {
       const parsedAccess = JSON.parse(data.viewingAccess)
       const user = await hashAndHexUserAccess(
@@ -948,7 +959,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<boolean>}
    * @protected
    */
-  protected async extractEditAccess(data: DFile): Promise<boolean> {
+  protected async extractEditAccess (data: DFile): Promise<boolean> {
     try {
       const parsedAccess = JSON.parse(data.editAccess)
       const user = await hashAndHexUserAccess(
@@ -968,7 +979,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<Record<string, any>>}
    * @protected
    */
-  protected async decryptAndParseContents(data: DFile): Promise<TMetaDataSets> {
+  protected async decryptAndParseContents (data: DFile): Promise<TMetaDataSets> {
     try {
       const safe = prepDecompressionForAmino(data.contents)
       const aes = await this.extractViewAccess(data)
@@ -987,7 +998,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {IChildMetaDataMap}
    * @protected
    */
-  protected basicFolderShell(): IChildMetaDataMap {
+  protected basicFolderShell (): IChildMetaDataMap {
     return {
       files: {},
       folders: {},
