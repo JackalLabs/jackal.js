@@ -1504,7 +1504,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const thumbnail = await maybeMakeThumbnail(toProcess)
 
       const ulid = this.readCurrentUlid()
-      // console.log(ulid)
+      console.log(ulid)
       const baseMeta = await FileMetaHandler.create({
         description: '',
         file,
