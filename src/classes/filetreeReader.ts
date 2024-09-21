@@ -96,18 +96,21 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {IChildMetaDataMap} - Contents structure.
    */
   async readFolderContents (path: string, options: IReadFolderContentOptions = {}): Promise<IChildMetaDataMap> {
+    // console.log(path)
     const {
       owner = this.clientAddress,
       refresh = false,
     } = options
+    // console.log(options)
+    // console.log(this.bluepages[owner])
+    // console.log(this.yellowpages[owner])
+
     try {
-      if (this.bluepages[owner][path]) {
-        if (refresh) {
-          await this.pathToLookupPostProcess(path, owner, this.yellowpages[owner][path])
-        }
+      if (this.bluepages[owner][path] && !refresh) {
         return this.bluepages[owner][path]
       } else {
-        throw new Error('No Resource Found')
+        await this.pathToLookupPostProcess(path, owner, this.yellowpages[owner][path])
+        return this.bluepages[owner][path]
       }
     } catch (err) {
       throw warnError('filetreeReader readFolderContents()', err)
@@ -150,7 +153,9 @@ export class FiletreeReader implements IFiletreeReader {
   async loadFolderMetaHandler (path: string): Promise<IFolderMetaHandler> {
     try {
       const lookup = await this.pathToLookup(path)
+      // console.log("lookup:", lookup)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
+      // console.log("File: ", file)
       const { contents } = file
       const access = await this.extractEditAccess(file)
       if (access) {
@@ -657,7 +662,7 @@ export class FiletreeReader implements IFiletreeReader {
             if (this.yellowpages[ownerAddress][path]) {
               return this.yellowpages[ownerAddress][path]
             } else {
-              console.log(path)
+              // console.log(path)
               const hexRootAddress = await merklePath(`s/ulid/${path}`)
               const rootLookup = {
                 address: hexRootAddress,
@@ -671,7 +676,7 @@ export class FiletreeReader implements IFiletreeReader {
               const lookup = (await this.decryptAndParseContents(
                 file,
               )) as IRootLookupMetaData
-              console.log(lookup)
+              // console.log(lookup)
               if (!(ownerAddress in this.redpages)) {
                 this.redpages[ownerAddress] = {}
               }

@@ -1,5 +1,7 @@
 import {
+  IBroadcastOptions,
   IBuyStorageOptions,
+  IChildMetaDataMap,
   ICreateFolderOptions,
   IDeleteTargetOptions,
   IDownloadTracker,
@@ -8,11 +10,12 @@ import {
   IFolderMetaData,
   IInitStorageOptions,
   IProviderIpSet,
+  IReadFolderContentOptions,
   IRegisterPubKeyOptions,
   IShareOptions,
   IStagedUploadPackage,
   IStorageStatus,
-  IWrappedEncodeObject
+  IWrappedEncodeObject,
 } from '@/interfaces'
 import type { TSharedRootMetaDataMap } from '@/types'
 
@@ -21,7 +24,9 @@ export interface IStorageHandler {
 
   registerPubKey (options?: IRegisterPubKeyOptions): Promise<IWrappedEncodeObject[]>
 
-  loadDirectory (path?: string): Promise<void>
+  loadDirectory (options?: IReadFolderContentOptions): Promise<void>
+
+  readDirectoryContents (path: string, options?: IReadFolderContentOptions): Promise<IChildMetaDataMap>
 
   loadShared (): Promise<void>
 
@@ -71,7 +76,7 @@ export interface IStorageHandler {
 
   queuePublic (toQueue: File | File[], duration?: number): Promise<number>
 
-  processAllQueues (): Promise<any>
+  processAllQueues (options?: IBroadcastOptions): Promise<any>
 
   getFileParticulars (filePath: string): Promise<IFileParticulars>
 
@@ -80,7 +85,7 @@ export interface IStorageHandler {
   downloadExternalFile (
     userAddress: string,
     filePath: string,
-    trackers: IDownloadTracker
+    trackers: IDownloadTracker,
   ): Promise<File>
 
   deleteTargets (options: IDeleteTargetOptions): Promise<IWrappedEncodeObject[]>

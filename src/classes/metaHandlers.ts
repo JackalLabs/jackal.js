@@ -3,7 +3,6 @@ import { ulid } from 'ulid'
 import { chunkSize } from '@/utils/globalDefaults'
 import {
   intToHex,
-  maybeMakeThumbnail,
   uintArrayToString,
 } from '@/utils/converters'
 import { bufferToHex } from '@/utils/hash'
@@ -286,7 +285,6 @@ export class FileMetaHandler implements IFileMetaHandler {
       rdy.merkleRoot = new Uint8Array(tree.getRoot())
       rdy.merkleHex = tree.getRootAsHex()
       rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
-      rdy.thumbnail = await maybeMakeThumbnail(source.file)
     }
 
     return new FileMetaHandler(rdy)

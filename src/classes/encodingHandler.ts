@@ -355,7 +355,7 @@ export class EncodingHandler {
     try {
       const mH = pkg.meta as IFolderMetaHandler
       const meta = mH.export()
-      console.log('saving:', meta.whoAmI)
+      // console.log('saving:', meta.whoAmI)
 
       const lookup: IRootLookupMetaData = {
         metaDataType: 'rootlookup',
@@ -381,7 +381,7 @@ export class EncodingHandler {
     try {
       const mH = pkg.meta as IFolderMetaHandler
       const meta = mH.export()
-      console.log('saving:', meta.whoAmI)
+      // console.log('saving:', meta.whoAmI)
 
       const parentAndChild = await merkleParentAndChild(`s/ulid/${mH.getUlid()}`)
       return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })

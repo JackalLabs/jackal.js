@@ -222,14 +222,122 @@ export function blockToDateFixed(options: IBlockTimeOptions): Date {
  * @private
  */
 export async function maybeMakeThumbnail(source: File): Promise<string> {
-  const convertableImages: string[] = ['png']
-  if (source.type in convertableImages) {
-    return ''
+
+  console.log("Making thumbnail for type....", source.name, source.type)
+  if (
+    source.type.startsWith("image")
+  ) {
+    console.log("it is an image!")
+    return await convertToWebP(source)
+  } else if (
+    source.type.startsWith("video")
+  ) {
+    console.log("it is a video!")
+    return await extractThumbnailFromVideo(source)
   } else {
+    console.log("it is not convertable :(")
     return ''
   }
 }
 
+function extractThumbnailFromVideo(file: File): Promise<string>  {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+
+    video.src = URL.createObjectURL(file);
+    video.muted = true;  // Mute the video to prevent sound playing
+    video.playsInline = true;
+
+    video.onloadedmetadata = () => {
+      const duration = video.duration;
+      const randomTime = Math.random() * duration; // Select a random time point in the video
+      video.currentTime = randomTime;  // Seek to the random time
+
+      video.onseeked = () => {
+        // Set the maximum dimension to 256
+        const maxSize = 256;
+        let { videoWidth: width, videoHeight: height } = video;
+
+        // Maintain aspect ratio when resizing
+        if (width > height) {
+          if (width > maxSize) {
+            height *= maxSize / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width *= maxSize / height;
+            height = maxSize;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Set canvas dimensions to the resized dimensions
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw the current video frame onto the resized canvas
+        ctx?.drawImage(video, 0, 0, width, height);
+
+        // Convert the canvas to a WebP image
+        const base64String = canvas.toDataURL("image/webp", 0.25); // 25% compression
+        resolve(base64String);
+      };
+    };
+
+    video.onerror = reject;
+  });
+};
+function convertToWebP (file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+
+      img.onload = () => {
+        const maxSize = 256;
+        let { width, height } = img;
+
+        // Calculate new dimensions while maintaining aspect ratio
+        if (width > height) {
+          if (width > maxSize) {
+            height *= maxSize / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width *= maxSize / height;
+            height = maxSize;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) return reject("Canvas context is unavailable");
+
+        // Set canvas dimensions to the resized dimensions
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw resized image onto the canvas
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert canvas to WebP format and get Base64 string
+        canvas.toDataURL("image/webp", 0.25); // 25% compression
+        const base64String = canvas.toDataURL("image/webp", 0.25);
+        // console.log(base64String)
+        resolve(base64String);
+      };
+    };
+
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 /**
  * Safely stringify FileTree contents for saving to chain.
  * @param {TMetaDataSets} source - Meta data handler export to save.

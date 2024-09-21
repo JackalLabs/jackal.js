@@ -6,7 +6,7 @@ import type {
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
 import { PrivateKey } from 'eciesjs'
-import { extractFileMetaData } from '@/utils/converters'
+import { extractFileMetaData, maybeMakeThumbnail } from '@/utils/converters'
 import { isItPastDate, shuffleArray, signerNotEnabled, tidyString, warnError } from '@/utils/misc'
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
 import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
@@ -36,6 +36,7 @@ import {
   IProviderIpSet,
   IProviderPool,
   IProviderUploadResponse,
+  IReadFolderContentOptions,
   IRegisterPubKeyOptions,
   IRnsHandler,
   IShareOptions,
@@ -256,20 +257,41 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {string} [path]
+   * @param {IReadFolderContentOptions} [options]
    * @returns {Promise<void>}
    */
-  async loadDirectory (path?: string): Promise<void> {
+  async loadDirectory (options: IReadFolderContentOptions = {}): Promise<void> {
     if (await this.checkLocked({ noConvert: true, signer: true })) {
       throw new Error('Locked.')
     }
+    const {
+      owner,
+      path,
+      refresh = true,
+    } = options
+    // console.log('path:', path)
     try {
       this.path = path || this.path
       this.meta = await this.reader.loadFolderMetaHandler(this.path)
-      this.children = await this.reader.readFolderContents(this.path, { refresh: true })
+      this.children = await this.reader.readFolderContents(this.path, { owner, refresh })
     } catch (err) {
       throw warnError('storageHandler loadDirectory()', err)
     }
+  }
+
+  /**
+   *
+   * @param {string} path
+   * @param {IReadFolderContentOptions} [options]
+   * @returns {Promise<IChildMetaDataMap>}
+   */
+  async readDirectoryContents (path: string, options?: IReadFolderContentOptions): Promise<IChildMetaDataMap> {
+    if (await this.checkLocked({ noConvert: true, signer: true })) {
+      throw new Error('Locked.')
+    }
+    // console.log('path:', path)
+
+    return this.reader.readFolderContents(path, options)
   }
 
   /**
@@ -347,7 +369,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   async getAvailableProviders (): Promise<string[]> {
     try {
       const data = await this.jackalClient.getQueries().storage.activeProviders()
-      console.log(data)
+      // console.log(data)
       const final: string[] = []
       for (let value of data.providers) {
         final.push(value.address)
@@ -368,14 +390,14 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     try {
       const ips: Record<string, string> = {}
       for (let address of providers) {
-        console.log(address)
+        // console.log(address)
         const details = await this.jackalClient
           .getQueries()
           .storage.provider({ address })
-        console.log(details)
+        // console.log(details)
         ips[details.provider.address] = details.provider.ip
       }
-      console.log(ips)
+      // console.log(ips)
       return ips
     } catch (err) {
       throw warnError('storageHandler findProviderIps()', err)
@@ -390,11 +412,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   async loadProviderPool (providers?: IProviderIpSet): Promise<void> {
     try {
       providers = providers || (await this.loadProvidersFromChain())
-      console.log(providers)
+      // console.log(providers)
       for (let ip of Object.values(providers)) {
-        console.log(ip)
+        // console.log(ip)
         const root = ip.split('.').slice(-2).join('.')
-        console.log(root)
+        // console.log(root)
         if (!(root in this.providers)) {
           this.providers[root] = []
         }
@@ -403,7 +425,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           ip,
           failures: 0,
         })
-        console.log(this.providers)
+        // console.log(this.providers)
       }
     } catch (err) {
       throw warnError('storageHandler loadProviderPool()', err)
@@ -621,7 +643,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         }
         foundMatch = false
       }
-      console.log(bundle.folderMeta)
+      // console.log(bundle.folderMeta)
       const folderMsgs = await this.existingFolderToMsgs({
         meta: bundle.folderMeta,
       })
@@ -919,6 +941,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
               }
               baseFile = new File(parts, name, meta)
             }
+            if (baseFile.size == 0) {
+              throw new Error('File is empty')
+            }
             return baseFile
           }
         } catch (err) {
@@ -1107,7 +1132,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   protected async loadProvidersFromChain (): Promise<IProviderIpSet> {
     try {
       const providers = await this.getAvailableProviders()
-      console.log(providers)
+      // console.log(providers)
       return await this.findProviderIps(providers)
     } catch (err) {
       throw warnError('storageHandler loadProvidersFromChain()', err)
@@ -1198,7 +1223,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       fileFormData.set('sender', this.jklAddress)
       fileFormData.set('start', startBlock.toString())
 
-      console.log('startBlock:', startBlock.toString())
+      // console.log('startBlock:', startBlock.toString())
       return await fetch(url, { method: 'POST', body: fileFormData }).then(
         async (resp): Promise<IProviderUploadResponse> => {
           if (typeof resp === 'undefined' || resp === null) {
@@ -1365,13 +1390,17 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             merkle: ft.merkleRoot,
           })
         const [details] = files
-        const deletePkg = {
-          creator: this.jklAddress,
-          merkle: details.merkle,
-          start: details.start,
+        try {
+          const deletePkg = {
+            creator: this.jklAddress,
+            merkle: details.merkle,
+            start: details.start,
+          }
+          const wrapped = this.fileDeleteToMsgs(deletePkg)
+          msgs.push(...wrapped)
+        } catch (err) {
+          console.warn('looks like we\'re deleting a dead file...', err)
         }
-        const wrapped = this.fileDeleteToMsgs(deletePkg)
-        msgs.push(...wrapped)
       } else if (ft.metaDataType === 'folder') {
         const data = await this.reader.readFolderContents(target)
         for (let file of Object.values(data.files)) {
@@ -1472,13 +1501,16 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const finalName = await hashAndHex(fileMeta.name + Date.now().toString())
       const file = new File(encryptedArray, finalName, { type: 'text/plain' })
 
+      const thumbnail = await maybeMakeThumbnail(toProcess)
+
       const ulid = this.readCurrentUlid()
-      console.log(ulid)
+      // console.log(ulid)
       const baseMeta = await FileMetaHandler.create({
         description: '',
         file,
         fileMeta,
         location: this.readCurrentUlid(),
+        thumbnail,
       })
       return { file, meta: baseMeta, duration, aes }
     } catch (err) {
@@ -1528,7 +1560,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       }
       if (checkSet.needsProviders) {
         const k = Object.keys(this.providers)
-        console.log(k)
+        // console.log(k)
         const providerCount = k.length
         if (providerCount === 0) {
           throw true
