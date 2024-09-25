@@ -127,9 +127,10 @@ export class FiletreeReader implements IFiletreeReader {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
-      const access = await this.extractEditAccess(file)
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !contents.includes('metaDataType')
+        const parsed = !isCleartext
           ? await this.decryptAndParseContents(file)
           : safeParseFileTree(contents)
         if (parsed.metaDataType === 'folder') {
@@ -157,9 +158,10 @@ export class FiletreeReader implements IFiletreeReader {
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       // console.log("File: ", file)
       const { contents } = file
-      const access = await this.extractEditAccess(file)
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !contents.includes('metaDataType')
+        const parsed = !isCleartext
           ? await this.decryptAndParseContents(file)
           : safeParseFileTree(contents)
         if (parsed.metaDataType === 'folder') {
@@ -192,9 +194,10 @@ export class FiletreeReader implements IFiletreeReader {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
-      const access = await this.extractEditAccess(file)
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !contents.includes('metaDataType')
+        const parsed = !isCleartext
           ? await this.decryptAndParseContents(file)
           : safeParseFileTree(contents)
         if (parsed.metaDataType === 'sharefolder') {
@@ -220,9 +223,10 @@ export class FiletreeReader implements IFiletreeReader {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
-      const access = await this.extractEditAccess(file)
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !contents.includes('metaDataType')
+        const parsed = !isCleartext
           ? await this.decryptAndParseContents(file)
           : safeParseFileTree(contents)
         if (parsed.metaDataType === 'share') {
@@ -357,7 +361,7 @@ export class FiletreeReader implements IFiletreeReader {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
-      const access = await this.extractEditAccess(file)
+      const access = await this.checkViewAuthorization(file, false)
 
       if (access) {
         const { legacyMerkles } = safeParseLegacyMerkles(contents)
@@ -389,9 +393,10 @@ export class FiletreeReader implements IFiletreeReader {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents, trackingNumber } = file
-      const access = await this.extractEditAccess(file)
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        if (contents.includes('metaDataType')) {
+        if (isCleartext) {
           return {
             contents,
             viewers: await this.createViewAccess(trackingNumber, allViewers),
@@ -732,9 +737,10 @@ export class FiletreeReader implements IFiletreeReader {
     try {
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
-      const access = await this.extractEditAccess(file)
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !contents.includes('metaDataType')
+        const parsed = !isCleartext
           ? await this.decryptAndParseContents(file)
           : (JSON.parse(contents) as TMetaDataSets)
         if (parsed.metaDataType === 'folder') {
@@ -836,11 +842,12 @@ export class FiletreeReader implements IFiletreeReader {
   ): Promise<TMetaDataSets> {
     try {
       const { contents } = file
-      const access = await this.extractEditAccess(file)
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
 
       if (access) {
         switch (true) {
-          case contents.includes('metaDataType'):
+          case isCleartext:
             return safeParseFileTree(contents)
           case contents.includes('legacyMerkles'):
             if (!legacyPath) {
@@ -950,6 +957,31 @@ export class FiletreeReader implements IFiletreeReader {
       return JSON.stringify(editAccess)
     } catch (err) {
       throw warnError('filetreeReader createEditAccess()', err)
+    }
+  }
+
+  /**
+   * 
+   * @param {DFile} data
+   * @param {boolean} isPublic
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  protected async checkViewAuthorization (data: DFile, isPublic: boolean): Promise<boolean> {
+    try {
+      if (isPublic) {
+        return isPublic
+      } else {
+        const parsedAccess = JSON.parse(data.viewingAccess)
+        const user = await hashAndHexUserAccess(
+          'v',
+          data.trackingNumber,
+          this.clientAddress,
+        )
+        return user in parsedAccess
+      }
+    } catch (err) {
+      throw warnError('filetreeReader checkViewAuthorization()', err)
     }
   }
 
