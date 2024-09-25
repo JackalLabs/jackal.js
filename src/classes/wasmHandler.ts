@@ -14,7 +14,7 @@ import { PrivateKey } from 'eciesjs'
 import { stringToShaHex } from '@/utils/hash'
 
 export class WasmHandler extends EncodingHandler implements IWasmHandler {
-  protected constructor(
+  protected constructor (
     client: IClientHandler,
     jackalSigner: TJackalSigningClient,
     hostSigner: THostSigningClient,
@@ -28,7 +28,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
    * @param {IClientHandler} client - Instance of ClientHandler.
    * @returns {Promise<IWasmHandler>} - Instance of WasmHandler.
    */
-  static async init(client: IClientHandler): Promise<IWasmHandler> {
+  static async init (client: IClientHandler): Promise<IWasmHandler> {
     const jackalSigner = client.getJackalSigner()
     if (!jackalSigner) {
       throw new Error(signerNotEnabled('WasmHandler', 'init'))
@@ -49,7 +49,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
    * @param {number} codeId
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async instantiateICA(
+  async instantiateICA (
     connectionIdA: string,
     connectionIdB: string,
     codeId: number,
@@ -73,7 +73,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
    * @param {number} [index] - Optional contract index, defaults to 0.
    * @returns {Promise<string>} - Contract address.
    */
-  async getICAContractAddress(index: number = 0): Promise<string> {
+  async getICAContractAddress (index: number = 0): Promise<string> {
     try {
       const contractsByCreator =
         await this.hostSigner.queries.cosmwasm.contractsByCreator({
@@ -90,7 +90,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
    * Get jkl address from unknown Interchain contract.
    * @returns {Promise<string>}
    */
-  async getICAJackalAddress(): Promise<string> {
+  async getICAJackalAddress (): Promise<string> {
     try {
       const address = await this.getICAContractAddress()
       return this.getJackalAddressFromContract(address)
@@ -104,7 +104,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
    * @param {string} contractAddress - Target Interchain contract.
    * @returns {Promise<string>} - Jkl address.
    */
-  async getJackalAddressFromContract(contractAddress: string): Promise<string> {
+  async getJackalAddressFromContract (contractAddress: string): Promise<string> {
     try {
       const q = { get_contract_state: {} }
 
@@ -129,7 +129,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
    * @param {DEncodeObject[]} msgs - Array of messages.
    * @returns {DEncodeObject[]} - Processed array of wrapped messages.
    */
-  wrapEncodeObjectsForBroadcast(
+  wrapEncodeObjectsForBroadcast (
     contract: string,
     msgs: DEncodeObject[],
   ): DEncodeObject[] {

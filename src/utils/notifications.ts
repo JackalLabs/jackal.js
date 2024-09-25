@@ -5,7 +5,7 @@ import type { INotification } from '@/interfaces'
  * @param {string} msg - Incoming notification message.
  * @returns {INotification} - Formatted message.
  */
-export function formatNotification(msg: string): INotification {
+export function formatNotification (msg: string): INotification {
   return {
     msg,
   }
@@ -17,7 +17,7 @@ export function formatNotification(msg: string): INotification {
  * @param {boolean} isFile - True if path points to a file.
  * @returns {INotification} - Formatted message.
  */
-export function formatShareNotification(
+export function formatShareNotification (
   path: string,
   isFile: boolean,
 ): INotification {

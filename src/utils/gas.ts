@@ -34,7 +34,7 @@ USING MODIFIERS
  * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
  * @returns {number} - Adjusted number of gas units collection is expected to require.
  */
-export function estimateGas(msgArray: IWrappedEncodeObject[]): number {
+export function estimateGas (msgArray: IWrappedEncodeObject[]): number {
   return calculateGas(msgArray, 0)[0]
 }
 
@@ -46,7 +46,7 @@ export function estimateGas(msgArray: IWrappedEncodeObject[]): number {
  * @returns {IFinalGas} - Gas object with best estimate based on input.
  * @private
  */
-export function finalizeGas(
+export function finalizeGas (
   msgArray: IWrappedEncodeObject[],
   gasMultiplier: number,
   gasOverride?: number,
@@ -71,9 +71,9 @@ export function finalizeGas(
  * @returns {[number, DEncodeObject[]]} - Tuple of adjusted number of gas units collection is expected to require and unwrapped msg array.
  * @private
  */
-function calculateGas(
+function calculateGas (
   msgArray: IWrappedEncodeObject[],
-  gasMultiplier: number
+  gasMultiplier: number,
 ): [number, DEncodeObject[]] {
   const objects: DEncodeObject[] = []
   let gas = gasBaselineRate
@@ -102,7 +102,7 @@ function calculateGas(
  * @returns {toCheck is IWrappedEncodeObject} - Boolean indicating if source is a IWrappedEncodeObject.
  * @private
  */
-function isIWrappedEncodeObject(
+function isIWrappedEncodeObject (
   toCheck: any | IWrappedEncodeObject,
 ): toCheck is IWrappedEncodeObject {
   return 'encodedObject' in toCheck
@@ -115,7 +115,7 @@ function isIWrappedEncodeObject(
  * @returns {number}
  * @private
  */
-function calculateModifier(buffer: number, modifier: number): number {
+function calculateModifier (buffer: number, modifier: number): number {
   const sanitizedModifier = Number(modifier) || 0
   return buffer + sanitizedModifier * 0.04
 }

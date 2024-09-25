@@ -19,7 +19,7 @@ import type { IAesBundle } from '@/interfaces'
  * @returns {Promise<Uint8Array>} - CryptoKey as Uint8Array.
  * @private
  */
-export async function exportJackalKey(key: CryptoKey): Promise<Uint8Array> {
+export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.exportKey('raw', key))
 }
 
@@ -29,7 +29,7 @@ export async function exportJackalKey(key: CryptoKey): Promise<Uint8Array> {
  * @returns {Promise<CryptoKey>} - Recovered CryptoKey.
  * @private
  */
-export function importJackalKey(rawExport: Uint8Array): Promise<CryptoKey> {
+export function importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, [
     'encrypt',
     'decrypt',
@@ -41,7 +41,7 @@ export function importJackalKey(rawExport: Uint8Array): Promise<CryptoKey> {
  * @returns {Promise<CryptoKey>} - Fresh random CryptoKey.
  * @private
  */
-export function genKey(): Promise<CryptoKey> {
+export function genKey (): Promise<CryptoKey> {
   return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])
 }
 
@@ -50,7 +50,7 @@ export function genKey(): Promise<CryptoKey> {
  * @returns {Uint8Array} - Fresh random iv.
  * @private
  */
-export function genIv(): Uint8Array {
+export function genIv (): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(16))
 }
 
@@ -59,7 +59,7 @@ export function genIv(): Uint8Array {
  * @returns {Promise<IAesBundle>} - AES bundle.
  * @private
  */
-export async function genAesBundle(): Promise<IAesBundle> {
+export async function genAesBundle (): Promise<IAesBundle> {
   return {
     iv: genIv(),
     key: await genKey(),
@@ -74,7 +74,7 @@ export async function genAesBundle(): Promise<IAesBundle> {
  * @returns {Promise<Blob>} - Processed result.
  * @private
  */
-export async function aesBlobCrypt(
+export async function aesBlobCrypt (
   data: Blob,
   aes: IAesBundle,
   mode: 'encrypt' | 'decrypt',
@@ -95,7 +95,7 @@ export async function aesBlobCrypt(
  * @returns {Promise<ArrayBuffer>} - Processed result.
  * @private
  */
-export async function aesCrypt(
+export async function aesCrypt (
   data: ArrayBuffer,
   aes: IAesBundle,
   mode: 'encrypt' | 'decrypt',
@@ -124,7 +124,7 @@ export async function aesCrypt(
  * @returns {string} - Encrypted value as hex string.
  * @private
  */
-export function eciesEncryptWithPubKey(
+export function eciesEncryptWithPubKey (
   pubKey: string,
   toEncrypt: ArrayBuffer | Uint8Array,
 ): string {
@@ -142,7 +142,7 @@ export function eciesEncryptWithPubKey(
  * @returns {Uint8Array} - Decrypted value.
  * @private
  */
-export function eciesDecryptWithPrivateKey(
+export function eciesDecryptWithPrivateKey (
   key: PrivateKey,
   toDecrypt: string | Uint8Array,
 ): Uint8Array {
@@ -158,7 +158,7 @@ export function eciesDecryptWithPrivateKey(
  * @returns {Promise<string>} - Encrypted string with pipe "|" delimiter.
  * @private
  */
-export async function aesToString(
+export async function aesToString (
   pubKey: string,
   aes: IAesBundle,
 ): Promise<string> {
@@ -175,7 +175,7 @@ export async function aesToString(
  * @returns {Promise<IAesBundle>} - Decrypted AES iv/CryptoKey set.
  * @private
  */
-export async function stringToAes(
+export async function stringToAes (
   privateKey: PrivateKey,
   source: string,
 ): Promise<IAesBundle> {
@@ -201,7 +201,7 @@ export async function stringToAes(
  * @returns {Promise<string>} - Compressed and encrypted string.
  * @private
  */
-export async function compressEncryptString(
+export async function compressEncryptString (
   input: string,
   aes: IAesBundle,
   isLedger: boolean,
@@ -222,7 +222,7 @@ export async function compressEncryptString(
  * @returns {Promise<string>} - Decrypted and decompressed string.
  * @private
  */
-export async function decryptDecompressString(
+export async function decryptDecompressString (
   input: string,
   aes: IAesBundle,
 ): Promise<string> {
@@ -243,7 +243,7 @@ export async function decryptDecompressString(
  * @returns {Promise<string>} - Processed result.
  * @private
  */
-export async function cryptString(
+export async function cryptString (
   input: string,
   aes: IAesBundle,
   mode: 'encrypt' | 'decrypt',

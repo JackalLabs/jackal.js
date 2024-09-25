@@ -1,20 +1,10 @@
-import {
-  findNestedContentsCount,
-  findNestedSharedDepth,
-  warnError,
-} from '@/utils/misc'
-import {
-  ShareFolderMetaHandler,
-  ShareMetaHandler,
-} from '@/classes/metaHandlers'
+import { findNestedContentsCount, findNestedSharedDepth, warnError } from '@/utils/misc'
+import { ShareFolderMetaHandler, ShareMetaHandler } from '@/classes/metaHandlers'
 import { sharedPath } from '@/utils/globalDefaults'
 import { EncodingHandler } from '@/classes/encodingHandler'
 import { genAesBundle } from '@/utils/crypt'
 import type { PrivateKey } from 'eciesjs'
-import type {
-  THostSigningClient,
-  TJackalSigningClient,
-} from '@jackallabs/jackal.js-protos'
+import type { THostSigningClient, TJackalSigningClient } from '@jackallabs/jackal.js-protos'
 import {
   IClientHandler,
   INotificationRecord,
@@ -35,7 +25,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
   protected readonly addedMiddle: Record<string, IShareFolderMetaHandler>
   protected readonly addedShared: Record<string, IShareMetaHandler>
 
-  constructor(
+  constructor (
     client: IClientHandler,
     jackalSigner: TJackalSigningClient,
     hostSigner: THostSigningClient,
@@ -57,7 +47,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
    * Fetch notifications from chain.
    * @returns {Promise<number>} - Number of new notifications found.
    */
-  async fetchNotifications(): Promise<number> {
+  async fetchNotifications (): Promise<number> {
     try {
       const raw =
         await this.jackalSigner.queries.notifications.allNotificationsByAddress(
@@ -77,7 +67,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
    * Core process of sharing system.
    * @returns {Promise<void>}
    */
-  async digest(): Promise<void> {
+  async digest (): Promise<void> {
     try {
       for (let one of this.notifications) {
         if (one.msg.startsWith('file|')) {
@@ -162,7 +152,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
    * @returns {Promise<void>}
    * @protected
    */
-  protected async maybeMakeSharer(sender: string): Promise<void> {
+  protected async maybeMakeSharer (sender: string): Promise<void> {
     const path = `s/${sharedPath}/${sender}`
     if (path in this.existingPaths) {
       this.existingPaths[path].addAndReturnCount(1)
@@ -193,7 +183,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
    * @returns {string[]} - Path of new folder.
    * @protected
    */
-  protected makeFreshFolders(
+  protected makeFreshFolders (
     sender: string,
     base: string[],
     offset: number,
@@ -212,7 +202,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
    * @returns {number} - Index of ref.
    * @protected
    */
-  protected findRefIndex(path: string): number {
+  protected findRefIndex (path: string): number {
     const chunks = path.split('/')
     chunks.pop()
     const target = chunks.join('/')
@@ -230,7 +220,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async buildMsgQueue(): Promise<IWrappedEncodeObject[]> {
+  protected async buildMsgQueue (): Promise<IWrappedEncodeObject[]> {
     try {
       const msgs: IWrappedEncodeObject[] = []
       for (let name in this.existingPaths) {

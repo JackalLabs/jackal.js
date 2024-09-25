@@ -49,10 +49,10 @@ export class FiletreeReader implements IFiletreeReader {
   protected readonly keyPair: PrivateKey
   protected readonly clientAddress: string
 
-  protected redpages: Record<string, Record<string, string>>
-  protected bluepages: Record<string, Record<string, IChildMetaDataMap>>
+  protected ulidLeaves: Record<string, Record<string, string>>
+  protected directoryLeaves: Record<string, Record<string, IChildMetaDataMap>>
   protected yellowpages: Record<string, Record<string, DQueryFileTreeFile>>
-  protected whitepages: Record<string, ILegacyFolderMetaData>
+  protected legacyMetaLeaves: Record<string, ILegacyFolderMetaData>
 
   constructor (
     jackalClient: IClientHandler,
@@ -65,13 +65,13 @@ export class FiletreeReader implements IFiletreeReader {
     this.keyPair = keyPair
     this.clientAddress = ownerAddress
 
-    this.redpages = {}
-    this.redpages[ownerAddress] = {}
-    this.bluepages = {}
-    this.bluepages[ownerAddress] = {}
+    this.ulidLeaves = {}
+    this.ulidLeaves[ownerAddress] = {}
+    this.directoryLeaves = {}
+    this.directoryLeaves[ownerAddress] = {}
     this.yellowpages = {}
     this.yellowpages[ownerAddress] = {}
-    this.whitepages = {}
+    this.legacyMetaLeaves = {}
   }
 
   /**
@@ -82,8 +82,8 @@ export class FiletreeReader implements IFiletreeReader {
    */
   ulidLookup (path: string, owner?: string): string {
     const ownerAddress = owner || this.clientAddress
-    if (this.redpages[ownerAddress][path]) {
-      return this.redpages[ownerAddress][path]
+    if (this.ulidLeaves[ownerAddress][path]) {
+      return this.ulidLeaves[ownerAddress][path]
     } else {
       throw warnError('filetreeReader ulidLookup()', new Error('No Resource Found'))
     }
@@ -102,15 +102,15 @@ export class FiletreeReader implements IFiletreeReader {
       refresh = false,
     } = options
     // console.log(options)
-    // console.log(this.bluepages[owner])
+    // console.log(this.directoryLeaves[owner])
     // console.log(this.yellowpages[owner])
 
     try {
-      if (this.bluepages[owner][path] && !refresh) {
-        return this.bluepages[owner][path]
+      if (this.directoryLeaves[owner][path] && !refresh) {
+        return this.directoryLeaves[owner][path]
       } else {
         await this.pathToLookupPostProcess(path, owner, this.yellowpages[owner][path])
-        return this.bluepages[owner][path]
+        return this.directoryLeaves[owner][path]
       }
     } catch (err) {
       throw warnError('filetreeReader readFolderContents()', err)
@@ -169,7 +169,7 @@ export class FiletreeReader implements IFiletreeReader {
             description,
             location,
             name: whoAmI,
-            ulid: this.redpages[this.clientAddress][path],
+            ulid: this.ulidLeaves[this.clientAddress][path],
           })
         } else {
           throw new Error('Invalid Meta')
@@ -271,7 +271,7 @@ export class FiletreeReader implements IFiletreeReader {
     try {
       const [parentPath, name] = legacyPath
       const parent =
-        this.whitepages[parentPath] || (await this.loadMetaByPath(parentPath))
+        this.legacyMetaLeaves[parentPath] || (await this.loadMetaByPath(parentPath))
       if (parent.fileChildren) {
         const meta = await FileMetaHandler.create({
           fileMeta: parent.fileChildren[name],
@@ -677,17 +677,17 @@ export class FiletreeReader implements IFiletreeReader {
                 file,
               )) as IRootLookupMetaData
               // console.log(lookup)
-              if (!(ownerAddress in this.redpages)) {
-                this.redpages[ownerAddress] = {}
+              if (!(ownerAddress in this.ulidLeaves)) {
+                this.ulidLeaves[ownerAddress] = {}
               }
-              this.redpages[ownerAddress][path] = lookup.ulid
+              this.ulidLeaves[ownerAddress][path] = lookup.ulid
               if (!(ownerAddress in this.yellowpages)) {
                 this.yellowpages[ownerAddress] = {}
               }
               await this.setYellowpages(
                 path,
                 ownerAddress,
-                this.redpages[ownerAddress][path],
+                this.ulidLeaves[ownerAddress][path],
               )
               await this.pathToLookupPostProcess(
                 path,
@@ -739,36 +739,13 @@ export class FiletreeReader implements IFiletreeReader {
           : (JSON.parse(contents) as TMetaDataSets)
         if (parsed.metaDataType === 'folder') {
           const count = hexToInt(parsed.count)
-          this.bluepages[ownerAddress][path] = this.basicFolderShell()
+          this.directoryLeaves[ownerAddress][path] = this.basicFolderShell()
+          const post = []
           for (let i = 0; i < count; i++) {
-            const refMeta = await this.loadRefMeta(
-              this.redpages[ownerAddress][path],
-              i,
-            )
-            const meta = await this.loadMetaByUlid(refMeta.pointsTo)
-            if (meta.metaDataType === 'folder') {
-              const loopPath = `${path}/${meta.whoAmI}`
-              this.redpages[ownerAddress][loopPath] = refMeta.pointsTo
-              await this.setYellowpages(
-                loopPath,
-                ownerAddress,
-                refMeta.pointsTo,
-              )
-              this.bluepages[ownerAddress][path].folders[i] = meta
-            } else if (meta.metaDataType === 'file') {
-              const loopPath = `${path}/${meta.fileMeta.name}`
-              this.redpages[ownerAddress][loopPath] = refMeta.pointsTo
-              await this.setYellowpages(
-                loopPath,
-                ownerAddress,
-                refMeta.pointsTo,
-              )
-              this.bluepages[ownerAddress][path].files[i] = meta
-            } else if (meta.metaDataType === 'null') {
-              const handler = await NullMetaHandler.create(meta.location, i)
-              this.bluepages[ownerAddress][path].nulls[i] = handler
-            }
+            post.push(this.singleLoadMeta(path, ownerAddress, i))
           }
+          const final = await Promise.allSettled(post)
+          console.dir(final)
         } else {
           // do nothing
         }
@@ -777,6 +754,48 @@ export class FiletreeReader implements IFiletreeReader {
       }
     } catch (err) {
       throw warnError('filetreeReader pathToLookupPostProcess()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} path
+   * @param {string} ownerAddress
+   * @param {number} index
+   * @returns {Promise<void>}
+   * @protected
+   */
+  protected async singleLoadMeta (path: string, ownerAddress: string, index: number): Promise<void> {
+    try {
+      const refMeta = await this.loadRefMeta(
+        this.ulidLeaves[ownerAddress][path],
+        index,
+      )
+      const leaf = this.directoryLeaves[ownerAddress][path]
+      const meta = await this.loadMetaByUlid(refMeta.pointsTo)
+      if (meta.metaDataType === 'folder') {
+        const loopPath = `${path}/${meta.whoAmI}`
+        this.ulidLeaves[ownerAddress][loopPath] = refMeta.pointsTo
+        await this.setYellowpages(
+          loopPath,
+          ownerAddress,
+          refMeta.pointsTo,
+        )
+        leaf.folders[index] = meta
+      } else if (meta.metaDataType === 'file') {
+        const loopPath = `${path}/${meta.fileMeta.name}`
+        this.ulidLeaves[ownerAddress][loopPath] = refMeta.pointsTo
+        await this.setYellowpages(
+          loopPath,
+          ownerAddress,
+          refMeta.pointsTo,
+        )
+        leaf.files[index] = meta
+      } else if (meta.metaDataType === 'null') {
+        leaf.nulls[index] = await NullMetaHandler.create(meta.location, index)
+      }
+    } catch (err) {
+      throw warnError('filetreeReader singleLoadMeta()', err)
     }
   }
 

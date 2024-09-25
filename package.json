@@ -61,7 +61,7 @@
     "@cosmjs/stargate": "^0.32.2",
     "@jackallabs/bech32": "^1.2.0",
     "@jackallabs/dogwood-tree": "^1.0.1",
-    "@jackallabs/jackal.js-protos": "2.1.1",
+    "@jackallabs/jackal.js-protos": "2.2.0",
     "@karnthis/plzsu": "^1.0.0",
     "@keplr-wallet/types": "^0.12.44",
     "browserify-aes": "^1.2.0",

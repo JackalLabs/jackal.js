@@ -1,10 +1,6 @@
 /// <reference types="long" />
 import { AminoSignResponse, StdSignature, StdSignDoc } from '@cosmjs/amino'
-import {
-  DirectSignResponse,
-  OfflineDirectSigner,
-  OfflineSigner,
-} from '@cosmjs/proto-signing'
+import { DirectSignResponse, OfflineDirectSigner, OfflineSigner } from '@cosmjs/proto-signing'
 import { BroadcastMode } from 'cosmjs-types/cosmos/tx/v1beta1/service'
 import { ChainInfo } from './chain-info'
 
@@ -32,20 +28,20 @@ export interface Leap {
   ) => Promise<OfflineSigner | OfflineDirectSigner>
   getEnigmaUtils: (chainId: string) => LeapEnigmaUtils
 
-  enable(chainds: string | string[]): Promise<void>
+  enable (chainds: string | string[]): Promise<void>
 
-  experimentalSuggestChain(chainInfo: ChainInfo): Promise<void>
+  experimentalSuggestChain (chainInfo: ChainInfo): Promise<void>
 
-  getKey(chainId: string): Promise<Key>
+  getKey (chainId: string): Promise<Key>
 
-  signAmino(
+  signAmino (
     chainId: string,
     signer: string,
     signDoc: StdSignDoc,
     signOptions?: LeapSignOptions,
   ): Promise<AminoSignResponse>
 
-  signDirect(
+  signDirect (
     chainId: string,
     signer: string,
     signDoc: {
@@ -61,43 +57,43 @@ export interface Leap {
     signOptions?: LeapSignOptions,
   ): Promise<DirectSignResponse>
 
-  signArbitrary(
+  signArbitrary (
     chainId: string,
     signer: string,
     data: string | Uint8Array,
   ): Promise<StdSignature>
 
-  sendTx(
+  sendTx (
     chainId: string,
     tx: Uint8Array,
     mode: BroadcastMode,
   ): Promise<Uint8Array>
 
-  suggestToken(
+  suggestToken (
     chainId: string,
     contractAddress: string,
     viewingKey?: string,
   ): Promise<void>
 
-  getSecret20ViewingKey(
+  getSecret20ViewingKey (
     chainId: string,
     contractAddress: string,
   ): Promise<string>
 
-  getEnigmaPubKey(chainId: string): Promise<Uint8Array>
+  getEnigmaPubKey (chainId: string): Promise<Uint8Array>
 
-  getEnigmaTxEncryptionKey(
+  getEnigmaTxEncryptionKey (
     chainId: string,
     nonce: Uint8Array,
   ): Promise<Uint8Array>
 
-  enigmaEncrypt(
+  enigmaEncrypt (
     chainId: string,
     contractCodeHash: string,
     msg: object,
   ): Promise<Uint8Array>
 
-  enigmaDecrypt(
+  enigmaDecrypt (
     chainId: string,
     ciphertext: Uint8Array,
     nonce: Uint8Array,
@@ -108,15 +104,15 @@ export class LeapEnigmaUtils {
   protected readonly chainId: string
   protected readonly leap: Leap
 
-  constructor(chainId: string, leap: Leap)
+  constructor (chainId: string, leap: Leap)
 
-  getPubkey(): Promise<Uint8Array>
+  getPubkey (): Promise<Uint8Array>
 
-  getTxEncryptionKey(nonce: Uint8Array): Promise<Uint8Array>
+  getTxEncryptionKey (nonce: Uint8Array): Promise<Uint8Array>
 
-  encrypt(contractCodeHash: string, msg: object): Promise<Uint8Array>
+  encrypt (contractCodeHash: string, msg: object): Promise<Uint8Array>
 
-  decrypt(ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array>
+  decrypt (ciphertext: Uint8Array, nonce: Uint8Array): Promise<Uint8Array>
 }
 
 export type LeapMode = 'core' | 'extension' | 'mobile-web' | 'walletconnect'
@@ -135,5 +131,6 @@ export interface LeapWindow {
 }
 
 declare global {
-  interface Window extends LeapWindow {}
+  interface Window extends LeapWindow {
+  }
 }

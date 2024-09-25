@@ -14,7 +14,7 @@ import type { ISharedMetaDataMap } from '@/interfaces'
  * @returns {void}
  * @private
  */
-export function deprecated(
+export function deprecated (
   thing: string,
   version: string,
   opts?: { aggressive?: boolean; replacement?: string },
@@ -36,7 +36,7 @@ export function deprecated(
  * @returns {any}
  * @private
  */
-export function warnError(thing: string, err: any): any {
+export function warnError (thing: string, err: any): any {
   const notice = `Jackal.js | ${thing}: ${err}`
   console.warn(notice)
   return err
@@ -49,7 +49,7 @@ export function warnError(thing: string, err: any): any {
  * @param {TTidyStringModes} mode - If character should be removed from start, end. or both.
  * @returns {string} - Final string.
  */
-export function tidyString(
+export function tidyString (
   source: string,
   toTidy: string,
   mode: TTidyStringModes = 'both',
@@ -75,7 +75,7 @@ export function tidyString(
  * @param {number} seconds - Duration of timer in ms.
  * @returns {Promise<void>}
  */
-export async function setDelay(seconds: number): Promise<void> {
+export async function setDelay (seconds: number): Promise<void> {
   const delay = secondToMS(Number(seconds))
   await new Promise((resolve) => setTimeout(resolve, delay))
 }
@@ -86,7 +86,7 @@ export async function setDelay(seconds: number): Promise<void> {
  * @param {string[]} path - Path within object to check.
  * @returns {number} - Depth of match.
  */
-export function findNestedSharedDepth(
+export function findNestedSharedDepth (
   obj: ISharedMetaDataMap,
   path: string[],
 ): number {
@@ -107,7 +107,7 @@ export function findNestedSharedDepth(
  * @param {string[]} path - Path within object to check.
  * @returns {number} - Number of matches found.
  */
-export function findNestedContentsCount(
+export function findNestedContentsCount (
   obj: ISharedMetaDataMap,
   path: string[],
 ): number {
@@ -126,7 +126,7 @@ export function findNestedContentsCount(
  * @returns {string} - String containing error message.
  * @private
  */
-export function signerNotEnabled(module: string, func: string): string {
+export function signerNotEnabled (module: string, func: string): string {
   let notice = `Jackal.js | [${module}] ${func}() - Signer has not been enabled. Please init with valid signer`
   console.error(notice)
   return notice
@@ -137,7 +137,7 @@ export function signerNotEnabled(module: string, func: string): string {
  * @param {number} target - Timestamp to check.
  * @returns {boolean} - True if timestamp is in the past.
  */
-export function isItPast(target: number): boolean {
+export function isItPast (target: number): boolean {
   const dd = Date.now()
   return dd > target
 }
@@ -147,7 +147,7 @@ export function isItPast(target: number): boolean {
  * @param {Date} target - Date to check.
  * @returns {boolean} - True if date is in the past.
  */
-export function isItPastDate(target: Date): boolean {
+export function isItPastDate (target: Date): boolean {
   return isItPast(target.getTime())
 }
 
@@ -156,7 +156,7 @@ export function isItPastDate(target: Date): boolean {
  * @param {T[]} source - Arbitrary array.
  * @returns {T[]} - New array of shuffled elements.
  */
-export function shuffleArray<T>(source: T[]): T[] {
+export function shuffleArray<T> (source: T[]): T[] {
   const final: T[] = []
   for (let i = source.length; i > -1; --i) {
     final.push(source[Math.floor(Math.random() * i)])
@@ -173,12 +173,12 @@ export function shuffleArray<T>(source: T[]): T[] {
  * @param {Record<TSockets, ISocketConfig>} socketOverrides - Object of possible override values for sockets.
  * @returns {IIbcEngageBundle<TxEvent>[]} - Broadcast result.
  */
-export function makeConnectionBundles(
+export function makeConnectionBundles (
   networks: TSockets[],
   feed: TxEvent[],
   msgs: DEncodeObject[],
   addr: string,
-  socketOverrides: TSocketSet
+  socketOverrides: TSocketSet,
 ): IIbcEngageBundle<TxEvent>[] {
   const bundles: IIbcEngageBundle<TxEvent>[] = []
 
@@ -189,7 +189,7 @@ export function makeConnectionBundles(
   const uniqueUrls = [...new Set(allUrls)]
 
   for (let url of uniqueUrls) {
-    function parser(resp: any) {
+    function parser (resp: any) {
       try {
         // return parseMsgResponse(url, resp)
         return resp

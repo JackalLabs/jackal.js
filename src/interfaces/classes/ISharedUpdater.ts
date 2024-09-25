@@ -1,5 +1,5 @@
 export interface ISharedUpdater {
-  fetchNotifications(): Promise<number>
+  fetchNotifications (): Promise<number>
 
-  digest(): Promise<void>
+  digest (): Promise<void>
 }

@@ -4,17 +4,20 @@
  * and run the @cosmwasm/ts-codegen generate command to regenerate this file.
  */
 
-export type TxEncoding = "proto3" | "proto3json";
+export type TxEncoding = 'proto3' | 'proto3json';
+
 export interface InstantiateMsg {
   admin?: string | null;
   channel_open_init_options?: ChannelOpenInitOptions | null;
 }
+
 export interface ChannelOpenInitOptions {
   connection_id: string;
   counterparty_connection_id: string;
   counterparty_port_id?: string | null;
   tx_encoding?: TxEncoding | null;
 }
+
 export type ExecuteMsg = {
   create_channel: ChannelOpenInitOptions;
 } | {
@@ -150,31 +153,41 @@ export type GovMsg = {
     [k: string]: unknown;
   };
 };
-export type VoteOption = "yes" | "no" | "abstain" | "no_with_veto";
+export type VoteOption = 'yes' | 'no' | 'abstain' | 'no_with_veto';
 export type Decimal = string;
+
 export interface Coin {
   amount: Uint128;
   denom: string;
+
   [k: string]: unknown;
 }
+
 export interface Empty {
   [k: string]: unknown;
 }
+
 export interface IbcTimeout {
   block?: IbcTimeoutBlock | null;
   timestamp?: Timestamp | null;
+
   [k: string]: unknown;
 }
+
 export interface IbcTimeoutBlock {
   height: number;
   revision: number;
+
   [k: string]: unknown;
 }
+
 export interface WeightedVoteOption {
   option: VoteOption;
   weight: Decimal;
+
   [k: string]: unknown;
 }
+
 export type QueryMsg = {
   get_channel: {};
 } | {
@@ -182,36 +195,51 @@ export type QueryMsg = {
 } | {
   get_callback_counter: {};
 };
+
 export interface CallbackCounter {
   error: number;
   success: number;
   timeout: number;
 }
-export type IbcOrder = "ORDER_UNORDERED" | "ORDER_ORDERED";
-export type ChannelStatus = "STATE_UNINITIALIZED_UNSPECIFIED" | "STATE_INIT" | "STATE_TRYOPEN" | "STATE_OPEN" | "STATE_CLOSED";
+
+export type IbcOrder = 'ORDER_UNORDERED' | 'ORDER_ORDERED';
+export type ChannelStatus =
+  'STATE_UNINITIALIZED_UNSPECIFIED'
+  | 'STATE_INIT'
+  | 'STATE_TRYOPEN'
+  | 'STATE_OPEN'
+  | 'STATE_CLOSED';
+
 export interface ChannelState {
   channel: IbcChannel;
   channel_status: ChannelStatus;
 }
+
 export interface IbcChannel {
   connection_id: string;
   counterparty_endpoint: IbcEndpoint;
   endpoint: IbcEndpoint;
   order: IbcOrder;
   version: string;
+
   [k: string]: unknown;
 }
+
 export interface IbcEndpoint {
   channel_id: string;
   port_id: string;
+
   [k: string]: unknown;
 }
+
 export type Addr = string;
+
 export interface ContractState {
   admin: Addr;
   allow_channel_open_init?: boolean;
   ica_info?: IcaInfo | null;
 }
+
 export interface IcaInfo {
   channel_id: string;
   encoding: TxEncoding;

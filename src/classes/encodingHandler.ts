@@ -33,11 +33,7 @@ import {
   IWrappedEncodeObject,
 } from '@/interfaces'
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
-import {
-  CosmosMsgForEmpty,
-  ExecuteMsg,
-  InstantiateMsg,
-} from '@/types/StorageOutpost.client.types'
+import { CosmosMsgForEmpty, ExecuteMsg, InstantiateMsg } from '@/types/StorageOutpost.client.types'
 import { PrivateKey } from 'eciesjs'
 import { FiletreeReader } from '@/classes/filetreeReader'
 import { FolderMetaHandler } from '@/classes/metaHandlers'
@@ -52,7 +48,7 @@ export class EncodingHandler {
 
   protected reader: IFiletreeReader
 
-  constructor(
+  constructor (
     client: IClientHandler,
     jackalSigner: TJackalSigningClient,
     hostSigner: THostSigningClient,
@@ -79,7 +75,7 @@ export class EncodingHandler {
    * @param {PrivateKey} keyPair
    * @protected
    */
-  protected resetReader(keyPair: PrivateKey): void {
+  protected resetReader (keyPair: PrivateKey): void {
     this.reader = new FiletreeReader(
       this.jackalClient,
       this.jackalSigner,
@@ -98,7 +94,7 @@ export class EncodingHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected encodeInstantiateContract(
+  protected encodeInstantiateContract (
     connectionIdA: string,
     connectionIdB: string,
     codeId: number,
@@ -134,7 +130,7 @@ export class EncodingHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected encodeExecuteContract(
+  protected encodeExecuteContract (
     contractAddress: string,
     execMsg: DEncodeObject,
   ): DEncodeObject {
@@ -170,7 +166,7 @@ export class EncodingHandler {
    * @returns {IWrappedEncodeObject[]}
    * @protected
    */
-  protected instantiateToMsgs(
+  protected instantiateToMsgs (
     connectionIdA: string,
     connectionIdB: string,
     codeId: number,
@@ -200,7 +196,7 @@ export class EncodingHandler {
    * @returns {DEncodeObject[]}
    * @protected
    */
-  protected executeToSpecialMsgs(
+  protected executeToSpecialMsgs (
     contractAddress: string,
     execs: DEncodeObject | DEncodeObject[],
   ): DEncodeObject[] {
@@ -226,7 +222,7 @@ export class EncodingHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected encodePostKey(key: string): DEncodeObject {
+  protected encodePostKey (key: string): DEncodeObject {
     const forKey: DMsgPostKey = {
       creator: this.hostAddress,
       key,
@@ -241,7 +237,7 @@ export class EncodingHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected encodeStoragePostFile(
+  protected encodeStoragePostFile (
     pkg: IUploadPackage,
     currentBlock: number,
   ): DEncodeObject {
@@ -264,7 +260,7 @@ export class EncodingHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected encodeStorageDeleteFile(item: DUnifiedFile): DEncodeObject {
+  protected encodeStorageDeleteFile (item: DUnifiedFile): DEncodeObject {
     const { merkle, start } = item
     const forRemoval: DMsgStorageDeleteFile = {
       creator: this.jklAddress,
@@ -282,7 +278,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async storageEncodeFileTree(
+  protected async storageEncodeFileTree (
     location: TMerkleParentChild,
     meta: TMetaDataSets,
     options?: IFileTreeOptions,
@@ -305,7 +301,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeFile(
+  protected async encodeFileTreeFile (
     pkg: IUploadPackage,
   ): Promise<DEncodeObject> {
     try {
@@ -326,7 +322,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeFileShare(
+  protected async encodeFileTreeFileShare (
     path: string,
     additionalViewers: string[],
   ): Promise<DEncodeObject> {
@@ -349,7 +345,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeBaseFolder(
+  protected async encodeFileTreeBaseFolder (
     pkg: IFileTreePackage,
   ): Promise<DEncodeObject> {
     try {
@@ -375,7 +371,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeFolder(
+  protected async encodeFileTreeFolder (
     pkg: IFileTreePackage,
   ): Promise<DEncodeObject> {
     try {
@@ -396,7 +392,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeShared(
+  protected async encodeFileTreeShared (
     pkg: IFileTreePackage,
   ): Promise<DEncodeObject> {
     try {
@@ -415,7 +411,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeSharedFolder(
+  protected async encodeFileTreeSharedFolder (
     pkg: IFileTreePackage,
   ): Promise<DEncodeObject> {
     try {
@@ -438,16 +434,13 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeNull(
+  protected async encodeFileTreeNull (
     pkg: IFileTreePackage,
   ): Promise<DEncodeObject> {
     try {
       const mH = pkg.meta as INullMetaHandler
       const meta = mH.export()
-      const parentAndChild = await merkleParentAndIndex(
-        mH.getLocation(),
-        mH.getRefString(),
-      )
+      const parentAndChild = await merkleParentAndChild(meta.location)
       return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
     } catch (err) {
       throw warnError('encodingHandler encodeFileTreeNull()', err)
@@ -460,7 +453,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeRef(
+  protected async encodeFileTreeRef (
     pkg: IUploadPackage | IFileTreePackage,
   ): Promise<DEncodeObject> {
     try {
@@ -488,7 +481,7 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeCreateNotification(
+  protected async encodeCreateNotification (
     pkg: INotificationPackage,
   ): Promise<DEncodeObject> {
     try {
@@ -525,7 +518,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async baseFolderToMsgs(
+  protected async baseFolderToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
@@ -552,7 +545,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async folderToMsgs(
+  protected async folderToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
@@ -579,7 +572,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async existingFolderToMsgs(
+  protected async existingFolderToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
@@ -600,7 +593,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async ulidFolderToMsgs(): Promise<IWrappedEncodeObject[]> {
+  protected async ulidFolderToMsgs (): Promise<IWrappedEncodeObject[]> {
     try {
       const aes = await genAesBundle()
       const ulidMeta = await FolderMetaHandler.create({
@@ -632,7 +625,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async sharedFolderToMsgs(
+  protected async sharedFolderToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
@@ -659,7 +652,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async sharedFileToMsgs(
+  protected async sharedFileToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
@@ -686,7 +679,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async filetreeDeleteToMsgs(
+  protected async filetreeDeleteToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
@@ -708,7 +701,7 @@ export class EncodingHandler {
    * @returns {IWrappedEncodeObject[]}
    * @protected
    */
-  protected fileDeleteToMsgs(
+  protected fileDeleteToMsgs (
     filePkg: IFileDeletePackage,
   ): IWrappedEncodeObject[] {
     try {
@@ -731,7 +724,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async pkgToMsgs(
+  protected async pkgToMsgs (
     pkg: IUploadPackage,
     blockHeight: number,
   ): Promise<IWrappedEncodeObject[]> {
@@ -766,7 +759,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async legacyPkgToMsgs(
+  protected async legacyPkgToMsgs (
     pkg: IUploadPackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
@@ -795,7 +788,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async existingPkgToMsgs(
+  protected async existingPkgToMsgs (
     toReplace: DUnifiedFile,
     pkg: IUploadPackage,
     blockHeight: number,
@@ -832,7 +825,7 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async shareToMsgs(
+  protected async shareToMsgs (
     pkg: INotificationPackage,
     additionalViewers: string[] = [],
   ): Promise<IWrappedEncodeObject[]> {
@@ -861,7 +854,7 @@ export class EncodingHandler {
    * @returns {number}
    * @protected
    */
-  protected createExpiresValue(source: number, currentBlock: number): number {
+  protected createExpiresValue (source: number, currentBlock: number): number {
     if (source < 0) {
       const dd = new Date()
       dd.setFullYear(dd.getFullYear() + Math.abs(source))

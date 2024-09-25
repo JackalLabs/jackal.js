@@ -1,6 +1,7 @@
 import {
   DCoin,
-  ITxLibrary, THostSigningClient,
+  ITxLibrary,
+  THostSigningClient,
   TJackalSigningClient,
   TQueryExtensions,
 } from '@jackallabs/jackal.js-protos'
@@ -9,54 +10,56 @@ import {
   IBroadcastResults,
   IOracleHandler,
   IRnsHandler,
-  IStorageHandler, IWalletDetails, IWasmDetails,
+  IStorageHandler,
+  IWalletDetails,
+  IWasmDetails,
   IWrappedEncodeObject,
 } from '@/interfaces'
 
 export interface IClientHandler {
-  createStorageHandler(): Promise<IStorageHandler>
+  createStorageHandler (): Promise<IStorageHandler>
 
-  createWasmStorageHandler(details?: IWasmDetails): Promise<IStorageHandler>
+  createWasmStorageHandler (details?: IWasmDetails): Promise<IStorageHandler>
 
-  createRnsHandler(): Promise<IRnsHandler>
+  createRnsHandler (): Promise<IRnsHandler>
 
-  createOracleHandler(): Promise<IOracleHandler>
+  createOracleHandler (): Promise<IOracleHandler>
 
-  getChainId(): string
+  getChainId (): string
 
-  getHostChainId(): string
+  getHostChainId (): string
 
-  getIsLedger(): boolean
+  getIsLedger (): boolean
 
-  getWalletDetails(): IWalletDetails
+  getWalletDetails (): IWalletDetails
 
-  getSelectedWallet(): string
+  getSelectedWallet (): string
 
-  getProofWindow(): number
+  getProofWindow (): number
 
-  getJackalBlockHeight(): Promise<number>
+  getJackalBlockHeight (): Promise<number>
 
-  getJackalSigner(): TJackalSigningClient | null
+  getJackalSigner (): TJackalSigningClient | null
 
-  getHostSigner(): THostSigningClient | null
+  getHostSigner (): THostSigningClient | null
 
-  getQueries(): TQueryExtensions
+  getQueries (): TQueryExtensions
 
-  getTxs(): ITxLibrary
+  getTxs (): ITxLibrary
 
-  getJklBalance(): Promise<DCoin>
+  getJklBalance (): Promise<DCoin>
 
-  getJackalAddress(): string
+  getJackalAddress (): string
 
-  getHostAddress(): string
+  getHostAddress (): string
 
-  getICAJackalAddress(): string
+  getICAJackalAddress (): string
 
-  findPubKey(address: string): Promise<string>
+  findPubKey (address: string): Promise<string>
 
-  myPubKeyIsPublished(): Promise<boolean>
+  myPubKeyIsPublished (): Promise<boolean>
 
-  broadcastAndMonitorMsgs(
+  broadcastAndMonitorMsgs (
     wrappedMsgs: IWrappedEncodeObject | IWrappedEncodeObject[],
     options?: IBroadcastOptions,
   ): Promise<IBroadcastResults>

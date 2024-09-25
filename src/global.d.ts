@@ -63,8 +63,8 @@ type Split<
 > = S extends `${infer U}${Sep}${infer V}`
   ? [U, ...Split<V, Sep>]
   : S extends ''
-  ? []
-  : [S]
+    ? []
+    : [S]
 
 /* Tuples */
 
@@ -78,8 +78,8 @@ type ExactTuple<
   Length extends number,
   /** don't */ __A extends any[] = [],
 > = __A extends {
-  length: Length
-}
+    length: Length
+  }
   ? __A
   : ExactTuple<T, Length, [...__A, T]>
 /** Removes first item from a tuple and returns the rest. */
@@ -119,10 +119,10 @@ type AllOrNone<T> = T | { [K in keyof T]?: never }
  */
 type AtLeastOne<T, Keys extends keyof T = keyof T> = Normalize<
   Pick<T, Exclude<keyof T, Keys>> &
-    {
-      [K in Keys]-?: Required<Pick<T, K>> &
-        Partial<Record<Exclude<Keys, K>, T[K]>>
-    }[Keys]
+  {
+    [K in Keys]-?: Required<Pick<T, K>> &
+    Partial<Record<Exclude<Keys, K>, T[K]>>
+  }[Keys]
 >
 
 /**
@@ -130,10 +130,10 @@ type AtLeastOne<T, Keys extends keyof T = keyof T> = Normalize<
  */
 type OnlyOne<T, Keys extends keyof T = keyof T> = Normalize<
   Pick<T, Exclude<keyof T, Keys>> &
-    {
-      [K in Keys]-?: Required<Pick<T, K>> &
-        Partial<Record<Exclude<Keys, K>, never>>
-    }[Keys]
+  {
+    [K in Keys]-?: Required<Pick<T, K>> &
+    Partial<Record<Exclude<Keys, K>, never>>
+  }[Keys]
 >
 
 /**
@@ -141,9 +141,9 @@ type OnlyOne<T, Keys extends keyof T = keyof T> = Normalize<
  */
 type OnlyOneOrNone<T, Keys extends keyof T = keyof T> = Normalize<
   Pick<T, Exclude<keyof T, Keys>> &
-    {
-      [K in Keys]?: Pick<T, K> & Partial<Record<Exclude<Keys, K>, never>>
-    }[Keys]
+  {
+    [K in Keys]?: Pick<T, K> & Partial<Record<Exclude<Keys, K>, never>>
+  }[Keys]
 >
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -157,14 +157,13 @@ type OnlyOneOrNone<T, Keys extends keyof T = keyof T> = Normalize<
  */
 type PickAs<
   T,
-  K extends
-    | `${string}:${string}`
+  K extends | `${string}:${string}`
     | Exclude<keyof T, K extends `${infer A}:${string}` ? A : never>,
 > = ShallowNormalize<
   UnionToIntersection<
     K extends `${infer A}:${infer B}` ? { [key in B]: T[A] } : never
   > &
-    Pick<T, Extract<K, keyof T>>
+  Pick<T, Extract<K, keyof T>>
 >
 /*`*/
 
@@ -220,8 +219,8 @@ type Normalize<T> = T extends (...args: infer A) => infer R
 type ShallowNormalize<T> = { [K in keyof T]: T[K] }
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
-  k: infer I,
-) => void
+    k: infer I,
+  ) => void
   ? I
   : never
 

@@ -1,8 +1,4 @@
-import type {
-  DMsgFileTreePostFile,
-  DMsgProvisionFileTree,
-  DNotification,
-} from '@jackallabs/jackal.js-protos'
+import type { DMsgFileTreePostFile, DMsgProvisionFileTree, DNotification } from '@jackallabs/jackal.js-protos'
 import {
   IAesBundle,
   IChildMetaDataMap,
@@ -12,7 +8,8 @@ import {
   IFileTreeOptions,
   IFolderMetaData,
   IFolderMetaHandler,
-  INotificationRecord, IReadFolderContentOptions,
+  INotificationRecord,
+  IReadFolderContentOptions,
   IReconstructedFileTree,
   IRefMetaData,
   ISharedMetaDataMap,
@@ -22,68 +19,68 @@ import {
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 
 export interface IFiletreeReader {
-  ulidLookup(path: string, owner?: string): string
+  ulidLookup (path: string, owner?: string): string
 
-  readFolderContents(path: string, options?: IReadFolderContentOptions): Promise<IChildMetaDataMap>
+  readFolderContents (path: string, options?: IReadFolderContentOptions): Promise<IChildMetaDataMap>
 
-  loadFolderMeta(path: string): Promise<IFolderMetaData>
+  loadFolderMeta (path: string): Promise<IFolderMetaData>
 
-  loadFolderMetaHandler(path: string): Promise<IFolderMetaHandler>
+  loadFolderMetaHandler (path: string): Promise<IFolderMetaHandler>
 
-  loadShareFolderMeta(path: string): Promise<IShareFolderMetaData>
+  loadShareFolderMeta (path: string): Promise<IShareFolderMetaData>
 
-  loadShareMeta(path: string): Promise<IShareMetaData>
+  loadShareMeta (path: string): Promise<IShareMetaData>
 
-  loadRefMeta(ulid: string, ref: number): Promise<IRefMetaData>
+  loadRefMeta (ulid: string, ref: number): Promise<IRefMetaData>
 
-  loadLegacyMeta(
+  loadLegacyMeta (
     legacyMerkles: Uint8Array[],
     legacyPath: [string, string],
   ): Promise<IFileMetaData>
 
-  loadMetaByUlid(ulid: string): Promise<TMetaDataSets>
+  loadMetaByUlid (ulid: string): Promise<TMetaDataSets>
 
-  loadMetaByPath(path: string): Promise<TMetaDataSets>
+  loadMetaByPath (path: string): Promise<TMetaDataSets>
 
-  loadMetaByExternalPath(
+  loadMetaByExternalPath (
     path: string,
     ownerAddress: string,
   ): Promise<TMetaDataSets>
 
-  loadFromLegacyMerkles(
+  loadFromLegacyMerkles (
     path: string,
     location: string,
     fileMeta: IFileMeta,
   ): Promise<IFileMetaHandler>
 
-  setMetaViewers(
+  setMetaViewers (
     path: string,
     additionalViewers: string[],
   ): Promise<IReconstructedFileTree>
 
-  loadKeysByPath(path: string, ownerAddress: string): Promise<IAesBundle>
+  loadKeysByPath (path: string, ownerAddress: string): Promise<IAesBundle>
 
-  loadKeysByUlid(ulid: string, ownerAddress: string): Promise<IAesBundle>
+  loadKeysByUlid (ulid: string, ownerAddress: string): Promise<IAesBundle>
 
-  encodeProvisionFileTree(): Promise<DMsgProvisionFileTree>
+  encodeProvisionFileTree (): Promise<DMsgProvisionFileTree>
 
-  encodePostFile(
+  encodePostFile (
     location: TMerkleParentChild,
     meta: TMetaDataSets,
     options?: IFileTreeOptions,
   ): Promise<DMsgFileTreePostFile>
 
-  encodeExistingPostFile(
+  encodeExistingPostFile (
     path: string,
     location: TMerkleParentChild,
     additionalViewers: string[],
   ): Promise<DMsgFileTreePostFile>
 
-  protectNotification(receiverAddress: string, aes: IAesBundle): Promise<string>
+  protectNotification (receiverAddress: string, aes: IAesBundle): Promise<string>
 
-  readShareNotification(
+  readShareNotification (
     notificationData: DNotification,
   ): Promise<INotificationRecord>
 
-  loadSharingFolder(ulid: string): Promise<ISharedMetaDataMap>
+  loadSharingFolder (ulid: string): Promise<ISharedMetaDataMap>
 }

@@ -1,10 +1,7 @@
 import { Merkletree } from '@jackallabs/dogwood-tree'
 import { ulid } from 'ulid'
 import { chunkSize } from '@/utils/globalDefaults'
-import {
-  intToHex,
-  uintArrayToString,
-} from '@/utils/converters'
+import { intToHex, uintArrayToString } from '@/utils/converters'
 import { bufferToHex } from '@/utils/hash'
 import type {
   IFileMeta,
@@ -34,26 +31,26 @@ export class NullMetaHandler implements INullMetaHandler {
   protected readonly location: string
   protected refIndex: number
 
-  protected constructor(path: string, refIndex: number) {
-    this.location = path
+  protected constructor (location: string, refIndex: number) {
+    this.location = `s/ulid/${location}`
     this.refIndex = refIndex
   }
 
   /**
    *
-   * @param {string} path
+   * @param {string} ulid
    * @param {number} refIndex
    * @returns {Promise<NullMetaHandler>}
    */
-  static async create(path: string, refIndex: number = 0) {
-    return new NullMetaHandler(path, refIndex)
+  static async create (ulid: string, refIndex: number = 0) {
+    return new NullMetaHandler(ulid, refIndex)
   }
 
   /**
    *
    * @param {number} refIndex
    */
-  setRefIndex(refIndex: number): void {
+  setRefIndex (refIndex: number): void {
     this.refIndex = refIndex
   }
 
@@ -61,7 +58,7 @@ export class NullMetaHandler implements INullMetaHandler {
    *
    * @returns {number}
    */
-  getRefIndex(): number {
+  getRefIndex (): number {
     return this.refIndex
   }
 
@@ -69,7 +66,7 @@ export class NullMetaHandler implements INullMetaHandler {
    *
    * @returns {string}
    */
-  getRefString(): string {
+  getRefString (): string {
     return intToHex(this.refIndex)
   }
 
@@ -77,7 +74,7 @@ export class NullMetaHandler implements INullMetaHandler {
    *
    * @returns {string}
    */
-  getLocation(): string {
+  getLocation (): string {
     return this.location
   }
 
@@ -85,7 +82,7 @@ export class NullMetaHandler implements INullMetaHandler {
    *
    * @returns {INullMetaData}
    */
-  export(): INullMetaData {
+  export (): INullMetaData {
     return {
       location: this.location,
       merkleHex: '',
@@ -103,7 +100,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
   protected readonly ulid: string
   protected whoAmI: string
 
-  protected constructor(source: IFolderMetaFoundationalData) {
+  protected constructor (source: IFolderMetaFoundationalData) {
     this.count = source.count
     this.description = source.description
     this.location = source.location
@@ -117,7 +114,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    * @param {IFolderMetaDataSource} source
    * @returns {Promise<FolderMetaHandler>}
    */
-  static async create(source: IFolderMetaDataSource) {
+  static async create (source: IFolderMetaDataSource) {
     const rdy: IFolderMetaFoundationalData = {
       count: source.count,
       description: source.description || '',
@@ -134,7 +131,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    * @param {number} value
    * @returns {number}
    */
-  addAndReturnCount(value: number): number {
+  addAndReturnCount (value: number): number {
     this.count += value
     return this.count
   }
@@ -143,7 +140,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @param {number} count
    */
-  setCount(count: number): void {
+  setCount (count: number): void {
     this.count = count
   }
 
@@ -151,7 +148,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @returns {number}
    */
-  getCount(): number {
+  getCount (): number {
     return this.count
   }
 
@@ -159,7 +156,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @param {number} refIndex
    */
-  setRefIndex(refIndex: number): void {
+  setRefIndex (refIndex: number): void {
     this.refIndex = refIndex
   }
 
@@ -167,7 +164,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @returns {number}
    */
-  getRefIndex(): number {
+  getRefIndex (): number {
     return this.refIndex
   }
 
@@ -175,7 +172,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @returns {string}
    */
-  getRefString(): string {
+  getRefString (): string {
     return intToHex(this.refIndex)
   }
 
@@ -183,7 +180,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @returns {string}
    */
-  getUlid(): string {
+  getUlid (): string {
     return this.ulid
   }
 
@@ -191,7 +188,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @param {string} location
    */
-  setLocation(location: string): void {
+  setLocation (location: string): void {
     this.location = `s/ulid/${location}`
   }
 
@@ -199,7 +196,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @returns {string}
    */
-  getLocation(): string {
+  getLocation (): string {
     return this.location
   }
 
@@ -207,7 +204,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @returns {IFolderMetaData}
    */
-  export(): IFolderMetaData {
+  export (): IFolderMetaData {
     return {
       count: intToHex(this.count),
       description: this.description,
@@ -222,7 +219,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    *
    * @returns {IRefMetaData}
    */
-  exportRef(): IRefMetaData {
+  exportRef (): IRefMetaData {
     return {
       location: `${this.location}/${intToHex(this.refIndex)}`,
       merkleHex: '',
@@ -243,7 +240,7 @@ export class FileMetaHandler implements IFileMetaHandler {
   protected readonly thumbnail: string
   protected readonly ulid: string
 
-  protected constructor(source: IFileMetaFoundationalData) {
+  protected constructor (source: IFileMetaFoundationalData) {
     this.description = source.description
     this.fileMeta = source.fileMeta
     this.location = source.location
@@ -260,7 +257,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    * @param {IFileMetaDataSource} source
    * @returns {Promise<FileMetaHandler>}
    */
-  static async create(source: IFileMetaDataSource) {
+  static async create (source: IFileMetaDataSource) {
     const rdy: IFileMetaFoundationalData = {
       description: source.description || '',
       fileMeta: source.fileMeta,
@@ -294,7 +291,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    *
    * @param {number} refIndex
    */
-  setRefIndex(refIndex: number): void {
+  setRefIndex (refIndex: number): void {
     this.refIndex = refIndex
   }
 
@@ -302,7 +299,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    *
    * @returns {number}
    */
-  getRefIndex(): number {
+  getRefIndex (): number {
     return this.refIndex
   }
 
@@ -310,7 +307,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    *
    * @returns {string}
    */
-  getRefString(): string {
+  getRefString (): string {
     return intToHex(this.refIndex)
   }
 
@@ -318,7 +315,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    *
    * @returns {string}
    */
-  getUlid(): string {
+  getUlid (): string {
     return this.ulid
   }
 
@@ -326,7 +323,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    *
    * @param {string} location
    */
-  setLocation(location: string): void {
+  setLocation (location: string): void {
     this.location = `s/ulid/${location}`
   }
 
@@ -334,7 +331,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    *
    * @returns {string}
    */
-  getLocation(): string {
+  getLocation (): string {
     return this.location
   }
 
@@ -342,7 +339,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    *
    * @returns {IFileMetaData}
    */
-  export(): IFileMetaData {
+  export (): IFileMetaData {
     return {
       description: this.description,
       fileMeta: this.fileMeta,
@@ -360,7 +357,7 @@ export class FileMetaHandler implements IFileMetaHandler {
    *
    * @returns {IRefMetaData}
    */
-  exportRef(): IRefMetaData {
+  exportRef (): IRefMetaData {
     return {
       location: `${this.location}/${intToHex(this.refIndex)}`,
       merkleHex: '',
@@ -377,7 +374,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
   protected readonly ulid: string
   protected readonly whoAmI: string
 
-  protected constructor(source: ISharedFolderMetaFoundationalData) {
+  protected constructor (source: ISharedFolderMetaFoundationalData) {
     this.count = source.count
     this.location = source.location
     this.refIndex = source.refIndex
@@ -390,7 +387,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    * @param {ISharedFolderMetaDataSource} source
    * @returns {Promise<ShareFolderMetaHandler>}
    */
-  static async create(source: ISharedFolderMetaDataSource) {
+  static async create (source: ISharedFolderMetaDataSource) {
     const rdy: ISharedFolderMetaFoundationalData = {
       count: source.count,
       location: `s/ulid/${source.location}`,
@@ -406,7 +403,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    * @param {number} value
    * @returns {number}
    */
-  addAndReturnCount(value: number): number {
+  addAndReturnCount (value: number): number {
     this.count += value
     return this.count
   }
@@ -415,7 +412,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    *
    * @returns {number}
    */
-  getCount(): number {
+  getCount (): number {
     return this.count
   }
 
@@ -423,7 +420,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    *
    * @param {number} refIndex
    */
-  setRefIndex(refIndex: number): void {
+  setRefIndex (refIndex: number): void {
     this.refIndex = refIndex
   }
 
@@ -431,7 +428,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    *
    * @returns {number}
    */
-  getRefIndex(): number {
+  getRefIndex (): number {
     return this.refIndex
   }
 
@@ -439,7 +436,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    *
    * @returns {string}
    */
-  getRefString(): string {
+  getRefString (): string {
     return intToHex(this.refIndex)
   }
 
@@ -447,7 +444,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    *
    * @returns {string}
    */
-  getUlid(): string {
+  getUlid (): string {
     return this.ulid
   }
 
@@ -455,7 +452,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    *
    * @returns {string}
    */
-  getLocation(): string {
+  getLocation (): string {
     return this.location
   }
 
@@ -463,7 +460,7 @@ export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
    *
    * @returns {IShareFolderMetaData}
    */
-  export(): IShareFolderMetaData {
+  export (): IShareFolderMetaData {
     return {
       count: intToHex(this.count),
       description: '',
@@ -484,7 +481,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
   protected refIndex: number
   protected readonly ulid: string
 
-  protected constructor(source: IShareMetaFoundationalData) {
+  protected constructor (source: IShareMetaFoundationalData) {
     this.label = source.label
     this.location = source.location
     this.owner = source.owner
@@ -498,7 +495,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    * @param {IShareMetaDataSource} source
    * @returns {Promise<ShareMetaHandler>}
    */
-  static async create(source: IShareMetaDataSource) {
+  static async create (source: IShareMetaDataSource) {
     const rdy: IShareMetaFoundationalData = {
       label: source.label,
       location: `s/ulid/${source.location}`,
@@ -515,7 +512,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @param {number} refIndex
    */
-  setRefIndex(refIndex: number): void {
+  setRefIndex (refIndex: number): void {
     this.refIndex = refIndex
   }
 
@@ -523,7 +520,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @returns {number}
    */
-  getRefIndex(): number {
+  getRefIndex (): number {
     return this.refIndex
   }
 
@@ -531,7 +528,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @returns {string}
    */
-  getRefString(): string {
+  getRefString (): string {
     return intToHex(this.refIndex)
   }
 
@@ -539,7 +536,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @param {string} label
    */
-  setLabel(label: string): void {
+  setLabel (label: string): void {
     this.label = label
   }
 
@@ -547,7 +544,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @returns {string}
    */
-  getLabel(): string {
+  getLabel (): string {
     return this.label
   }
 
@@ -555,7 +552,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @returns {string}
    */
-  getUlid(): string {
+  getUlid (): string {
     return this.ulid
   }
 
@@ -563,7 +560,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @returns {string}
    */
-  getLocation(): string {
+  getLocation (): string {
     return this.location
   }
 
@@ -571,7 +568,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @returns {IShareMetaData}
    */
-  export(): IShareMetaData {
+  export (): IShareMetaData {
     return {
       label: '',
       location: this.location,
@@ -586,7 +583,7 @@ export class ShareMetaHandler implements IShareMetaHandler {
    *
    * @returns {IShareRefMetaData}
    */
-  exportRef(): IShareRefMetaData {
+  exportRef (): IShareRefMetaData {
     return {
       location: `${this.location}/${intToHex(this.refIndex)}`,
       merkleHex: '',

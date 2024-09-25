@@ -9,71 +9,71 @@ import type {
 } from '@/interfaces'
 
 export interface IRefMetaHandler {
-  setRefIndex(refIndex: number): void
+  setRefIndex (refIndex: number): void
 
-  getRefIndex(): number
+  getRefIndex (): number
 
-  getRefString(): string
+  getRefString (): string
 }
 
 export interface INullMetaHandler extends IRefMetaHandler {
-  getLocation(): string
+  getLocation (): string
 
-  export(): INullMetaData
+  export (): INullMetaData
 }
 
 export interface IFolderMetaHandler extends IRefMetaHandler {
-  addAndReturnCount(value: number): number
+  addAndReturnCount (value: number): number
 
-  setCount(count: number): void
+  setCount (count: number): void
 
-  getCount(): number
+  getCount (): number
 
-  getUlid(): string
+  getUlid (): string
 
-  setLocation(location: string): void
+  setLocation (location: string): void
 
-  getLocation(): string
+  getLocation (): string
 
-  export(): IFolderMetaData
+  export (): IFolderMetaData
 
-  exportRef(): IRefMetaData
+  exportRef (): IRefMetaData
 }
 
 export interface IFileMetaHandler extends IRefMetaHandler {
-  getUlid(): string
+  getUlid (): string
 
-  setLocation(location: string): void
+  setLocation (location: string): void
 
-  getLocation(): string
+  getLocation (): string
 
-  export(): IFileMetaData
+  export (): IFileMetaData
 
-  exportRef(): IRefMetaData
+  exportRef (): IRefMetaData
 }
 
 export interface IShareFolderMetaHandler extends IRefMetaHandler {
-  addAndReturnCount(value: number): number
+  addAndReturnCount (value: number): number
 
-  getCount(): number
+  getCount (): number
 
-  getUlid(): string
+  getUlid (): string
 
-  getLocation(): string
+  getLocation (): string
 
-  export(): IShareFolderMetaData
+  export (): IShareFolderMetaData
 }
 
 export interface IShareMetaHandler extends IRefMetaHandler {
-  setLabel(label: string): void
+  setLabel (label: string): void
 
-  getLabel(): string
+  getLabel (): string
 
-  getLocation(): string
+  getLocation (): string
 
-  getUlid(): string
+  getUlid (): string
 
-  export(): IShareMetaData
+  export (): IShareMetaData
 
-  exportRef(): IShareRefMetaData
+  exportRef (): IShareRefMetaData
 }

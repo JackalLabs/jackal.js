@@ -13,20 +13,14 @@ import type {
   TQueryAllNamesResponseStrict,
   TQueryListOwnedNamesResponseStrict,
 } from '@jackallabs/jackal.js-protos'
-import type {
-  IClientHandler,
-  IPageRequest,
-  IRnsData,
-  IRnsHandler,
-  IWrappedEncodeObject,
-} from '@/interfaces'
+import type { IClientHandler, IPageRequest, IRnsData, IRnsHandler, IWrappedEncodeObject } from '@/interfaces'
 import type { TAddressPrefix } from '@/types'
 
 export class RnsHandler implements IRnsHandler {
   protected readonly jackalClient: IClientHandler
   protected readonly signingClient: TJackalSigningClient | null
 
-  protected constructor(client: IClientHandler) {
+  protected constructor (client: IClientHandler) {
     this.jackalClient = client
     this.signingClient = client.getJackalSigner()
   }
@@ -36,7 +30,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IClientHandler} client - Instance of ClientHandler.
    * @returns {Promise<RnsHandler>} - Instance of RnsHandler.
    */
-  static async init(client: IClientHandler): Promise<IRnsHandler> {
+  static async init (client: IClientHandler): Promise<IRnsHandler> {
     return new RnsHandler(client)
   }
 
@@ -45,7 +39,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} name - RNS name to search for.
    * @returns {Promise<DBid>}
    */
-  async getBidForSingleName(name: string): Promise<DBid> {
+  async getBidForSingleName (name: string): Promise<DBid> {
     try {
       const result = await this.jackalClient
         .getQueries()
@@ -61,7 +55,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
    * @returns {Promise<TQueryAllBidsResponseStrict>}
    */
-  async getBidsForAllNames(
+  async getBidsForAllNames (
     pagination?: IPageRequest,
   ): Promise<TQueryAllBidsResponseStrict> {
     try {
@@ -76,7 +70,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} name - RNS name to find.
    * @returns {Promise<DForsale>}
    */
-  async getNameForSale(name: string): Promise<DForsale> {
+  async getNameForSale (name: string): Promise<DForsale> {
     try {
       const result = await this.jackalClient
         .getQueries()
@@ -92,7 +86,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
    * @returns {Promise<TQueryAllForSaleResponseStrict>}
    */
-  async getAllNamesForSale(
+  async getAllNamesForSale (
     pagination?: IPageRequest,
   ): Promise<TQueryAllForSaleResponseStrict> {
     try {
@@ -107,7 +101,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
    * @returns {Promise<TQueryAllNamesResponseStrict>} - Pagination and array of DName.
    */
-  async getAllNames(
+  async getAllNames (
     pagination?: IPageRequest,
   ): Promise<TQueryAllNamesResponseStrict> {
     try {
@@ -122,7 +116,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
    * @returns {Promise<TQueryListOwnedNamesResponseStrict>} - Pagination and array of DName.
    */
-  async getAllMyNames(
+  async getAllMyNames (
     pagination?: IPageRequest,
   ): Promise<TQueryListOwnedNamesResponseStrict> {
     try {
@@ -141,7 +135,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
    * @returns {Promise<TQueryListOwnedNamesResponseStrict>} - Pagination and array of DName.
    */
-  async getAllNamesInWallet(
+  async getAllNamesInWallet (
     address: string,
     pagination?: IPageRequest,
   ): Promise<TQueryListOwnedNamesResponseStrict> {
@@ -159,7 +153,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} name - RNS name to check.
    * @returns {Promise<DName>}
    */
-  async getNameDetails(name: string): Promise<DName> {
+  async getNameDetails (name: string): Promise<DName> {
     try {
       const result = await this.jackalClient
         .getQueries()
@@ -176,7 +170,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {TAddressPrefix} prefix - Optional wallet prefix, defaults to jkl.
    * @returns {Promise<string>} - Wallet address of RNS owner.
    */
-  async rnsToAddress(name: string, prefix?: TAddressPrefix): Promise<string> {
+  async rnsToAddress (name: string, prefix?: TAddressPrefix): Promise<string> {
     try {
       const details = await this.getNameDetails(name)
       if (prefix) {
@@ -195,7 +189,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {DCoin} bid - Value of offer as DCoin instance.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async bid(rns: string, bid: DCoin): Promise<DDeliverTxResponse> {
+  async bid (rns: string, bid: DCoin): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'bid'))
     }
@@ -218,7 +212,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} from - The Jackal address to accept the bid from.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async acceptBid(rns: string, from: string): Promise<DDeliverTxResponse> {
+  async acceptBid (rns: string, from: string): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'acceptBid'))
     }
@@ -240,7 +234,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS to retract offer from.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async cancelBid(rns: string): Promise<DDeliverTxResponse> {
+  async cancelBid (rns: string): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'cancelBid'))
     }
@@ -263,7 +257,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {DCoin} price - Value to buy as DCoin instance.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async list(rns: string, price: DCoin): Promise<DDeliverTxResponse> {
+  async list (rns: string, price: DCoin): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'list'))
     }
@@ -285,7 +279,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS to remove.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async delist(rns: string): Promise<DDeliverTxResponse> {
+  async delist (rns: string): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'delist'))
     }
@@ -307,7 +301,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} rns
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async buy(rns: string): Promise<DDeliverTxResponse> {
+  async buy (rns: string): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'buy'))
     }
@@ -328,7 +322,7 @@ export class RnsHandler implements IRnsHandler {
    * Activate user in the RNS system and to generate free account RNS.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async init(): Promise<DDeliverTxResponse> {
+  async init (): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'init'))
     }
@@ -352,7 +346,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IRnsData} [data] - Optional object to include in data field.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async register(
+  async register (
     rns: string,
     yearsToRegister: number,
     data?: IRnsData,
@@ -379,7 +373,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IRnsData} [data] - Optional object to replace existing contents of data field.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async update(rns: string, data?: IRnsData): Promise<DDeliverTxResponse> {
+  async update (rns: string, data?: IRnsData): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'update'))
     }
@@ -402,7 +396,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} receiver - Jackal address to transfer to.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async transfer(rns: string, receiver: string): Promise<DDeliverTxResponse> {
+  async transfer (rns: string, receiver: string): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'transfer'))
     }
@@ -427,7 +421,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {IRnsData} [data] - Optional object to include in sub RNS data field.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async addSubRns(
+  async addSubRns (
     rns: string,
     linkedWallet: string,
     subRns: string,
@@ -454,7 +448,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} rns - Full RNS to remove.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async removeSubRns(rns: string): Promise<DDeliverTxResponse> {
+  async removeSubRns (rns: string): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'removeSubRns'))
     }
@@ -478,7 +472,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeBidMsg(rns: string, bid: DCoin): DEncodeObject {
+  protected makeBidMsg (rns: string, bid: DCoin): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeBidMsg'))
     }
@@ -496,7 +490,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeAcceptBidMsg(rns: string, from: string): DEncodeObject {
+  protected makeAcceptBidMsg (rns: string, from: string): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeAcceptBidMsg'))
     }
@@ -513,7 +507,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeCancelBidMsg(rns: string): DEncodeObject {
+  protected makeCancelBidMsg (rns: string): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeCancelBidMsg'))
     }
@@ -530,7 +524,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeListMsg(rns: string, price: DCoin): DEncodeObject {
+  protected makeListMsg (rns: string, price: DCoin): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeListMsg'))
     }
@@ -547,7 +541,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeDelistMsg(rns: string): DEncodeObject {
+  protected makeDelistMsg (rns: string): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeDelistMsg'))
     }
@@ -563,7 +557,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeBuyMsg(rns: string): DEncodeObject {
+  protected makeBuyMsg (rns: string): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeBuyMsg'))
     }
@@ -578,7 +572,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeInitMsg(): DEncodeObject {
+  protected makeInitMsg (): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeInitMsg'))
     }
@@ -595,7 +589,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeRegisterMsg(
+  protected makeRegisterMsg (
     rns: string,
     yearsToRegister: number,
     data?: IRnsData,
@@ -618,7 +612,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeUpdateMsg(rns: string, data?: IRnsData): DEncodeObject {
+  protected makeUpdateMsg (rns: string, data?: IRnsData): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeUpdateMsg'))
     }
@@ -636,7 +630,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeTransferMsg(rns: string, receiver: string): DEncodeObject {
+  protected makeTransferMsg (rns: string, receiver: string): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeTransferMsg'))
     }
@@ -656,7 +650,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeAddRecordMsg(
+  protected makeAddRecordMsg (
     rns: string,
     linkedWallet: string,
     subRns: string,
@@ -680,7 +674,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeDelRecordMsg(rns: string): DEncodeObject {
+  protected makeDelRecordMsg (rns: string): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeDelRecordMsg'))
     }
@@ -696,7 +690,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {string} - Source RNS address with ".jkl" included.
    * @protected
    */
-  protected sanitizeRns(name: string): string {
+  protected sanitizeRns (name: string): string {
     return name.endsWith('.jkl') ? name : `${name}.jkl`
   }
 
@@ -709,7 +703,7 @@ export class RnsHandler implements IRnsHandler {
    * @returns {string}
    * @protected
    */
-  protected standardizeDataContents(data: IRnsData = {}): string {
+  protected standardizeDataContents (data: IRnsData = {}): string {
     try {
       return JSON.stringify(data)
     } catch (err) {

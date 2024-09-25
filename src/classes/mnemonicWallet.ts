@@ -14,7 +14,7 @@ export class MnemonicWallet implements IMnemonicWallet {
    * @param {string} address
    * @private
    */
-  private constructor(mergedSigner: TMergedSigner, address: string) {
+  private constructor (mergedSigner: TMergedSigner, address: string) {
     this.mergedSigner = mergedSigner
     this.address = address
   }
@@ -24,7 +24,7 @@ export class MnemonicWallet implements IMnemonicWallet {
    * @param {string} mnemonic - Seed phrase to use to generate the wallet session.
    * @returns {Promise<MnemonicWallet>} - Instance of MnemonicWallet.
    */
-  static async init(mnemonic: string): Promise<MnemonicWallet> {
+  static async init (mnemonic: string): Promise<MnemonicWallet> {
     let directWallet = await DirectSecp256k1HdWallet.fromMnemonic(mnemonic, {
       prefix: 'jkl',
     })
@@ -47,7 +47,7 @@ export class MnemonicWallet implements IMnemonicWallet {
    * Expose Signer for use in ClientHandler.
    * @returns {TMergedSigner}
    */
-  getOfflineSigner(): TMergedSigner {
+  getOfflineSigner (): TMergedSigner {
     return this.mergedSigner
   }
 
@@ -55,7 +55,7 @@ export class MnemonicWallet implements IMnemonicWallet {
    * Expose Signer's Jackal address.
    * @returns {string}
    */
-  getAddress(): string {
+  getAddress (): string {
     return this.address
   }
 
@@ -64,7 +64,7 @@ export class MnemonicWallet implements IMnemonicWallet {
    * @param {string} message - Value to use as signature base.
    * @returns {Promise<StdSignature>} - Resulting AminoSignResponse.signature.
    */
-  async signArbitrary(message: string): Promise<StdSignature> {
+  async signArbitrary (message: string): Promise<StdSignature> {
     const signed = await this.mergedSigner.signAmino(this.address, {
       chain_id: '',
       account_number: '0',

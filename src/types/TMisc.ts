@@ -1,9 +1,11 @@
 import {
   IChildMetaDataMap,
   IFileMetaHandler,
-  IFolderMetaHandler, INullMetaHandler,
+  IFolderMetaHandler,
+  INullMetaHandler,
   IShareFolderMetaHandler,
-  IShareMetaHandler, type ISocketConfig
+  IShareMetaHandler,
+  type ISocketConfig,
 } from '@/interfaces'
 
 export type TTidyStringModes = 'start' | 'end' | 'both'
@@ -13,7 +15,12 @@ export type TMerkleParent = string
 export type TMerkleChild = string
 export type TMerkleParentChild = [TMerkleParent, TMerkleChild]
 
-export type TMetaHandler = INullMetaHandler | IFolderMetaHandler | IFileMetaHandler | IShareFolderMetaHandler | IShareMetaHandler
+export type TMetaHandler =
+  INullMetaHandler
+  | IFolderMetaHandler
+  | IFileMetaHandler
+  | IShareFolderMetaHandler
+  | IShareMetaHandler
 
 export type TSockets =
   | 'jackal'

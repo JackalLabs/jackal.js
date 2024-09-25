@@ -13,7 +13,7 @@ const OneSecondMs = 1000
  * @returns {string} - Compressed string.
  * @private
  */
-export function safeCompressData(input: string): string {
+export function safeCompressData (input: string): string {
   return `jklpc1${Plzsu.compress(input)}`
 }
 
@@ -23,7 +23,7 @@ export function safeCompressData(input: string): string {
  * @returns {string} - Decompressed string.
  * @private
  */
-export function safeDecompressData(input: string): string {
+export function safeDecompressData (input: string): string {
   if (!input.startsWith('jklpc1')) {
     throw new Error('Invalid Decompression String')
   }
@@ -36,7 +36,7 @@ export function safeDecompressData(input: string): string {
  * @returns {string} - Compressed string.
  * @private
  */
-export function unsafeCompressData(input: string): string {
+export function unsafeCompressData (input: string): string {
   return Plzsu.compress(input)
 }
 
@@ -46,7 +46,7 @@ export function unsafeCompressData(input: string): string {
  * @returns {string} - Decompressed string.
  * @private
  */
-export function unsafeDecompressData(input: string): string {
+export function unsafeDecompressData (input: string): string {
   return Plzsu.decompress(input)
 }
 
@@ -56,7 +56,7 @@ export function unsafeDecompressData(input: string): string {
  * @returns {string} - Compressed Amino-safe string.
  * @private
  */
-export function sanitizeCompressionForAmino(input: string): string {
+export function sanitizeCompressionForAmino (input: string): string {
   const uint = stringToUint16Array(input)
   const finalBuf = new Uint8Array(uint.buffer)
   const bufAsString = String.fromCodePoint(...finalBuf)
@@ -69,7 +69,7 @@ export function sanitizeCompressionForAmino(input: string): string {
  * @returns {string} - Decompressed string.
  * @private
  */
-export function prepDecompressionForAmino(input: string): string {
+export function prepDecompressionForAmino (input: string): string {
   if (input.startsWith('jklpc2|')) {
     const wasBase64 = atob(input.substring(7))
     const asArray = [...wasBase64].map((str) => str.codePointAt(0) || 0)
@@ -85,7 +85,7 @@ export function prepDecompressionForAmino(input: string): string {
  * @returns {IFileMeta} - Extracted meta data attributes.
  * @private
  */
-export function extractFileMetaData(input: File): IFileMeta {
+export function extractFileMetaData (input: File): IFileMeta {
   const { lastModified, name, size, type } = input
   return { lastModified, name, size, type }
 }
@@ -96,7 +96,7 @@ export function extractFileMetaData(input: File): IFileMeta {
  * @returns {string} - Converted result.
  * @private
  */
-export function uintArrayToString(
+export function uintArrayToString (
   buf: Uint8Array | Uint16Array | Uint32Array,
 ): string {
   return String.fromCharCode.apply(null, [...buf])
@@ -108,7 +108,7 @@ export function uintArrayToString(
  * @returns {Uint8Array} - Converted result.
  * @private
  */
-export function stringToUint8Array(str: string): Uint8Array {
+export function stringToUint8Array (str: string): Uint8Array {
   const uintView = new Uint8Array(str.length)
   for (let i = 0; i < str.length; i++) {
     uintView[i] = str.charCodeAt(i)
@@ -122,7 +122,7 @@ export function stringToUint8Array(str: string): Uint8Array {
  * @returns {Uint16Array} - Converted result.
  * @private
  */
-export function stringToUint16Array(str: string): Uint16Array {
+export function stringToUint16Array (str: string): Uint16Array {
   const uintView = new Uint16Array(str.length)
   for (let i = 0; i < str.length; i++) {
     uintView[i] = str.charCodeAt(i)
@@ -136,7 +136,7 @@ export function stringToUint16Array(str: string): Uint16Array {
  * @returns {string} - Converted result.
  * @private
  */
-export function intToHex(value?: number): string {
+export function intToHex (value?: number): string {
   const cleanNumber = Number(value) || 0
   return cleanNumber.toString(16)
 }
@@ -147,7 +147,7 @@ export function intToHex(value?: number): string {
  * @returns {number} - Converted result. Defaults to 0.
  * @private
  */
-export function hexToInt(value: string): number {
+export function hexToInt (value: string): number {
   return parseInt(value, 16) || 0
 }
 
@@ -157,7 +157,7 @@ export function hexToInt(value: string): number {
  * @returns {number}
  * @private
  */
-export function secondToMS(seconds: number): number {
+export function secondToMS (seconds: number): number {
   return seconds * OneSecondMs
 }
 
@@ -167,7 +167,7 @@ export function secondToMS(seconds: number): number {
  * @returns {number} - Estimated remaining number of blocks.
  * @private
  */
-export function blockCountUntilTimestamp(unixTimestamp: number): number {
+export function blockCountUntilTimestamp (unixTimestamp: number): number {
   const oneMonth = 30 * 24 * 60 * 60 * 1000
   const timeDiff = unixTimestamp - Date.now()
   if (timeDiff < oneMonth) {
@@ -187,7 +187,7 @@ export function blockCountUntilTimestamp(unixTimestamp: number): number {
  * @returns {number} - Estimated block height.
  * @private
  */
-export function timestampToBlockHeight(
+export function timestampToBlockHeight (
   unixTimestamp: number,
   currentHeight: number,
 ): number {
@@ -204,7 +204,7 @@ export function timestampToBlockHeight(
  * @returns {Date} - Date object for future date matching input future chain height.
  * @private
  */
-export function blockToDateFixed(options: IBlockTimeOptions): Date {
+export function blockToDateFixed (options: IBlockTimeOptions): Date {
   if (!options.blockTime) {
     throw new Error('Block Time is required!')
   }
@@ -221,134 +221,138 @@ export function blockToDateFixed(options: IBlockTimeOptions): Date {
  * @returns {Promise<string>} - Base64Encode of thumbnail data.
  * @private
  */
-export async function maybeMakeThumbnail(source: File): Promise<string> {
+export async function maybeMakeThumbnail (source: File): Promise<string> {
 
-  console.log("Making thumbnail for type....", source.name, source.type)
+  console.log('Making thumbnail for type....', source.name, source.type)
   if (
-    source.type.startsWith("image")
+    source.type.startsWith('image')
   ) {
-    console.log("it is an image!")
+    console.log('it is an image!')
     return await convertToWebP(source)
   } else if (
-    source.type.startsWith("video")
+    source.type.startsWith('video')
   ) {
-    console.log("it is a video!")
+    console.log('it is a video!')
     return await extractThumbnailFromVideo(source)
   } else {
-    console.log("it is not convertable :(")
+    console.log('it is not convertable :(')
     return ''
   }
 }
 
-function extractThumbnailFromVideo(file: File): Promise<string>  {
+function extractThumbnailFromVideo (file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const video = document.createElement("video");
+    const video = document.createElement('video')
 
-    video.src = URL.createObjectURL(file);
-    video.muted = true;  // Mute the video to prevent sound playing
-    video.playsInline = true;
+    video.src = URL.createObjectURL(file)
+    video.muted = true  // Mute the video to prevent sound playing
+    video.playsInline = true
 
     video.onloadedmetadata = () => {
-      const duration = video.duration;
-      const randomTime = Math.random() * duration; // Select a random time point in the video
-      video.currentTime = randomTime;  // Seek to the random time
+      const duration = video.duration
+      const randomTime = Math.random() * duration // Select a random time point in the video
+      video.currentTime = randomTime  // Seek to the random time
 
       video.onseeked = () => {
         // Set the maximum dimension to 256
-        const maxSize = 256;
-        let { videoWidth: width, videoHeight: height } = video;
+        const maxSize = 256
+        let { videoWidth: width, videoHeight: height } = video
 
         // Maintain aspect ratio when resizing
         if (width > height) {
           if (width > maxSize) {
-            height *= maxSize / width;
-            width = maxSize;
+            height *= maxSize / width
+            width = maxSize
           }
         } else {
           if (height > maxSize) {
-            width *= maxSize / height;
-            height = maxSize;
+            width *= maxSize / height
+            height = maxSize
           }
         }
 
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
 
         // Set canvas dimensions to the resized dimensions
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width
+        canvas.height = height
 
         // Draw the current video frame onto the resized canvas
-        ctx?.drawImage(video, 0, 0, width, height);
+        ctx?.drawImage(video, 0, 0, width, height)
 
         // Convert the canvas to a WebP image
-        const base64String = canvas.toDataURL("image/webp", 0.25); // 25% compression
-        resolve(base64String);
-      };
-    };
+        const base64String = canvas.toDataURL('image/webp', 0.25) // 25% compression
+        resolve(base64String)
+      }
+    }
 
-    video.onerror = reject;
-  });
-};
+    video.onerror = reject
+  })
+}
+
 function convertToWebP (file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
+      const img = new Image()
+      img.src = event.target?.result as string
 
       img.onload = () => {
-        const maxSize = 256;
-        let { width, height } = img;
+        const maxSize = 256
+        let { width, height } = img
 
         // Calculate new dimensions while maintaining aspect ratio
         if (width > height) {
           if (width > maxSize) {
-            height *= maxSize / width;
-            width = maxSize;
+            height *= maxSize / width
+            width = maxSize
           }
         } else {
           if (height > maxSize) {
-            width *= maxSize / height;
-            height = maxSize;
+            width *= maxSize / height
+            height = maxSize
           }
         }
 
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
 
-        if (!ctx) return reject("Canvas context is unavailable");
+        if (!ctx) {
+          return reject('Canvas context is unavailable')
+        }
 
         // Set canvas dimensions to the resized dimensions
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = width
+        canvas.height = height
 
         // Draw resized image onto the canvas
-        ctx.drawImage(img, 0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height)
 
         // Convert canvas to WebP format and get Base64 string
-        canvas.toDataURL("image/webp", 0.25); // 25% compression
-        const base64String = canvas.toDataURL("image/webp", 0.25);
+        canvas.toDataURL('image/webp', 0.25) // 25% compression
+        const base64String = canvas.toDataURL('image/webp', 0.25)
         // console.log(base64String)
-        resolve(base64String);
-      };
-    };
+        resolve(base64String)
+      }
+    }
 
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 /**
  * Safely stringify FileTree contents for saving to chain.
  * @param {TMetaDataSets} source - Meta data handler export to save.
  * @returns {string}
  */
-export function safeStringifyFileTree(source: TMetaDataSets): string {
+export function safeStringifyFileTree (source: TMetaDataSets): string {
   try {
     if ('merkleRoot' in source) {
       return JSON.stringify({
         ...source,
-        merkleRoot: Array.from(source.merkleRoot)
+        merkleRoot: Array.from(source.merkleRoot),
       })
     } else {
       return JSON.stringify(source)
@@ -363,7 +367,7 @@ export function safeStringifyFileTree(source: TMetaDataSets): string {
  * @param {string} source - JSON stringified contents from FileTree.
  * @returns {TMetaDataSets}
  */
-export function safeParseFileTree(source: string): TMetaDataSets {
+export function safeParseFileTree (source: string): TMetaDataSets {
   try {
     const base = JSON.parse(source)
     if (base.merkleRoot) {
@@ -388,7 +392,7 @@ export function safeParseFileTree(source: string): TMetaDataSets {
  * @param {string} source - JSON stringified contents from FileTree.
  * @returns {IFileContents}
  */
-export function safeParseLegacyMerkles(source: string): IFileContents {
+export function safeParseLegacyMerkles (source: string): IFileContents {
   try {
     const base = JSON.parse(source)
 

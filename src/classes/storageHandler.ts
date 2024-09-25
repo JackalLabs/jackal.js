@@ -1223,7 +1223,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       fileFormData.set('sender', this.jklAddress)
       fileFormData.set('start', startBlock.toString())
 
-      // console.log('startBlock:', startBlock.toString())
+      console.log('startBlock:', startBlock.toString())
       return await fetch(url, { method: 'POST', body: fileFormData }).then(
         async (resp): Promise<IProviderUploadResponse> => {
           if (typeof resp === 'undefined' || resp === null) {
@@ -1412,8 +1412,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           msgs.push(...(await this.prepDelete(path)))
         }
       }
+      const ulid = this.reader.ulidLookup(target)
       const pkg: IFileTreePackage = {
-        meta: await NullMetaHandler.create(target),
+        meta: await NullMetaHandler.create(ulid),
         aes: await genAesBundle(),
       }
       msgs.push(...(await this.filetreeDeleteToMsgs(pkg)))
@@ -1560,7 +1561,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       }
       if (checkSet.needsProviders) {
         const k = Object.keys(this.providers)
-        // console.log(k)
+        console.log(k)
         const providerCount = k.length
         if (providerCount === 0) {
           throw true

@@ -1,8 +1,4 @@
-import {
-  TChildFileMetaDataMap,
-  TChildFolderMetaDataMap,
-  TChildNullMetaDataMap,
-} from '@/types/TMetaData'
+import { TChildFileMetaDataMap, TChildFolderMetaDataMap, TChildNullMetaDataMap } from '@/types/TMetaData'
 
 export interface IChildMetaDataMap {
   nulls: TChildNullMetaDataMap
@@ -149,7 +145,8 @@ export interface IShareMetaData extends Omit<IRefMetaData, 'metaDataType'> {
 }
 
 export interface ISharedMetaDataMap
-  extends Record<string, ISharedMetaDataMap | IShareMetaData> {}
+  extends Record<string, ISharedMetaDataMap | IShareMetaData> {
+}
 
 export interface IRootLookupMetaData {
   metaDataType: 'rootlookup'

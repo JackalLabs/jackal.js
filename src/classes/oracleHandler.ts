@@ -13,7 +13,7 @@ export class OracleHandler implements IOracleHandler {
   protected readonly jackalClient: IClientHandler
   protected readonly signingClient: TJackalSigningClient | null
 
-  protected constructor(client: IClientHandler) {
+  protected constructor (client: IClientHandler) {
     this.jackalClient = client
     this.signingClient = client.getJackalSigner()
   }
@@ -23,7 +23,7 @@ export class OracleHandler implements IOracleHandler {
    * @param {IClientHandler} client - Instance of ClientHandler.
    * @returns {Promise<IOracleHandler>} - Instance of OracleHandler.
    */
-  static async init(client: IClientHandler): Promise<IOracleHandler> {
+  static async init (client: IClientHandler): Promise<IOracleHandler> {
     return new OracleHandler(client)
   }
 
@@ -32,7 +32,7 @@ export class OracleHandler implements IOracleHandler {
    * @param {string} name - Name of oracle.
    * @returns {Promise<DFeed>}
    */
-  async getFeed(name: string): Promise<DFeed> {
+  async getFeed (name: string): Promise<DFeed> {
     try {
       const result = await this.jackalClient.getQueries().oracle.feed({ name })
       return result.feed
@@ -46,7 +46,7 @@ export class OracleHandler implements IOracleHandler {
    * @param {IPageRequest} [pagination] - Optional values to fetch more than first 100 results.
    * @returns {Promise<TQueryAllFeedsResponseStrict>}
    */
-  async getAllFeeds(
+  async getAllFeeds (
     pagination?: IPageRequest,
   ): Promise<TQueryAllFeedsResponseStrict> {
     try {
@@ -63,7 +63,7 @@ export class OracleHandler implements IOracleHandler {
    * @param {string} oracleName - Unique name of Oracle feed to create.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async createFeed(oracleName: string): Promise<DDeliverTxResponse> {
+  async createFeed (oracleName: string): Promise<DDeliverTxResponse> {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('OracleHandler', 'createFeed'))
     }
@@ -86,7 +86,7 @@ export class OracleHandler implements IOracleHandler {
    * @param {string} data - Stringified JSON object of arbitrary data.
    * @returns {Promise<DDeliverTxResponse>}
    */
-  async pushToFeed(
+  async pushToFeed (
     oracleName: string,
     data: Record<string, any>,
   ): Promise<DDeliverTxResponse> {
@@ -112,7 +112,7 @@ export class OracleHandler implements IOracleHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeCreateFeedMsg(oracleName: string): DEncodeObject {
+  protected makeCreateFeedMsg (oracleName: string): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('OracleHandler', 'makeCreateFeedMsg'))
     }
@@ -129,7 +129,7 @@ export class OracleHandler implements IOracleHandler {
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeUpdateFeedMsg(
+  protected makeUpdateFeedMsg (
     oracleName: string,
     data: Record<string, any>,
   ): DEncodeObject {
@@ -149,11 +149,11 @@ export class OracleHandler implements IOracleHandler {
    * @returns {string}
    * @protected
    */
-  protected stringifyDataContents(data: Record<string, any> = {}): string {
+  protected stringifyDataContents (data: Record<string, any> = {}): string {
     try {
       return JSON.stringify(data)
     } catch (err) {
-      console.log('data:', data)
+      // console.log('data:', data)
       throw warnError('oracleHandler stringifyDataContents()', err)
     }
   }

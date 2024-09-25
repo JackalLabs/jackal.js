@@ -8,7 +8,7 @@ import type { TMerkleParentChild } from '@/types'
  * @returns {Promise<string>} - Resulting Hex string.
  * @private
  */
-export async function hashAndHex(input: string): Promise<string> {
+export async function hashAndHex (input: string): Promise<string> {
   const algo = 'SHA-256'
   const raw = await crypto.subtle.digest(algo, stringToUint8Array(input))
   return bufferToHex(new Uint8Array(raw))
@@ -21,7 +21,7 @@ export async function hashAndHex(input: string): Promise<string> {
  * @returns {Promise<string>} - Merkled, address plus hashed owner.
  * @private
  */
-export async function hashAndHexOwner(
+export async function hashAndHexOwner (
   hexedAddress: string,
   owner: string,
 ): Promise<string> {
@@ -37,7 +37,7 @@ export async function hashAndHexOwner(
  * @returns {Promise<string>} - Hashed hex string of inputs.
  * @private
  */
-export async function hashAndHexUserAccess(
+export async function hashAndHexUserAccess (
   prefix: string,
   trackingNumber: string,
   user: string,
@@ -52,7 +52,7 @@ export async function hashAndHexUserAccess(
  * @returns {Promise<string>} - Resulting Merkle Hex string.
  * @private
  */
-export async function hexFullPath(
+export async function hexFullPath (
   path: string,
   fileName: string,
 ): Promise<string> {
@@ -65,7 +65,7 @@ export async function hexFullPath(
  * @returns {Promise<string>} - Resulting Merkle Hex string.
  * @private
  */
-export async function merklePath(path: string | string[]): Promise<string> {
+export async function merklePath (path: string | string[]): Promise<string> {
   const pathArray = []
   if (path instanceof Array) {
     pathArray.push(...path)
@@ -86,7 +86,7 @@ export async function merklePath(path: string | string[]): Promise<string> {
  * @returns {Promise<string>} - Resulting Merkle Hex string.
  * @private
  */
-export async function merklePathPlusIndex(
+export async function merklePathPlusIndex (
   path: string,
   index: number,
 ): Promise<string> {
@@ -99,7 +99,7 @@ export async function merklePathPlusIndex(
  * @returns {Promise<TMerkleParentChild>}
  * @private
  */
-export async function merkleParentAndChild(
+export async function merkleParentAndChild (
   path: string,
 ): Promise<TMerkleParentChild> {
   const pathArray: string[] = path.split('/')
@@ -118,7 +118,7 @@ export async function merkleParentAndChild(
  * @returns {Promise<TMerkleParentChild>}
  * @private
  */
-export async function merkleParentAndIndex(
+export async function merkleParentAndIndex (
   path: string | string[],
   index: string,
 ): Promise<TMerkleParentChild> {
@@ -139,7 +139,7 @@ export async function merkleParentAndIndex(
  * @returns {Promise<string>} - Hex encoded SHA string.
  * @private
  */
-export async function stringToShaHex(source: string) {
+export async function stringToShaHex (source: string) {
   const safe = atob(source)
   const postProcess = await crypto.subtle.digest(
     'SHA-256',
@@ -154,7 +154,7 @@ export async function stringToShaHex(source: string) {
  * @returns {string} - Hex string converted from source.
  * @private
  */
-export function bufferToHex(buf: Uint8Array): string {
+export function bufferToHex (buf: Uint8Array): string {
   return buf.reduce((acc: string, curr: number) => {
     return acc + hexMap[curr]
   }, '')
@@ -166,7 +166,7 @@ export function bufferToHex(buf: Uint8Array): string {
  * @returns {Uint8Array} - Uint8Array converted from source.
  * @private
  */
-export function hexToBuffer(source: string): Uint8Array {
+export function hexToBuffer (source: string): Uint8Array {
   const found: number[] = []
   for (let i = 0; i < source.length; i += 2) {
     found.push(hexMap.indexOf(`${source[i]}${source[i + 1]}`))

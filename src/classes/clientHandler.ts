@@ -2,7 +2,8 @@ import {
   connectHostQueryClient,
   connectHostSigningClient,
   connectJackalQueryClient,
-  connectJackalSigningClient, DCoin,
+  connectJackalSigningClient,
+  DCoin,
   IIbcEngageBundle,
   ITxLibrary,
   THostQueryClient,
@@ -13,25 +14,9 @@ import {
   TQueryExtensions,
   TxEvent,
 } from '@jackallabs/jackal.js-protos'
-import {
-  jackalTestnetChainConfig,
-  jackalTestnetChainId,
-  jackalTestnetRpc,
-  sockets,
-} from '@/utils/globalDefaults'
-import {
-  makeConnectionBundles,
-  setDelay,
-  signerNotEnabled,
-  warnError,
-} from '@/utils/misc'
-import {
-  MnemonicWallet,
-  OracleHandler,
-  RnsHandler,
-  StorageHandler,
-  WasmHandler,
-} from '@/classes'
+import { jackalTestnetChainConfig, jackalTestnetChainId, jackalTestnetRpc, sockets } from '@/utils/globalDefaults'
+import { makeConnectionBundles, setDelay, signerNotEnabled, warnError } from '@/utils/misc'
+import { MnemonicWallet, OracleHandler, RnsHandler, StorageHandler, WasmHandler } from '@/classes'
 import { finalizeGas } from '@/utils/gas'
 import {
   IAvailableWallets,
@@ -68,7 +53,7 @@ export class ClientHandler implements IClientHandler {
   protected myContractAddress: string | null
   protected myIcaAddress: string | null
 
-  protected constructor(
+  protected constructor (
     jklQuery: TJackalQueryClient,
     hostQuery: THostQueryClient,
     jklSigner: TJackalSigningClient | null,
@@ -107,7 +92,7 @@ export class ClientHandler implements IClientHandler {
    * @param {IClientSetup} [setup]
    * @returns {Promise<IClientHandler>}
    */
-  static async connect(setup: IClientSetup = {}): Promise<IClientHandler> {
+  static async connect (setup: IClientSetup = {}): Promise<IClientHandler> {
     try {
       const {
         host,
@@ -269,7 +254,7 @@ export class ClientHandler implements IClientHandler {
    * Detects wallet extensions installed by current browser. Supports Keplr and Leap.
    * @returns {IAvailableWallets} - Object containing boolean status of supported wallet extensions.
    */
-  static detectAvailableWallets(): IAvailableWallets {
+  static detectAvailableWallets (): IAvailableWallets {
     return {
       keplr: !!window.keplr,
       leap: !!window.leap,
@@ -280,7 +265,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {Promise<IStorageHandler>}
    */
-  async createStorageHandler(): Promise<IStorageHandler> {
+  async createStorageHandler (): Promise<IStorageHandler> {
     try {
       return await StorageHandler.init(this)
     } catch (err) {
@@ -292,13 +277,13 @@ export class ClientHandler implements IClientHandler {
    * Create Wasm Handler session, defaults to Archway.
    * @returns {Promise<IWasmHandler>}
    */
-  async createWasmStorageHandler(details: IWasmDetails = {}): Promise<IStorageHandler> {
+  async createWasmStorageHandler (details: IWasmDetails = {}): Promise<IStorageHandler> {
     try {
       const {
         addressIndex = 1,
         codeId = 546,
         connIdA = 'connection-18',
-        connIdB = 'connection-50'
+        connIdB = 'connection-50',
       } = details
       this.myCosmwasm = await WasmHandler.init(this)
       this.myContractAddress = await this.myCosmwasm.getICAContractAddress(addressIndex)
@@ -326,7 +311,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {Promise<IRnsHandler>}
    */
-  async createRnsHandler(): Promise<IRnsHandler> {
+  async createRnsHandler (): Promise<IRnsHandler> {
     try {
       return await RnsHandler.init(this)
     } catch (err) {
@@ -338,7 +323,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {Promise<IOracleHandler>}
    */
-  async createOracleHandler(): Promise<IOracleHandler> {
+  async createOracleHandler (): Promise<IOracleHandler> {
     try {
       return await OracleHandler.init(this)
     } catch (err) {
@@ -350,7 +335,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {string}
    */
-  getChainId(): string {
+  getChainId (): string {
     return this.jklChainId
   }
 
@@ -358,7 +343,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {string}
    */
-  getHostChainId(): string {
+  getHostChainId (): string {
     return this.hostChainId
   }
 
@@ -366,7 +351,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {boolean}
    */
-  getIsLedger(): boolean {
+  getIsLedger (): boolean {
     return this.details.isNanoLedger
   }
 
@@ -374,7 +359,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {IWalletDetails}
    */
-  getWalletDetails(): IWalletDetails {
+  getWalletDetails (): IWalletDetails {
     return this.details
   }
 
@@ -382,7 +367,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {string}
    */
-  getSelectedWallet(): string {
+  getSelectedWallet (): string {
     return this.selectedWallet
   }
 
@@ -390,7 +375,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {number}
    */
-  getProofWindow(): number {
+  getProofWindow (): number {
     return this.proofWindow
   }
 
@@ -399,7 +384,7 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<number>}
    * @protected
    */
-  async getJackalBlockHeight(): Promise<number> {
+  async getJackalBlockHeight (): Promise<number> {
     if (!this.jklSigner) {
       throw new Error(signerNotEnabled('ClientHandler', 'getJackalBlockHeight'))
     }
@@ -410,7 +395,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {TJackalSigningClient}
    */
-  getJackalSigner(): TJackalSigningClient | null {
+  getJackalSigner (): TJackalSigningClient | null {
     return this.jklSigner
   }
 
@@ -418,7 +403,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {TJackalSigningClient}
    */
-  getHostSigner(): THostSigningClient | null {
+  getHostSigner (): THostSigningClient | null {
     return this.hostSigner
   }
 
@@ -426,7 +411,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {TQueryExtensions}
    */
-  getQueries(): TQueryExtensions {
+  getQueries (): TQueryExtensions {
     return this.jklQuery.queries as TQueryExtensions
   }
 
@@ -434,7 +419,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {ITxLibrary}
    */
-  getTxs(): ITxLibrary {
+  getTxs (): ITxLibrary {
     if (!this.jklSigner) {
       throw new Error(signerNotEnabled('ClientHandler', 'getTxs'))
     }
@@ -445,14 +430,14 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {Promise<DCoin>}
    */
-  async getJklBalance(): Promise<DCoin> {
+  async getJklBalance (): Promise<DCoin> {
     if (!this.jklSigner) {
       throw new Error(signerNotEnabled('ClientHandler', 'getJklBalance'))
     }
     try {
       const res = await this.jklQuery.queries.bank.balance({
         address: this.getICAJackalAddress(),
-        denom: 'ujkl'
+        denom: 'ujkl',
       })
       return res.balance as DCoin
     } catch (err) {
@@ -464,7 +449,7 @@ export class ClientHandler implements IClientHandler {
    * Expose signing ClientHandler instance jkl address.
    * @returns {string} - Jkl address.
    */
-  getJackalAddress(): string {
+  getJackalAddress (): string {
     if (!this.jklSigner) {
       throw new Error(signerNotEnabled('ClientHandler', 'getJackalAddress'))
     }
@@ -475,7 +460,7 @@ export class ClientHandler implements IClientHandler {
    * Expose signing ClientHandler instance host wallet address.
    * @returns {string} - Host address.
    */
-  getHostAddress(): string {
+  getHostAddress (): string {
     if (!this.jklSigner) {
       throw new Error(signerNotEnabled('ClientHandler', 'getHostAddress'))
     }
@@ -486,7 +471,7 @@ export class ClientHandler implements IClientHandler {
    * Expose WASM ICA Contract instance jkl address.
    * @returns {string} - Jkl address.
    */
-  getICAJackalAddress(): string {
+  getICAJackalAddress (): string {
     if (!this.myIcaAddress) {
       throw new Error(signerNotEnabled('ClientHandler', 'getICAJackalAddress'))
     }
@@ -498,7 +483,7 @@ export class ClientHandler implements IClientHandler {
    * @param {string} address - Jkl address to check.
    * @returns {Promise<string>} - Target address' public key as hex value.
    */
-  async findPubKey(address: string): Promise<string> {
+  async findPubKey (address: string): Promise<string> {
     try {
       const result = await this.jklQuery.queries.fileTree.pubKey({ address })
       return result.pubKey.key
@@ -511,7 +496,7 @@ export class ClientHandler implements IClientHandler {
    *
    * @returns {Promise<boolean>}
    */
-  async myPubKeyIsPublished(): Promise<boolean> {
+  async myPubKeyIsPublished (): Promise<boolean> {
     try {
       const key = await this.findPubKey(this.myIcaAddress || this.hostAddress)
       return key.length > 0
@@ -526,7 +511,7 @@ export class ClientHandler implements IClientHandler {
    * @param {IBroadcastOptions} [options]
    * @returns {Promise<IBroadcastResults>}
    */
-  async broadcastAndMonitorMsgs(
+  async broadcastAndMonitorMsgs (
     wrappedMsgs: IWrappedEncodeObject | IWrappedEncodeObject[],
     options: IBroadcastOptions = {},
   ): Promise<IBroadcastResults> {
@@ -548,7 +533,7 @@ export class ClientHandler implements IClientHandler {
         memo,
         broadcastTimeoutHeight,
         monitorTimeout = 30,
-        socketOverrides = {} as TSocketSet
+        socketOverrides = {} as TSocketSet,
       } = options
       const events: TxEvent[] = []
       const ready: IWrappedEncodeObject[] =
@@ -561,7 +546,7 @@ export class ClientHandler implements IClientHandler {
           events,
           msgs,
           this.myIcaAddress || this.hostAddress,
-          socketOverrides
+          socketOverrides,
         )
       console.log('connectionBundles:', connectionBundles)
 
