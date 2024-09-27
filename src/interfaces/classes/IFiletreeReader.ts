@@ -21,9 +21,13 @@ import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 export interface IFiletreeReader {
   ulidLookup (path: string, owner?: string): string
 
+  findRefIndex (path: string): number
+
   readFolderContents (path: string, options?: IReadFolderContentOptions): Promise<IChildMetaDataMap>
 
-  loadFolderMeta (path: string): Promise<IFolderMetaData>
+  loadFolderMetaByPath (path: string): Promise<IFolderMetaData>
+
+  loadFolderMetaByUlid (ulid: string): Promise<IFolderMetaData>
 
   loadFolderMetaHandler (path: string): Promise<IFolderMetaHandler>
 

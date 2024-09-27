@@ -90,6 +90,34 @@ export class FiletreeReader implements IFiletreeReader {
   }
 
   /**
+   * Use path to find ref index of resource.
+   * @param {string} path - Path of resource to find.
+   * @returns {number}
+   */
+  findRefIndex (path: string): number {
+    const segments = path.split('/')
+    const parentPath = segments.slice(0, -1).join('/')
+    const target = segments.slice(-1)[0]
+    const details = this.directoryLeaves[this.clientAddress][parentPath]
+
+    for (let index of Object.keys(details.folders)) {
+      const ref = Number(index)
+      if (details.folders[ref].whoAmI === target) {
+        return ref
+      }
+    }
+
+    for (let index of Object.keys(details.files)) {
+      const ref = Number(index)
+      if (details.files[ref].fileMeta.name === target) {
+        return ref
+      }
+    }
+
+    return -1
+  }
+
+  /**
    * Look up contents of folder.
    * @param {string} path - Path of resource.
    * @param {IReadFolderContentOptions} [options] - Optional options of owner in case of 3rd party owner and if folder contents should be refreshed.
@@ -118,31 +146,39 @@ export class FiletreeReader implements IFiletreeReader {
   }
 
   /**
-   * Look up folder meta data.
+   * Look up folder meta data by path.
    * @param {string} path - Path of resource.
    * @returns {Promise<IFolderMetaData>}
    */
-  async loadFolderMeta (path: string): Promise<IFolderMetaData> {
+  async loadFolderMetaByPath (path: string): Promise<IFolderMetaData> {
     try {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      const { contents } = file
-      const isCleartext = contents.includes('metaDataType')
-      const access = await this.checkViewAuthorization(file, isCleartext)
-      if (access) {
-        const parsed = !isCleartext
-          ? await this.decryptAndParseContents(file)
-          : safeParseFileTree(contents)
-        if (parsed.metaDataType === 'folder') {
-          return parsed
-        } else {
-          throw new Error('Invalid Meta')
-        }
-      } else {
-        throw new Error('Not Authorized')
-      }
+      return await this.loadFolderMeta(file)
     } catch (err) {
-      throw warnError('filetreeReader loadFolderMeta()', err)
+      throw warnError('filetreeReader loadFolderMetaByPath()', err)
+    }
+  }
+
+  /**
+   * Look up folder meta data by ulid.
+   * @param {string} ulid - ULID of resource.
+   * @returns {Promise<IFolderMetaData>}
+   */
+  async loadFolderMetaByUlid (ulid: string): Promise<IFolderMetaData> {
+    try {
+      const hexRootAddress = await merklePath(`s/ulid/${ulid}`)
+      const lookup = {
+        address: hexRootAddress,
+        ownerAddress: await hashAndHexOwner(
+          hexRootAddress,
+          this.clientAddress,
+        ),
+      }
+      const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
+      return await this.loadFolderMeta(file)
+    } catch (err) {
+      throw warnError('filetreeReader loadFolderMetaByUlid()', err)
     }
   }
 
@@ -961,7 +997,7 @@ export class FiletreeReader implements IFiletreeReader {
   }
 
   /**
-   * 
+   *
    * @param {DFile} data
    * @param {boolean} isPublic
    * @returns {Promise<boolean>}
@@ -1026,6 +1062,34 @@ export class FiletreeReader implements IFiletreeReader {
       return user in parsedAccess
     } catch (err) {
       throw warnError('filetreeReader extractEditAccess()', err)
+    }
+  }
+
+  /**
+   * Convert DFile from filetree to metadata.
+   * @param {DFile} file - Filetree file.
+   * @returns {Promise<IFolderMetaData>}
+   * @protected
+   */
+  protected async loadFolderMeta (file: DFile): Promise<IFolderMetaData> {
+    try {
+      const { contents } = file
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
+      if (access) {
+        const parsed = !isCleartext
+          ? await this.decryptAndParseContents(file)
+          : safeParseFileTree(contents)
+        if (parsed.metaDataType === 'folder') {
+          return parsed
+        } else {
+          throw new Error('Invalid Meta')
+        }
+      } else {
+        throw new Error('Not Authorized')
+      }
+    } catch (err) {
+      throw warnError('filetreeReader loadFolderMeta()', err)
     }
   }
 

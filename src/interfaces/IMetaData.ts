@@ -36,6 +36,10 @@ export interface IShareRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
   metaDataType: 'shareref'
 }
 
+export interface INullRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
+  metaDataType: 'nullref'
+}
+
 export interface INullMetaData extends IBaseMetaData {
   metaDataType: 'null'
   removed: true

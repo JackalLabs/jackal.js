@@ -8,7 +8,7 @@ import {
   IFileMetaData,
   IFileParticulars,
   IFolderMetaData,
-  IInitStorageOptions,
+  IInitStorageOptions, IMoveRenameResourceOptions,
   IProviderIpSet,
   IReadFolderContentOptions,
   IRegisterPubKeyOptions,
@@ -57,6 +57,8 @@ export interface IStorageHandler {
   createFolders (options: ICreateFolderOptions): Promise<IWrappedEncodeObject[]>
 
   saveFolder (bundle: IStagedUploadPackage): Promise<IWrappedEncodeObject[]>
+
+  moveRenameResource (options: IMoveRenameResourceOptions): Promise<IWrappedEncodeObject[]>
 
   readActivePath (): string
 

@@ -684,9 +684,14 @@ export class EncodingHandler {
   ): Promise<IWrappedEncodeObject[]> {
     try {
       const fileTreeNull = this.encodeFileTreeNull(pkg)
+      const ref = this.encodeFileTreeRef(pkg)
       return [
         {
           encodedObject: await fileTreeNull,
+          modifier: 0,
+        },
+        {
+          encodedObject: await ref,
           modifier: 0,
         },
       ]
@@ -753,6 +758,27 @@ export class EncodingHandler {
     }
   }
 
+  protected async movePkgToMsgs (
+    pkg: IFileTreePackage,
+  ): Promise<IWrappedEncodeObject[]> {
+    try {
+      const fileTreeFile = this.encodeFileTreeFolder(pkg)
+      const ref = this.encodeFileTreeRef(pkg)
+      return [
+        {
+          encodedObject: await fileTreeFile,
+          modifier: 0,
+        },
+        {
+          encodedObject: await ref,
+          modifier: 0,
+        },
+      ]
+    } catch (err) {
+      throw warnError('storageHandler movePkgToMsgs()', err)
+    }
+  }
+
   /**
    *
    * @param {IUploadPackage} pkg
@@ -815,6 +841,28 @@ export class EncodingHandler {
       ]
     } catch (err) {
       throw warnError('storageHandler existingPkgToMsgs()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {IFileTreePackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
+  protected async existingMetaToMsgs (
+    pkg: IFileTreePackage,
+  ): Promise<IWrappedEncodeObject[]> {
+    try {
+      const fileTreeFile = this.encodeFileTreeFolder(pkg)
+      return [
+        {
+          encodedObject: await fileTreeFile,
+          modifier: 0,
+        },
+      ]
+    } catch (err) {
+      throw warnError('storageHandler existingMetaToMsgs()', err)
     }
   }
 

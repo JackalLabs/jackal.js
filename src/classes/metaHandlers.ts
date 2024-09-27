@@ -42,7 +42,7 @@ export class NullMetaHandler implements INullMetaHandler {
    * @param {number} refIndex
    * @returns {Promise<NullMetaHandler>}
    */
-  static async create (ulid: string, refIndex: number = 0) {
+  static async create (ulid: string, refIndex: number) {
     return new NullMetaHandler(ulid, refIndex)
   }
 

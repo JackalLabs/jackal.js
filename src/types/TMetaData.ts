@@ -4,6 +4,7 @@ import {
   ILegacyFolderMetaData,
   INullMetaData,
   INullMetaHandler,
+  INullRefMetaData,
   IRefMetaData,
   IRootLookupMetaData,
   ISharedMetaDataMap,
@@ -16,6 +17,7 @@ export type TMetaDataTypes =
   | 'file'
   | 'ref'
   | 'null'
+  | 'nullref'
   | 'share'
   | 'shareref'
   | 'sharefolder'
@@ -23,6 +25,7 @@ export type TMetaDataSets =
   | TChildMetaData
   | TSharedMetaData
   | IRefMetaData
+  | INullRefMetaData
   | ILegacyFolderMetaData
   | IRootLookupMetaData
 export type TChildMetaData = INullMetaData | IFolderMetaData | IFileMetaData

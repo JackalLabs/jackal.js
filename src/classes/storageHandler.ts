@@ -6,7 +6,7 @@ import type {
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
 import { PrivateKey } from 'eciesjs'
-import { extractFileMetaData, maybeMakeThumbnail } from '@/utils/converters'
+import { extractFileMetaData, hexToInt, maybeMakeThumbnail } from '@/utils/converters'
 import { isItPastDate, shuffleArray, signerNotEnabled, tidyString, warnError } from '@/utils/misc'
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
 import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
@@ -31,6 +31,8 @@ import {
   IFolderMetaData,
   IFolderMetaHandler,
   IInitStorageOptions,
+  IMoveRenameResourceOptions,
+  IMoveRenameTarget,
   INotification,
   INotificationPackage,
   IProviderIpSet,
@@ -47,7 +49,7 @@ import {
   IUploadPackage,
   IWrappedEncodeObject,
 } from '@/interfaces'
-import type { TSharedRootMetaDataMap } from '@/types'
+import type { TMetaHandler, TSharedRootMetaDataMap } from '@/types'
 import { IConversionFolderBundle } from '@/interfaces/IConversionFolderBundle'
 import { TFullSignerState } from '@/types/TFullSignerState'
 
@@ -652,6 +654,145 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     } catch (err) {
       throw warnError('storageHandler saveFolder()', err)
     }
+  }
+
+  async moveRenameResource (options: IMoveRenameResourceOptions): Promise<IWrappedEncodeObject[]> {
+    try {
+      const { start, finish } = options
+      const msgs: IWrappedEncodeObject[] = []
+
+      let target: IMoveRenameTarget = { name: '', ref: 0 }
+      let loop = 0
+      while (!target.location && loop < 2) {
+        switch (loop) {
+          case 0:
+            for (let index of Object.keys(this.children.folders)) {
+              const folderRef = Number(index)
+              const folder = this.children.folders[folderRef]
+              if (folder.whoAmI === start) {
+                target.location = folder.location
+                target.folder = folder
+                target.ref = folderRef
+                break
+              }
+            }
+            break
+          case 1:
+            for (let index of Object.keys(this.children.files)) {
+              const fileRef = Number(index)
+              const file = this.children.files[fileRef]
+              if (file.fileMeta.name === start) {
+                target.location = file.location
+                target.file = file
+                target.ref = fileRef
+                break
+              }
+            }
+            break
+        }
+        loop++
+      }
+      if (!target.location) {
+        throw new Error(`Target ${start} not found in current folder`)
+      }
+
+      const isMove = finish.includes('/')
+      target.name = finish.split('/').slice(-1)[0]
+
+      if (isMove) {
+        const ulid = this.reader.ulidLookup(`${this.path}/${start}`)
+        const ref = this.reader.findRefIndex(`${this.path}/${start}`)
+        const nullPkg: IFileTreePackage = {
+          meta: await NullMetaHandler.create(ulid, ref),
+          aes: await genAesBundle(),
+        }
+        msgs.push(...(await this.filetreeDeleteToMsgs(nullPkg)))
+
+        const finalPkg = await this.makeRenamePkg(target, finish)
+
+        msgs.push(...(await this.movePkgToMsgs(finalPkg)))
+
+      } else {
+        const finalPkg = await this.makeRenamePkg(target)
+
+        msgs.push(...(await this.existingMetaToMsgs(finalPkg)))
+
+      }
+
+      if (options?.chain) {
+        return msgs
+      } else {
+        const postBroadcast =
+          await this.jackalClient.broadcastAndMonitorMsgs(msgs, options?.broadcastOptions)
+        console.log('moveRenameResource:', postBroadcast)
+        return []
+      }
+
+    } catch (err) {
+      throw warnError('storageHandler moveRenameResource()', err)
+    }
+  }
+
+  async makeRenamePkg (target: IMoveRenameTarget, movedTo?: string): Promise<IFileTreePackage> {
+    try {
+      let mH: TMetaHandler
+      let aes: IAesBundle | undefined
+      switch (true) {
+        case !!target.folder:
+          const folderUlid = this.reader.ulidLookup(`${this.path}/${target.folder?.whoAmI}`)
+          let folderRef = 0
+          let folderLoc = target.folder?.location.split('/').slice(-1)[0]
+          if (movedTo) {
+            const meta = await this.reader.loadFolderMetaByUlid(movedTo)
+            folderRef = hexToInt(meta.count)
+            folderLoc = movedTo
+          }
+          mH = await FolderMetaHandler.create({
+            count: hexToInt(target.folder?.count),
+            description: target.folder?.description,
+            location: folderLoc,
+            name: target.folder?.whoAmI,
+            refIndex: folderRef,
+            ulid: folderUlid,
+          })
+          aes = await this.reader.loadKeysByUlid(folderUlid, this.hostAddress)
+          break
+        case !!target.file:
+          const fileUlid = this.reader.ulidLookup(`${this.path}/${target.file?.fileMeta.name}`)
+          let fileRef = 0
+          let fileLoc = target.file?.location.split('/').slice(-1)[0]
+          if (movedTo) {
+            const meta = await this.reader.loadFolderMetaByUlid(movedTo)
+            fileRef = hexToInt(meta.count)
+            fileLoc = movedTo
+          }
+          mH = await FileMetaHandler.create({
+            description: target.file?.description,
+            fileMeta: target.file?.fileMeta,
+            location: fileLoc,
+            refIndex: fileRef,
+            thumbnail: target.file?.thumbnail,
+            ulid: fileUlid,
+          })
+          try {
+            aes = await this.reader.loadKeysByUlid(fileUlid, this.hostAddress)
+          } catch {
+            // do nothing
+          }
+          break
+        default:
+          // failsafe, should never happen
+          mH = await NullMetaHandler.create('', -1)
+      }
+      return {
+        meta: mH,
+        aes,
+      }
+
+    } catch (err) {
+      throw warnError('storageHandler moveRenameResource()', err)
+    }
+
   }
 
   /**
@@ -1413,8 +1554,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         }
       }
       const ulid = this.reader.ulidLookup(target)
+      const ref = this.reader.findRefIndex(target)
       const pkg: IFileTreePackage = {
-        meta: await NullMetaHandler.create(ulid),
+        meta: await NullMetaHandler.create(ulid, ref),
         aes: await genAesBundle(),
       }
       msgs.push(...(await this.filetreeDeleteToMsgs(pkg)))
