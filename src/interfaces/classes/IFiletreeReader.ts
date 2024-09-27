@@ -8,7 +8,7 @@ import {
   IFileTreeOptions,
   IFolderMetaData,
   IFolderMetaHandler,
-  INotificationRecord,
+  INotificationRecord, INullRefMetaData,
   IReadFolderContentOptions,
   IReconstructedFileTree,
   IRefMetaData,
@@ -35,7 +35,7 @@ export interface IFiletreeReader {
 
   loadShareMeta (path: string): Promise<IShareMetaData>
 
-  loadRefMeta (ulid: string, ref: number): Promise<IRefMetaData>
+  loadRefMeta (ulid: string, ref: number): Promise<IRefMetaData | INullRefMetaData>
 
   loadLegacyMeta (
     legacyMerkles: Uint8Array[],

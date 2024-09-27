@@ -14,7 +14,7 @@ import type {
   IFolderMetaFoundationalData,
   IFolderMetaHandler,
   INullMetaData,
-  INullMetaHandler,
+  INullMetaHandler, INullRefMetaData,
   IRefMetaData,
   ISharedFolderMetaDataSource,
   ISharedFolderMetaFoundationalData,
@@ -88,6 +88,19 @@ export class NullMetaHandler implements INullMetaHandler {
       merkleHex: '',
       metaDataType: 'null',
       removed: true,
+    }
+  }
+
+  /**
+   *
+   * @returns {INullRefMetaData}
+   */
+  exportRef (): INullRefMetaData {
+    return {
+      location: `${this.location}/${intToHex(this.refIndex)}`,
+      merkleHex: '',
+      metaDataType: 'nullref',
+      pointsTo: '',
     }
   }
 }

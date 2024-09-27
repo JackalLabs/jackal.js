@@ -10,7 +10,7 @@ import {
   IFolderMetaData,
   IFolderMetaHandler,
   ILegacyFolderMetaData,
-  INotificationRecord,
+  INotificationRecord, INullRefMetaData,
   IPrivateNotification,
   IReadFolderContentOptions,
   IReconstructedFileTree,
@@ -282,9 +282,9 @@ export class FiletreeReader implements IFiletreeReader {
    * Look up ref meta data by ulid.
    * @param {string} ulid
    * @param {number} ref
-   * @returns {Promise<IRefMetaData>}
+   * @returns {Promise<IRefMetaData | INullRefMetaData>}
    */
-  async loadRefMeta (ulid: string, ref: number): Promise<IRefMetaData> {
+  async loadRefMeta (ulid: string, ref: number): Promise<IRefMetaData | INullRefMetaData> {
     try {
       const hexAddress = await merklePathPlusIndex(`s/ulid/${ulid}`, ref)
       const lookup = {
@@ -292,7 +292,8 @@ export class FiletreeReader implements IFiletreeReader {
         ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      return (await this.loadMeta(file)) as IRefMetaData
+      const meta = await this.loadMeta(file)
+      return (meta.metaDataType === 'ref') ? meta as IRefMetaData : meta as INullRefMetaData
     } catch (err) {
       throw warnError('filetreeReader loadRefMeta()', err)
     }
@@ -813,6 +814,9 @@ export class FiletreeReader implements IFiletreeReader {
         this.ulidLeaves[ownerAddress][path],
         index,
       )
+      if (refMeta.metaDataType === 'nullref') {
+        return
+      }
       const leaf = this.directoryLeaves[ownerAddress][path]
       const meta = await this.loadMetaByUlid(refMeta.pointsTo)
       if (meta.metaDataType === 'folder') {
