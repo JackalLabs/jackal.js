@@ -1,7 +1,8 @@
 import type {
   IFileMetaData,
   IFolderMetaData,
-  INullMetaData, INullRefMetaData,
+  INullMetaData,
+  INullRefMetaData,
   IRefMetaData,
   IShareFolderMetaData,
   IShareMetaData,
@@ -18,6 +19,8 @@ export interface IRefMetaHandler {
 
 export interface INullMetaHandler extends IRefMetaHandler {
   getLocation (): string
+
+  getSelf (): string
 
   export (): INullMetaData
 

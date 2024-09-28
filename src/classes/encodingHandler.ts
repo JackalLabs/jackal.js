@@ -440,7 +440,7 @@ export class EncodingHandler {
     try {
       const mH = pkg.meta as INullMetaHandler
       const meta = mH.export()
-      const parentAndChild = await merkleParentAndChild(meta.location)
+      const parentAndChild = await merkleParentAndChild(mH.getSelf())
       return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
     } catch (err) {
       throw warnError('encodingHandler encodeFileTreeNull()', err)

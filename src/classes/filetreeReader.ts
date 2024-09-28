@@ -10,7 +10,8 @@ import {
   IFolderMetaData,
   IFolderMetaHandler,
   ILegacyFolderMetaData,
-  INotificationRecord, INullRefMetaData,
+  INotificationRecord,
+  INullRefMetaData,
   IPrivateNotification,
   IReadFolderContentOptions,
   IReconstructedFileTree,
@@ -39,7 +40,7 @@ import {
   safeParseLegacyMerkles,
   safeStringifyFileTree,
 } from '@/utils/converters'
-import { aesToString, compressEncryptString, cryptString, stringToAes } from '@/utils/crypt'
+import { aesToString, compressEncryptString, cryptString, genAesBundle, stringToAes } from '@/utils/crypt'
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
 
@@ -53,6 +54,7 @@ export class FiletreeReader implements IFiletreeReader {
   protected directoryLeaves: Record<string, Record<string, IChildMetaDataMap>>
   protected yellowpages: Record<string, Record<string, DQueryFileTreeFile>>
   protected legacyMetaLeaves: Record<string, ILegacyFolderMetaData>
+  protected refCounts: Record<string, number>
 
   constructor (
     jackalClient: IClientHandler,
@@ -72,6 +74,32 @@ export class FiletreeReader implements IFiletreeReader {
     this.yellowpages = {}
     this.yellowpages[ownerAddress] = {}
     this.legacyMetaLeaves = {}
+    this.refCounts = {}
+  }
+
+  async refCountRead (path: string): Promise<number> {
+    if (path in this.refCounts) {
+      return this.refCounts[path]
+    } else {
+      const meta = await this.loadFolderMetaByPath(path)
+      const count = hexToInt(meta.count)
+      this.refCountSet(path, count)
+      return count
+    }
+  }
+
+  refCountIncrement (path: string): void {
+    if (this.refCounts[path]) {
+      this.refCounts[path]++
+    } else {
+      this.refCounts[path] = 1
+    }
+  }
+
+  refCountSet (path: string, value: number): void {
+    if (!this.refCounts[path]) {
+      this.refCounts[path] = value
+    }
   }
 
   /**
@@ -782,6 +810,9 @@ export class FiletreeReader implements IFiletreeReader {
           : (JSON.parse(contents) as TMetaDataSets)
         if (parsed.metaDataType === 'folder') {
           const count = hexToInt(parsed.count)
+          if (ownerAddress === this.clientAddress) {
+            this.refCountSet(path, count)
+          }
           this.directoryLeaves[ownerAddress][path] = this.basicFolderShell()
           const post = []
           for (let i = 0; i < count; i++) {
@@ -838,7 +869,11 @@ export class FiletreeReader implements IFiletreeReader {
         )
         leaf.files[index] = meta
       } else if (meta.metaDataType === 'null') {
-        leaf.nulls[index] = await NullMetaHandler.create(meta.location, index)
+        leaf.nulls[index] = await NullMetaHandler.create({
+          location: this.ulidLookup(path),
+          refIndex: index,
+          ulid: refMeta.pointsTo,
+        })
       }
     } catch (err) {
       throw warnError('filetreeReader singleLoadMeta()', err)
@@ -1040,7 +1075,11 @@ export class FiletreeReader implements IFiletreeReader {
         this.clientAddress,
       )
       if (user in parsedAccess) {
-        return await stringToAes(this.keyPair, parsedAccess[user])
+        if (parsedAccess[user] === 'public') {
+          return await genAesBundle()
+        } else {
+          return await stringToAes(this.keyPair, parsedAccess[user])
+        }
       } else {
         throw new Error('Not an authorized Viewer')
       }

@@ -3,10 +3,9 @@ import { ulid } from 'ulid'
 import { chunkSize } from '@/utils/globalDefaults'
 import { intToHex, uintArrayToString } from '@/utils/converters'
 import { bufferToHex } from '@/utils/hash'
-import type {
+import {
   IFileMeta,
   IFileMetaData,
-  IFileMetaDataSource,
   IFileMetaFoundationalData,
   IFileMetaHandler,
   IFolderMetaData,
@@ -14,7 +13,10 @@ import type {
   IFolderMetaFoundationalData,
   IFolderMetaHandler,
   INullMetaData,
-  INullMetaHandler, INullRefMetaData,
+  INullMetaDataSource,
+  INullMetaFoundationalData,
+  INullMetaHandler,
+  INullRefMetaData,
   IRefMetaData,
   ISharedFolderMetaDataSource,
   ISharedFolderMetaFoundationalData,
@@ -25,25 +27,27 @@ import type {
   IShareMetaFoundationalData,
   IShareMetaHandler,
   IShareRefMetaData,
+  TFileMetaDataSource,
 } from '@/interfaces'
 
 export class NullMetaHandler implements INullMetaHandler {
   protected readonly location: string
   protected refIndex: number
+  protected readonly ulid: string
 
-  protected constructor (location: string, refIndex: number) {
-    this.location = `s/ulid/${location}`
-    this.refIndex = refIndex
+  protected constructor (source: INullMetaFoundationalData) {
+    this.location = `s/ulid/${source.location}`
+    this.refIndex = source.refIndex
+    this.ulid = source.ulid
   }
 
   /**
    *
-   * @param {string} ulid
-   * @param {number} refIndex
+   * @param {INullMetaDataSource} source
    * @returns {Promise<NullMetaHandler>}
    */
-  static async create (ulid: string, refIndex: number) {
-    return new NullMetaHandler(ulid, refIndex)
+  static async create (source: INullMetaDataSource) {
+    return new NullMetaHandler(source)
   }
 
   /**
@@ -76,6 +80,14 @@ export class NullMetaHandler implements INullMetaHandler {
    */
   getLocation (): string {
     return this.location
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  getSelf (): string {
+    return `s/ulid/${this.ulid}`
   }
 
   /**
@@ -267,37 +279,44 @@ export class FileMetaHandler implements IFileMetaHandler {
 
   /**
    *
-   * @param {IFileMetaDataSource} source
+   * @param {TFileMetaDataSource} source
    * @returns {Promise<FileMetaHandler>}
    */
-  static async create (source: IFileMetaDataSource) {
-    const rdy: IFileMetaFoundationalData = {
-      description: source.description || '',
-      fileMeta: source.fileMeta,
-      location: `s/ulid/${source.location}`,
-      merkleHex: '',
-      merkleMem: '',
-      merkleRoot: new Uint8Array(),
-      refIndex: source.refIndex || 0,
-      thumbnail: source.thumbnail || '',
-      ulid: source.ulid || ulid(),
-    }
+  static async create (source: TFileMetaDataSource) {
+    if ('clone' in source) {
+      const shortcut: IFileMetaFoundationalData = {
+        ...source.clone,
+        refIndex: source.refIndex || 0,
+      }
+      return new FileMetaHandler(shortcut)
+    } else {
+      const rdy: IFileMetaFoundationalData = {
+        description: source.description || '',
+        fileMeta: source.fileMeta,
+        location: `s/ulid/${source.location}`,
+        merkleHex: '',
+        merkleMem: '',
+        merkleRoot: new Uint8Array(),
+        refIndex: source.refIndex || 0,
+        thumbnail: source.thumbnail || '',
+        ulid: source.ulid || ulid(),
+      }
 
-    if (!source.legacyMerkles && !source.file) {
-      throw new Error('Must supply legacyMerkle or file')
-    } else if (source.legacyMerkles) {
-      rdy.merkleRoot = source.legacyMerkles[0]
-      rdy.merkleHex = bufferToHex(source.legacyMerkles[0])
-      rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
-    } else if (source.file) {
-      const seed = await source.file.arrayBuffer()
-      const tree = await Merkletree.grow({ seed, chunkSize, preserve: false })
-      rdy.merkleRoot = new Uint8Array(tree.getRoot())
-      rdy.merkleHex = tree.getRootAsHex()
-      rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
+      if (!source.legacyMerkles && !source.file) {
+        throw new Error('Must supply legacyMerkle or file')
+      } else if (source.legacyMerkles) {
+        rdy.merkleRoot = source.legacyMerkles[0]
+        rdy.merkleHex = bufferToHex(source.legacyMerkles[0])
+        rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
+      } else if (source.file) {
+        const seed = await source.file.arrayBuffer()
+        const tree = await Merkletree.grow({ seed, chunkSize, preserve: false })
+        rdy.merkleRoot = new Uint8Array(tree.getRoot())
+        rdy.merkleHex = tree.getRootAsHex()
+        rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
+      }
+      return new FileMetaHandler(rdy)
     }
-
-    return new FileMetaHandler(rdy)
   }
 
   /**

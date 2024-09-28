@@ -8,7 +8,8 @@ import {
   IFileTreeOptions,
   IFolderMetaData,
   IFolderMetaHandler,
-  INotificationRecord, INullRefMetaData,
+  INotificationRecord,
+  INullRefMetaData,
   IReadFolderContentOptions,
   IReconstructedFileTree,
   IRefMetaData,
@@ -19,6 +20,12 @@ import {
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 
 export interface IFiletreeReader {
+  refCountRead (path: string): Promise<number>
+
+  refCountIncrement (path: string): void
+
+  refCountSet (path: string, value: number): void
+
   ulidLookup (path: string, owner?: string): string
 
   findRefIndex (path: string): number

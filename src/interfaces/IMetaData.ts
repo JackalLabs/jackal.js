@@ -40,6 +40,15 @@ export interface INullRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
   metaDataType: 'nullref'
 }
 
+export interface INullMetaDataSource {
+  location: string
+  refIndex: number
+  ulid: string
+}
+
+export interface INullMetaFoundationalData extends INullMetaDataSource {
+}
+
 export interface INullMetaData extends IBaseMetaData {
   metaDataType: 'null'
   removed: true
@@ -70,7 +79,12 @@ export interface IFolderMetaData extends IBaseMetaData {
   whoAmI: string
 }
 
-export interface IFileMetaDataSource {
+export interface ICloneFileMetaDataSource {
+  clone: IFileMetaData
+  refIndex?: number
+}
+
+export interface INoCloneFileMetaDataSource {
   description?: string
   file?: File
   fileMeta: IFileMeta
@@ -80,6 +94,8 @@ export interface IFileMetaDataSource {
   thumbnail?: string
   ulid?: string
 }
+
+export type TFileMetaDataSource = ICloneFileMetaDataSource | INoCloneFileMetaDataSource
 
 export interface IFileMetaFoundationalData {
   description: string

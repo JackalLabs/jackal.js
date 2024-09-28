@@ -700,17 +700,41 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       target.name = finish.split('/').slice(-1)[0]
 
       if (isMove) {
+        const dest = finish.split('/').slice(0, -1).join('/')
+        const sourceUlid = this.reader.ulidLookup(this.path)
+        const destUlid = this.reader.ulidLookup(dest)
+
         const ulid = this.reader.ulidLookup(`${this.path}/${start}`)
         const ref = this.reader.findRefIndex(`${this.path}/${start}`)
         const nullPkg: IFileTreePackage = {
-          meta: await NullMetaHandler.create(ulid, ref),
+          meta: await NullMetaHandler.create({
+            location: sourceUlid,
+            refIndex: ref,
+            ulid,
+          }),
           aes: await genAesBundle(),
         }
         msgs.push(...(await this.filetreeDeleteToMsgs(nullPkg)))
 
-        const finalPkg = await this.makeRenamePkg(target, finish)
+        const finalPkg = await this.makeRenamePkg(target, destUlid)
 
         msgs.push(...(await this.movePkgToMsgs(finalPkg)))
+
+        const destMeta = await this.reader.loadFolderMetaByUlid(destUlid)
+        const mH = await FolderMetaHandler.create({
+          count: (await this.reader.refCountRead(dest)) + 1,
+          description: destMeta.description,
+          location: destMeta.location.split('/').slice(-1)[0],
+          name: destMeta.whoAmI,
+          ulid: destUlid,
+        })
+
+        const destPkg = {
+          meta: mH,
+          aes: await this.reader.loadKeysByUlid(destUlid, this.hostAddress),
+        }
+        msgs.push(...(await this.existingFolderToMsgs(destPkg)))
+        this.reader.refCountIncrement(dest)
 
       } else {
         const finalPkg = await this.makeRenamePkg(target)
@@ -751,7 +775,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             count: hexToInt(target.folder?.count),
             description: target.folder?.description,
             location: folderLoc,
-            name: target.folder?.whoAmI,
+            name: target.name,
             refIndex: folderRef,
             ulid: folderUlid,
           })
@@ -767,12 +791,15 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             fileLoc = movedTo
           }
           mH = await FileMetaHandler.create({
-            description: target.file?.description,
-            fileMeta: target.file?.fileMeta,
-            location: fileLoc,
+            clone: {
+              ...target.file,
+              fileMeta: {
+                ...target.file?.fileMeta,
+                name: target.name,
+              },
+              location: `s/ulid/${fileLoc}`,
+            },
             refIndex: fileRef,
-            thumbnail: target.file?.thumbnail,
-            ulid: fileUlid,
           })
           try {
             aes = await this.reader.loadKeysByUlid(fileUlid, this.hostAddress)
@@ -782,7 +809,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           break
         default:
           // failsafe, should never happen
-          mH = await NullMetaHandler.create('', -1)
+          mH = await NullMetaHandler.create({ location: '', refIndex: -1, ulid: '' })
       }
       return {
         meta: mH,
@@ -790,7 +817,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       }
 
     } catch (err) {
-      throw warnError('storageHandler moveRenameResource()', err)
+      throw warnError('storageHandler makeRenamePkg()', err)
     }
 
   }
@@ -1556,7 +1583,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const ulid = this.reader.ulidLookup(target)
       const ref = this.reader.findRefIndex(target)
       const pkg: IFileTreePackage = {
-        meta: await NullMetaHandler.create(ulid, ref),
+        meta: await NullMetaHandler.create({
+          location: this.reader.ulidLookup(target.split('/').slice(0, -1).join('/')),
+          refIndex: ref,
+          ulid,
+        }),
         aes: await genAesBundle(),
       }
       msgs.push(...(await this.filetreeDeleteToMsgs(pkg)))
