@@ -18,6 +18,7 @@ import { bech32 } from '@jackallabs/bech32'
 import {
   IAesBundle,
   IBroadcastOptions,
+  IBroadcastOrChainOptions,
   IBuyStorageOptions,
   IChecks,
   IChildMetaDataMap,
@@ -30,7 +31,6 @@ import {
   IFileTreePackage,
   IFolderMetaData,
   IFolderMetaHandler,
-  IInitStorageOptions,
   IMoveRenameResourceOptions,
   IMoveRenameTarget,
   INotification,
@@ -39,7 +39,6 @@ import {
   IProviderPool,
   IProviderUploadResponse,
   IReadFolderContentOptions,
-  IRegisterPubKeyOptions,
   IRnsHandler,
   IShareOptions,
   IStagedUploadPackage,
@@ -230,10 +229,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {IRegisterPubKeyOptions} [options]
+   * @param {IBroadcastOrChainOptions} [options]
    * @returns {Promise<IWrappedEncodeObject[]>}
    */
-  async registerPubKey (options?: IRegisterPubKeyOptions): Promise<IWrappedEncodeObject[]> {
+  async registerPubKey (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]> {
     if (await this.checkLocked({ signer: true })) {
       throw new Error('Locked.')
     }
@@ -437,10 +436,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {IInitStorageOptions} [options]
+   * @param {IBroadcastOrChainOptions} [options]
    * @returns {Promise<IWrappedEncodeObject[]>}
    */
-  async initStorage (options?: IInitStorageOptions): Promise<IWrappedEncodeObject[]> {
+  async initStorage (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]> {
     if (await this.checkLocked({ signer: true })) {
       throw new Error('Locked.')
     }
@@ -656,11 +655,15 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     }
   }
 
+  /**
+   *
+   * @param {IMoveRenameResourceOptions} options
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   */
   async moveRenameResource (options: IMoveRenameResourceOptions): Promise<IWrappedEncodeObject[]> {
     try {
       const { start, finish } = options
       const msgs: IWrappedEncodeObject[] = []
-
       let target: IMoveRenameTarget = { name: '', ref: 0 }
       let loop = 0
       while (!target.location && loop < 2) {
@@ -695,10 +698,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       if (!target.location) {
         throw new Error(`Target ${start} not found in current folder`)
       }
-
       const isMove = finish.includes('/')
       target.name = finish.split('/').slice(-1)[0]
-
       if (isMove) {
         const dest = finish.split('/').slice(0, -1).join('/')
         const sourceUlid = this.reader.ulidLookup(this.path)
@@ -715,11 +716,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           aes: await genAesBundle(),
         }
         msgs.push(...(await this.filetreeDeleteToMsgs(nullPkg)))
-
         const finalPkg = await this.makeRenamePkg(target, destUlid)
-
         msgs.push(...(await this.movePkgToMsgs(finalPkg)))
-
         const destMeta = await this.reader.loadFolderMetaByUlid(destUlid)
         const mH = await FolderMetaHandler.create({
           count: (await this.reader.refCountRead(dest)) + 1,
@@ -728,21 +726,16 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           name: destMeta.whoAmI,
           ulid: destUlid,
         })
-
         const destPkg = {
           meta: mH,
           aes: await this.reader.loadKeysByUlid(destUlid, this.hostAddress),
         }
         msgs.push(...(await this.existingFolderToMsgs(destPkg)))
         this.reader.refCountIncrement(dest)
-
       } else {
         const finalPkg = await this.makeRenamePkg(target)
-
         msgs.push(...(await this.existingMetaToMsgs(finalPkg)))
-
       }
-
       if (options?.chain) {
         return msgs
       } else {
@@ -751,75 +744,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         console.log('moveRenameResource:', postBroadcast)
         return []
       }
-
     } catch (err) {
       throw warnError('storageHandler moveRenameResource()', err)
     }
-  }
-
-  async makeRenamePkg (target: IMoveRenameTarget, movedTo?: string): Promise<IFileTreePackage> {
-    try {
-      let mH: TMetaHandler
-      let aes: IAesBundle | undefined
-      switch (true) {
-        case !!target.folder:
-          const folderUlid = this.reader.ulidLookup(`${this.path}/${target.folder?.whoAmI}`)
-          let folderRef = 0
-          let folderLoc = target.folder?.location.split('/').slice(-1)[0]
-          if (movedTo) {
-            const meta = await this.reader.loadFolderMetaByUlid(movedTo)
-            folderRef = hexToInt(meta.count)
-            folderLoc = movedTo
-          }
-          mH = await FolderMetaHandler.create({
-            count: hexToInt(target.folder?.count),
-            description: target.folder?.description,
-            location: folderLoc,
-            name: target.name,
-            refIndex: folderRef,
-            ulid: folderUlid,
-          })
-          aes = await this.reader.loadKeysByUlid(folderUlid, this.hostAddress)
-          break
-        case !!target.file:
-          const fileUlid = this.reader.ulidLookup(`${this.path}/${target.file?.fileMeta.name}`)
-          let fileRef = 0
-          let fileLoc = target.file?.location.split('/').slice(-1)[0]
-          if (movedTo) {
-            const meta = await this.reader.loadFolderMetaByUlid(movedTo)
-            fileRef = hexToInt(meta.count)
-            fileLoc = movedTo
-          }
-          mH = await FileMetaHandler.create({
-            clone: {
-              ...target.file,
-              fileMeta: {
-                ...target.file?.fileMeta,
-                name: target.name,
-              },
-              location: `s/ulid/${fileLoc}`,
-            },
-            refIndex: fileRef,
-          })
-          try {
-            aes = await this.reader.loadKeysByUlid(fileUlid, this.hostAddress)
-          } catch {
-            // do nothing
-          }
-          break
-        default:
-          // failsafe, should never happen
-          mH = await NullMetaHandler.create({ location: '', refIndex: -1, ulid: '' })
-      }
-      return {
-        meta: mH,
-        aes,
-      }
-
-    } catch (err) {
-      throw warnError('storageHandler makeRenamePkg()', err)
-    }
-
   }
 
   /**
@@ -1289,6 +1216,76 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       }
     } catch (err) {
       throw warnError('storageHandler convert()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {IMoveRenameTarget} target
+   * @param {string} movedTo
+   * @returns {Promise<IFileTreePackage>}
+   * @protected
+   */
+  protected async makeRenamePkg (target: IMoveRenameTarget, movedTo?: string): Promise<IFileTreePackage> {
+    try {
+      let mH: TMetaHandler
+      let aes: IAesBundle | undefined
+      switch (true) {
+        case !!target.folder:
+          const folderUlid = this.reader.ulidLookup(`${this.path}/${target.folder?.whoAmI}`)
+          let folderRef = 0
+          let folderLoc = target.folder?.location.split('/').slice(-1)[0]
+          if (movedTo) {
+            const meta = await this.reader.loadFolderMetaByUlid(movedTo)
+            folderRef = hexToInt(meta.count)
+            folderLoc = movedTo
+          }
+          mH = await FolderMetaHandler.create({
+            count: hexToInt(target.folder?.count),
+            description: target.folder?.description,
+            location: folderLoc,
+            name: target.name,
+            refIndex: folderRef,
+            ulid: folderUlid,
+          })
+          aes = await this.reader.loadKeysByUlid(folderUlid, this.hostAddress)
+          break
+        case !!target.file:
+          const fileUlid = this.reader.ulidLookup(`${this.path}/${target.file?.fileMeta.name}`)
+          let fileRef = 0
+          let fileLoc = target.file?.location.split('/').slice(-1)[0]
+          if (movedTo) {
+            const meta = await this.reader.loadFolderMetaByUlid(movedTo)
+            fileRef = hexToInt(meta.count)
+            fileLoc = movedTo
+          }
+          mH = await FileMetaHandler.create({
+            clone: {
+              ...target.file,
+              fileMeta: {
+                ...target.file?.fileMeta,
+                name: target.name,
+              },
+              location: `s/ulid/${fileLoc}`,
+            },
+            refIndex: fileRef,
+          })
+          try {
+            aes = await this.reader.loadKeysByUlid(fileUlid, this.hostAddress)
+          } catch {
+            // do nothing
+          }
+          break
+        default:
+          // failsafe, should never happen
+          mH = await NullMetaHandler.create({ location: '', refIndex: -1, ulid: '' })
+      }
+      return {
+        meta: mH,
+        aes,
+      }
+    } catch (err) {
+      throw warnError('storageHandler makeRenamePkg()', err)
     }
   }
 

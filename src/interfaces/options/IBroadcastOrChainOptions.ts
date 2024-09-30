@@ -1,6 +1,6 @@
 import { IBroadcastOptions } from '@/interfaces'
 
-export interface IRegisterPubKeyOptions {
+export interface IBroadcastOrChainOptions {
   chain?: true
   broadcastOptions?: IBroadcastOptions
 }

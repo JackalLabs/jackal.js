@@ -1,7 +1,5 @@
 import type {
   DBid,
-  DCoin,
-  DDeliverTxResponse,
   DForsale,
   DName,
   TQueryAllBidsResponseStrict,
@@ -9,7 +7,22 @@ import type {
   TQueryAllNamesResponseStrict,
   TQueryListOwnedNamesResponseStrict,
 } from '@jackallabs/jackal.js-protos'
-import type { IPageRequest, IRnsData } from '@/interfaces'
+import {
+  IAcceptBidOptions,
+  IAddSubRnsOptions,
+  IBidOptions,
+  IBroadcastOrChainOptions,
+  IBuyOptions,
+  ICancelBidOptions,
+  IDelistOptions,
+  IListOptions,
+  IPageRequest,
+  IRegisterOptions,
+  IRemoveSubRnsOptions,
+  ITransferOptions,
+  IUpdateOptions,
+  IWrappedEncodeObject,
+} from '@/interfaces'
 import type { TAddressPrefix } from '@/types'
 
 export interface IRnsHandler {
@@ -38,38 +51,31 @@ export interface IRnsHandler {
 
   getNameDetails (name: string): Promise<DName>
 
+  getPrimaryName (address?: string): Promise<DName>
+
   rnsToAddress (name: string, prefix?: TAddressPrefix): Promise<string>
 
-  bid (rns: string, bid: DCoin): Promise<DDeliverTxResponse>
+  bid (options: IBidOptions): Promise<IWrappedEncodeObject[]>
 
-  acceptBid (rns: string, from: string): Promise<DDeliverTxResponse>
+  acceptBid (options: IAcceptBidOptions): Promise<IWrappedEncodeObject[]>
 
-  cancelBid (rns: string): Promise<DDeliverTxResponse>
+  cancelBid (options: ICancelBidOptions): Promise<IWrappedEncodeObject[]>
 
-  list (rns: string, price: DCoin): Promise<DDeliverTxResponse>
+  list (options: IListOptions): Promise<IWrappedEncodeObject[]>
 
-  delist (rns: string): Promise<DDeliverTxResponse>
+  delist (options: IDelistOptions): Promise<IWrappedEncodeObject[]>
 
-  buy (rns: string): Promise<DDeliverTxResponse>
+  buy (options: IBuyOptions): Promise<IWrappedEncodeObject[]>
 
-  init (): Promise<DDeliverTxResponse>
+  activate (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 
-  register (
-    rns: string,
-    yearsToRegister: number,
-    data?: IRnsData,
-  ): Promise<DDeliverTxResponse>
+  register (options: IRegisterOptions): Promise<IWrappedEncodeObject[]>
 
-  update (rns: string, data?: IRnsData): Promise<DDeliverTxResponse>
+  update (options: IUpdateOptions): Promise<IWrappedEncodeObject[]>
 
-  transfer (rns: string, receiver: string): Promise<DDeliverTxResponse>
+  transfer (options: ITransferOptions): Promise<IWrappedEncodeObject[]>
 
-  addSubRns (
-    rns: string,
-    linkedWallet: string,
-    subRns: string,
-    data?: IRnsData,
-  ): Promise<DDeliverTxResponse>
+  addSubRns (options: IAddSubRnsOptions): Promise<IWrappedEncodeObject[]>
 
-  removeSubRns (rns: string): Promise<DDeliverTxResponse>
+  removeSubRns (options: IRemoveSubRnsOptions): Promise<IWrappedEncodeObject[]>
 }

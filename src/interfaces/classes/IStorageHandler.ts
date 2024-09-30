@@ -1,5 +1,6 @@
 import {
   IBroadcastOptions,
+  IBroadcastOrChainOptions,
   IBuyStorageOptions,
   IChildMetaDataMap,
   ICreateFolderOptions,
@@ -8,10 +9,9 @@ import {
   IFileMetaData,
   IFileParticulars,
   IFolderMetaData,
-  IInitStorageOptions, IMoveRenameResourceOptions,
+  IMoveRenameResourceOptions,
   IProviderIpSet,
   IReadFolderContentOptions,
-  IRegisterPubKeyOptions,
   IShareOptions,
   IStagedUploadPackage,
   IStorageStatus,
@@ -22,7 +22,7 @@ import type { TSharedRootMetaDataMap } from '@/types'
 export interface IStorageHandler {
   cleanShutdown (): void
 
-  registerPubKey (options?: IRegisterPubKeyOptions): Promise<IWrappedEncodeObject[]>
+  registerPubKey (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 
   loadDirectory (options?: IReadFolderContentOptions): Promise<void>
 
@@ -46,7 +46,7 @@ export interface IStorageHandler {
 
   loadProviderPool (providers?: IProviderIpSet): Promise<void>
 
-  initStorage (options?: IInitStorageOptions): Promise<any>
+  initStorage (options?: IBroadcastOrChainOptions): Promise<any>
 
   planStatus (): Promise<IStorageStatus>
 
