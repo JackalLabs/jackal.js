@@ -991,11 +991,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     try {
       const particulars = await this.getFileParticulars(filePath)
       const providerList = shuffleArray(particulars.providerIps)
-      const provider =
-        providerList[Math.floor(Math.random() * providerList.length)]
-      const url = `${provider}/download/${particulars.merkleLocation}`
-
       for (const _ of providerList) {
+        const provider =
+          providerList[Math.floor(Math.random() * providerList.length)]
+        const url = `${provider}/download/${particulars.merkleLocation}`
         try {
           const resp = await fetch(url, { method: 'GET' })
           const contentLength = resp.headers.get('Content-Length')
