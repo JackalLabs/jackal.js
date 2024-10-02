@@ -5,7 +5,7 @@ const gasBaselineRate = 56
 const gasFallbackTxCost = 142
 const gasMap: Record<string, number> = {
   /** Filetree */
-  '/canine_chain.filetree.MsgPostFile': 210,
+  '/canine_chain.filetree.MsgPostFile': 270,
   '/canine_chain.filetree.MsgPostKey': 12,
   '/canine_chain.filetree.MsgDeleteFile': 9,
   /** Notifications */
