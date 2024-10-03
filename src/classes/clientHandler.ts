@@ -183,6 +183,8 @@ export class ClientHandler implements IClientHandler {
                     {},
                   )
                   hostAddress = (await tmpSigner.getAccounts())[0].address
+                } else {
+                  throw new Error('Leap Wallet amino failure')
                 }
               } else {
                 hostSigner = jklSigner
