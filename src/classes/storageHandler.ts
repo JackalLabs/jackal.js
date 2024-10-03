@@ -248,7 +248,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       } else {
         const postBroadcast =
           await this.jackalClient.broadcastAndMonitorMsgs(msgs, options?.broadcastOptions)
-        console.log('registerPubKey:', postBroadcast.txEvents[0])
+        console.log('registerPubKey:', postBroadcast)
         return []
       }
     } catch (err) {
@@ -881,9 +881,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   /**
    *
    * @param {IBroadcastOptions} [options]
-   * @returns {Promise<any>}
+   * @returns {Promise<void>}
    */
-  async processAllQueues (options?: IBroadcastOptions): Promise<any> {
+  async processAllQueues (options?: IBroadcastOptions): Promise<void> {
     if (
       await this.checkLocked({
         needsProviders: true,
@@ -925,7 +925,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       }
       this.uploadsInProgress = false
       await this.loadDirectory()
-      return postBroadcast
+      console.log('processAllQueues:', postBroadcast)
     } catch (err) {
       throw warnError('storageHandler processAllQueues()', err)
     }
@@ -1192,10 +1192,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @param {IBroadcastOptions} [options]
-   * @returns {Promise<any>}
+   * @param {IBroadcastOrChainOptions} [options]
+   * @returns {Promise<IWrappedEncodeObject[]>}
    */
-  async convert (options?: IBroadcastOptions): Promise<any> {
+  async convert (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]> {
     if (await this.checkLocked({ mustConvert: true, signer: true })) {
       throw new Error('Not Locked. Convert Not Available.')
     }
@@ -1211,7 +1211,16 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         msgs.push(...group)
         msgs.push(...bundle.msgs)
 
-        return await this.jackalClient.broadcastAndMonitorMsgs(msgs, options)
+        if (options?.chain) {
+          return msgs
+        } else {
+          const postBroadcast =
+            await this.jackalClient.broadcastAndMonitorMsgs(msgs, options?.broadcastOptions)
+          console.log('convert:', postBroadcast)
+          return []
+        }
+      } else {
+        throw new Error('Nothing to convert')
       }
     } catch (err) {
       throw warnError('storageHandler convert()', err)

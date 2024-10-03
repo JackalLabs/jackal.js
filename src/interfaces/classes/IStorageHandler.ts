@@ -78,7 +78,7 @@ export interface IStorageHandler {
 
   queuePublic (toQueue: File | File[], duration?: number): Promise<number>
 
-  processAllQueues (options?: IBroadcastOptions): Promise<any>
+  processAllQueues (options?: IBroadcastOptions): Promise<void>
 
   getFileParticulars (filePath: string): Promise<IFileParticulars>
 
@@ -100,5 +100,5 @@ export interface IStorageHandler {
 
   readSharing (): TSharedRootMetaDataMap
 
-  convert (): Promise<any>
+  convert (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 }
