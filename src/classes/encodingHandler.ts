@@ -59,7 +59,7 @@ export class EncodingHandler {
     this.jackalSigner = jackalSigner
     this.hostSigner = hostSigner
     this.proofInterval = client.getProofWindow()
-    this.jklAddress = accountAddress || client.getJackalAddress()
+    this.jklAddress = accountAddress || client.getICAJackalAddress()
     this.hostAddress = client.getHostAddress()
 
     this.reader = new FiletreeReader(

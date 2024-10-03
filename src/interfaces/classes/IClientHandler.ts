@@ -55,6 +55,8 @@ export interface IClientHandler {
 
   getICAJackalAddress (): string
 
+  wasmIsConnected (): boolean
+
   findPubKey (address: string): Promise<string>
 
   myPubKeyIsPublished (): Promise<boolean>

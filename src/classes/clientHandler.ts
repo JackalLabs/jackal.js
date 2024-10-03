@@ -84,7 +84,7 @@ export class ClientHandler implements IClientHandler {
 
     this.myCosmwasm = null
     this.myContractAddress = null
-    this.myIcaAddress = jklAddress
+    this.myIcaAddress = null
   }
 
   /**
@@ -473,9 +473,17 @@ export class ClientHandler implements IClientHandler {
    */
   getICAJackalAddress (): string {
     if (!this.myIcaAddress) {
-      throw new Error(signerNotEnabled('ClientHandler', 'getICAJackalAddress'))
+      return this.jklAddress
     }
     return this.myIcaAddress
+  }
+
+  /**
+   * Returns true if ICA address has been set by wasm signer.
+   * @returns {boolean}
+   */
+  wasmIsConnected(): boolean {
+    return this.getICAJackalAddress() !== this.jklAddress
   }
 
   /**
@@ -498,7 +506,7 @@ export class ClientHandler implements IClientHandler {
    */
   async myPubKeyIsPublished (): Promise<boolean> {
     try {
-      const key = await this.findPubKey(this.myIcaAddress || this.hostAddress)
+      const key = await this.findPubKey(this.getICAJackalAddress())
       return key.length > 0
     } catch (err) {
       throw warnError('clientHandler myPubKeyIsPublished()', err)
