@@ -901,6 +901,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         const readyMsgs = await this.saveFolder(this.stagedUploads[folderUlid])
         msgs.push(...readyMsgs)
       }
+      this.stagedUploads = {}
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(msgs, options)
 
