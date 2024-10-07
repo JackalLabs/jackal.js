@@ -1847,11 +1847,12 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             parent.getUlid(),
             fileMeta,
           )
+          const aes = await this.reader.loadKeysByPath(path, this.hostAddress)
           const pkg: IUploadPackage = {
             file: new File([], ''),
             meta,
             duration: 0,
-            aes: await genAesBundle(),
+            aes,
           }
           const group = await this.legacyPkgToMsgs(pkg)
           msgs.push(...group)
