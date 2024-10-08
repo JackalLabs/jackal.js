@@ -1315,6 +1315,21 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
+   * @returns {Promise<IProviderIpSet>}
+   * @protected
+   */
+  protected async getAllProviders (): Promise<IProviderIpSet> {
+    try {
+      const providers = await this.getAvailableProviders()
+      // console.log(providers)
+      return await this.findProviderIps(providers)
+    } catch (err) {
+      throw warnError('storageHandler loadProvidersFromChain()', err)
+    }
+  }
+
+  /**
+   *
    * @param {IWrappedEncodeObject[]} msgs
    * @param {number} uploadHeight
    * @returns {Promise<Promise<IProviderUploadResponse>[]>}

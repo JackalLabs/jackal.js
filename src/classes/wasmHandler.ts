@@ -43,23 +43,37 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
   }
 
   /**
-   * Instantiate a CosmWasm contract.
+   * Instantiate an outpost contract.
+   * @param {string} contractAddress
    * @param {string} connectionIdA
    * @param {string} connectionIdB
-   * @param {number} codeId
    * @returns {Promise<DDeliverTxResponse>}
    */
   async instantiateICA (
+    contractAddress: string,
     connectionIdA: string,
-    connectionIdB: string,
-    codeId: number,
+    connectionIdB: string
   ): Promise<DDeliverTxResponse> {
     try {
-      const wrapped: IWrappedEncodeObject[] = this.instantiateToMsgs(
-        connectionIdA,
-        connectionIdB,
-        codeId,
-      )
+
+      const msg = {
+        create_outpost: {
+          channel_open_init_options: {
+            connection_id: connectionIdA,
+            counterparty_connection_id: connectionIdB,
+            tx_encoding: "proto3"
+          }
+        }
+      }
+
+      const eo = this.jackalClient.getTxs().cosmwasm.msgExecuteContract({
+        contract: contractAddress,
+        msg: stringToUint8Array(JSON.stringify(msg)),
+        funds: [],
+        sender: this.jackalClient.getHostAddress(),
+      })
+      const wrapped: IWrappedEncodeObject = { encodedObject: eo, modifier: 0 }
+
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
       return postBroadcast.txResponse
@@ -70,17 +84,35 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
 
   /**
    * Get Interchain wasm contract address.
-   * @param {number} [index] - Optional contract index, defaults to 0.
+   * @param {string} contractAddress - Contract to query from
    * @returns {Promise<string>} - Contract address.
    */
-  async getICAContractAddress (index: number = 0): Promise<string> {
+  async getICAContractAddress (contractAddress: string): Promise<string> {
     try {
-      const contractsByCreator =
-        await this.hostSigner.queries.cosmwasm.contractsByCreator({
-          creatorAddress: this.hostAddress,
-        })
-      const contracts = contractsByCreator.contractAddresses
-      return contracts[index] || ''
+
+      const query = {
+        get_user_outpost_address: {
+          user_address: this.hostAddress,
+        },
+      }
+
+      const q = stringToUint8Array(JSON.stringify(query))
+
+      console.log("Query : ", query, q)
+
+      const req: DQuerySmartContractStateRequest = {
+        address: contractAddress,
+        queryData: q,
+      }
+
+      console.log(req)
+      const state =
+        await this.hostSigner.queries.cosmwasm.smartContractState(req)
+      console.log(state)
+
+      return ''
+
+
     } catch (err) {
       throw warnError('wasmHandler getICAContractAddress()', err)
     }
@@ -88,11 +120,12 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
 
   /**
    * Get jkl address from unknown Interchain contract.
+   * @param {string} contractAddress - Contract to query from
    * @returns {Promise<string>}
    */
-  async getICAJackalAddress (): Promise<string> {
+  async getICAJackalAddress (contractAddress: string): Promise<string> {
     try {
-      const address = await this.getICAContractAddress()
+      const address = await this.getICAContractAddress(contractAddress)
       return this.getJackalAddressFromContract(address)
     } catch (err) {
       throw warnError('wasmHandler getICAJackalAddress()', err)

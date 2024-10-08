@@ -282,20 +282,23 @@ export class ClientHandler implements IClientHandler {
   async createWasmStorageHandler (details: IWasmDetails = {}): Promise<IStorageHandler> {
     try {
       const {
-        addressIndex = 1,
-        codeId = 546,
         connIdA = 'connection-18',
         connIdB = 'connection-50',
+        contract = 'archway1fdqdk2ck3hfzhx03qrx5arkhzz25qkz9x69utrmh2vxy85ur4f9spg5fcr',
       } = details
       this.myCosmwasm = await WasmHandler.init(this)
-      this.myContractAddress = await this.myCosmwasm.getICAContractAddress(addressIndex)
-      if (!this.myContractAddress) {
+      const ica = await this.myCosmwasm.getICAContractAddress(contract).catch(err => {
+        console.warn(err)
+      })
+      if (ica) {
+        this.myContractAddress = ica
+      } else {
         await this.myCosmwasm.instantiateICA(
+          contract,
           connIdA,
           connIdB,
-          codeId,
         )
-        this.myContractAddress = await this.myCosmwasm.getICAContractAddress(addressIndex)
+        this.myContractAddress = await this.myCosmwasm.getICAContractAddress(contract)
       }
       this.myIcaAddress = await this.myCosmwasm.getJackalAddressFromContract(
         this.myContractAddress,

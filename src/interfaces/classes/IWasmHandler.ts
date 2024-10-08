@@ -2,14 +2,14 @@ import type { DDeliverTxResponse, DEncodeObject } from '@jackallabs/jackal.js-pr
 
 export interface IWasmHandler {
   instantiateICA (
+    contractAddress: string,
     connectionIdA: string,
-    connectionIdB: string,
-    codeId: number,
+    connectionIdB: string
   ): Promise<DDeliverTxResponse>
 
-  getICAContractAddress (index?: number): Promise<string>
+  getICAContractAddress (contractAddress: string): Promise<string>
 
-  getICAJackalAddress (): Promise<string>
+  getICAJackalAddress (contractAddress: string): Promise<string>
 
   getJackalAddressFromContract (contractAddress: string): Promise<string>
 
