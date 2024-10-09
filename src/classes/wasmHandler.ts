@@ -98,20 +98,18 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
 
       const q = stringToUint8Array(JSON.stringify(query))
 
-      console.log("Query : ", query, q)
 
       const req: DQuerySmartContractStateRequest = {
         address: contractAddress,
         queryData: q,
       }
 
-      console.log(req)
       const state =
         await this.hostSigner.queries.cosmwasm.smartContractState(req)
-      console.log(state)
 
-      return ''
+      const uint8Array = state.data instanceof Uint8Array ? state.data : new Uint8Array(state.data);
 
+      return uintArrayToString(uint8Array).replaceAll('"', '')
 
     } catch (err) {
       throw warnError('wasmHandler getICAContractAddress()', err)
@@ -146,8 +144,10 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
         queryData: stringToUint8Array(JSON.stringify(q)),
       }
 
+      console.log(req)
       const res = await this.hostSigner.queries.cosmwasm.smartContractState(req)
       const str = uintArrayToString(res.data as Uint8Array)
+      console.log(str)
       const data = JSON.parse(str)
 
       return data.ica_info.ica_address

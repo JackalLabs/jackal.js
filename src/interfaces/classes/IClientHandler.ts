@@ -15,6 +15,7 @@ import {
   IWasmDetails,
   IWrappedEncodeObject,
 } from '@/interfaces'
+import { Coin, DeliverTxResponse } from '@cosmjs/stargate'
 
 export interface IClientHandler {
   createStorageHandler (): Promise<IStorageHandler>
@@ -48,6 +49,12 @@ export interface IClientHandler {
   getTxs (): ITxLibrary
 
   getJklBalance (): Promise<DCoin>
+
+  getJackalNetworkBalance (address: string): Promise<DCoin>
+
+  getHostNetworkBalance (address: string, denom: string): Promise<DCoin>
+
+  ibcSend (address: string, amount: Coin, sourceChannel: string): Promise<DeliverTxResponse>
 
   getJackalAddress (): string
 
