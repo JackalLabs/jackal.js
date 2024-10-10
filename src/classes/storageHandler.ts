@@ -358,6 +358,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       ;[this.keyPair, this.fullSigner] = await StorageHandler.enableFullSigner(
         this.jackalClient,
       )
+      this.resetReader(this.keyPair)
     } catch (err) {
       throw warnError('storageHandler upgradeSigner()', err)
     }
