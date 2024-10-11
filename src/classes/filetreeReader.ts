@@ -41,13 +41,14 @@ import {
   safeStringifyFileTree,
 } from '@/utils/converters'
 import { aesToString, compressEncryptString, cryptString, genAesBundle, stringToAes } from '@/utils/crypt'
-import type { TMerkleParentChild, TMetaDataSets } from '@/types'
+import { TConversionPair, TExtractedViewAccess, TMerkleParentChild, TMetaDataSets } from '@/types'
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
 
 export class FiletreeReader implements IFiletreeReader {
   protected readonly jackalClient: IClientHandler
   protected readonly jackalSigner: TJackalSigningClient
   protected readonly keyPair: PrivateKey
+  protected readonly defaultKeyPair: PrivateKey
   protected readonly clientAddress: string
 
   protected ulidLeaves: Record<string, Record<string, string>>
@@ -55,16 +56,20 @@ export class FiletreeReader implements IFiletreeReader {
   protected yellowpages: Record<string, Record<string, DQueryFileTreeFile>>
   protected legacyMetaLeaves: Record<string, ILegacyFolderMetaData>
   protected refCounts: Record<string, number>
+  protected conversionQueue: string[]
+  protected nullConversions: string[]
 
   constructor (
     jackalClient: IClientHandler,
     jackalSigner: TJackalSigningClient,
     keyPair: PrivateKey,
+    defaultKeyPair: PrivateKey,
     ownerAddress: string,
   ) {
     this.jackalClient = jackalClient
     this.jackalSigner = jackalSigner
     this.keyPair = keyPair
+    this.defaultKeyPair = defaultKeyPair
     this.clientAddress = ownerAddress
 
     this.ulidLeaves = {}
@@ -75,8 +80,15 @@ export class FiletreeReader implements IFiletreeReader {
     this.yellowpages[ownerAddress] = {}
     this.legacyMetaLeaves = {}
     this.refCounts = {}
+    this.conversionQueue = []
+    this.nullConversions = []
   }
 
+  /**
+   *
+   * @param {string} path
+   * @returns {Promise<number>}
+   */
   async refCountRead (path: string): Promise<number> {
     if (path in this.refCounts) {
       return this.refCounts[path]
@@ -88,6 +100,10 @@ export class FiletreeReader implements IFiletreeReader {
     }
   }
 
+  /**
+   *
+   * @param {string} path
+   */
   refCountIncrement (path: string): void {
     if (this.refCounts[path]) {
       this.refCounts[path]++
@@ -96,9 +112,100 @@ export class FiletreeReader implements IFiletreeReader {
     }
   }
 
+  /**
+   *
+   * @param {string} path
+   * @param {number} value
+   */
   refCountSet (path: string, value: number): void {
     if (!this.refCounts[path]) {
       this.refCounts[path] = value
+    }
+  }
+
+  /**
+   *
+   * @returns {number}
+   */
+  getConversionQueueLength (): number {
+    return this.conversionQueue.length
+  }
+
+  /**
+   *
+   * @returns {Promise<TConversionPair[]>}
+   */
+  async getConversions (): Promise<TConversionPair[]> {
+    try {
+      const final: TConversionPair[] = []
+      for (let ulid of this.conversionQueue) {
+        const meta = await this.loadMetaByUlid(ulid)
+
+        if (meta.metaDataType === 'file') {
+          const parent = meta.location.split('/').slice(-1)[0]
+          const files = this.directoryLeaves[this.clientAddress][parent].files
+          for (let index of Object.keys(files)) {
+            if (files[Number(index)].fileMeta.name === meta.fileMeta.name) {
+              const refIndex = Number(index)
+              const handler = await FileMetaHandler.create({ clone: meta, refIndex })
+              final.push([meta.metaDataType, handler])
+              break
+            }
+          }
+        } else if (meta.metaDataType === 'null') {
+          const parent = meta.location.split('/').slice(-1)[0]
+          if (this.nullConversions.includes(parent)) {
+            const handler = await NullMetaHandler.create({
+              location: parent,
+              refIndex: -1,
+              ulid,
+            })
+            final.push([meta.metaDataType, handler])
+          } else {
+            this.nullConversions.push(parent)
+            const nulls = this.directoryLeaves[this.clientAddress][parent].nulls
+            for (let index of Object.keys(nulls)) {
+              const handler = await NullMetaHandler.create({
+                location: parent,
+                refIndex: Number(index),
+                ulid,
+              })
+              final.push([meta.metaDataType, handler])
+            }
+          }
+        } else if (meta.metaDataType === 'folder') {
+          const parent = meta.location.split('/').slice(-1)[0]
+          const folders = this.directoryLeaves[this.clientAddress][parent].folders
+          for (let index of Object.keys(folders)) {
+            if (folders[Number(index)].whoAmI === meta.whoAmI) {
+              const refIndex = Number(index)
+              const handler = await FolderMetaHandler.create({
+                count: hexToInt(meta.count),
+                description: meta.description,
+                location: parent,
+                name: meta.whoAmI,
+                refIndex,
+                ulid,
+              })
+              final.push([meta.metaDataType, handler])
+              break
+            }
+          }
+        } else if (meta.metaDataType === 'rootlookup') {
+          const handler = await FolderMetaHandler.create({
+            count: 0,
+            location: 'ulid',
+            name: 'Home',
+            ulid,
+          })
+          final.push([meta.metaDataType, handler])
+        }
+      }
+      this.conversionQueue = []
+      this.nullConversions = []
+      return final
+    } catch (err) {
+      throw warnError('filetreeReader getConversions()', err)
     }
   }
 
@@ -182,7 +289,8 @@ export class FiletreeReader implements IFiletreeReader {
     try {
       const lookup = await this.pathToLookup(path)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      return await this.loadFolderMeta(file)
+      const id = this.ulidLookup(path)
+      return await this.loadFolderMeta(file, id)
     } catch (err) {
       throw warnError('filetreeReader loadFolderMetaByPath()', err)
     }
@@ -204,7 +312,7 @@ export class FiletreeReader implements IFiletreeReader {
         ),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      return await this.loadFolderMeta(file)
+      return await this.loadFolderMeta(file, ulid)
     } catch (err) {
       throw warnError('filetreeReader loadFolderMetaByUlid()', err)
     }
@@ -225,9 +333,13 @@ export class FiletreeReader implements IFiletreeReader {
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !isCleartext
-          ? await this.decryptAndParseContents(file)
-          : safeParseFileTree(contents)
+        let parsed
+        if (!isCleartext) {
+          const id = this.ulidLookup(path)
+          parsed = await this.decryptAndParseContents(file, id)
+        } else {
+          parsed = safeParseFileTree(contents)
+        }
         if (parsed.metaDataType === 'folder') {
           const { count, description, location, whoAmI } = parsed
           return await FolderMetaHandler.create({
@@ -261,9 +373,13 @@ export class FiletreeReader implements IFiletreeReader {
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !isCleartext
-          ? await this.decryptAndParseContents(file)
-          : safeParseFileTree(contents)
+        let parsed
+        if (!isCleartext) {
+          const id = this.ulidLookup(path)
+          parsed = await this.decryptAndParseContents(file, id)
+        } else {
+          parsed = safeParseFileTree(contents)
+        }
         if (parsed.metaDataType === 'sharefolder') {
           return parsed
         } else {
@@ -290,9 +406,13 @@ export class FiletreeReader implements IFiletreeReader {
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !isCleartext
-          ? await this.decryptAndParseContents(file)
-          : safeParseFileTree(contents)
+        let parsed
+        if (!isCleartext) {
+          const id = this.ulidLookup(path)
+          parsed = await this.decryptAndParseContents(file, id)
+        } else {
+          parsed = safeParseFileTree(contents)
+        }
         if (parsed.metaDataType === 'share') {
           return parsed
         } else {
@@ -320,7 +440,7 @@ export class FiletreeReader implements IFiletreeReader {
         ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      const meta = await this.loadMeta(file)
+      const meta = await this.loadMeta(file, ulid)
       return (meta.metaDataType === 'ref') ? meta as IRefMetaData : meta as INullRefMetaData
     } catch (err) {
       throw warnError('filetreeReader loadRefMeta()', err)
@@ -369,7 +489,7 @@ export class FiletreeReader implements IFiletreeReader {
         ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      return await this.loadMeta(file)
+      return await this.loadMeta(file, ulid)
     } catch (err) {
       throw warnError('filetreeReader loadMetaByUlid()', err)
     }
@@ -404,7 +524,8 @@ export class FiletreeReader implements IFiletreeReader {
         pathSet.slice(-1)[0],
       ]
 
-      return await this.loadMeta(file, legacyPath)
+      const id = this.ulidLookup(path, ownerAddress)
+      return await this.loadMeta(file, id, legacyPath)
     } catch (err) {
       throw warnError('filetreeReader loadMetaByExternalPath()', err)
     }
@@ -470,12 +591,15 @@ export class FiletreeReader implements IFiletreeReader {
           }
         } else if (contents.length > 0) {
           const aes = await this.extractViewAccess(file)
+          if (aes[1]) {
+            throw new Error('Requires rekey')
+          }
           return {
             contents,
             viewers: await this.createViewAccess(
               trackingNumber,
               allViewers,
-              aes,
+              aes[0],
             ),
             editors: await this.createEditAccess(trackingNumber),
             trackingNumber,
@@ -504,7 +628,8 @@ export class FiletreeReader implements IFiletreeReader {
     try {
       const lookup = await this.pathToLookup(path, ownerAddress)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      return await this.extractViewAccess(file)
+      const aes = await this.extractViewAccess(file)
+      return aes[0]
     } catch (err) {
       throw warnError('filetreeReader loadKeysByPath()', err)
     }
@@ -527,7 +652,8 @@ export class FiletreeReader implements IFiletreeReader {
         ownerAddress: await hashAndHexOwner(hexAddress, ownerAddress),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      return await this.extractViewAccess(file)
+      const aes = await this.extractViewAccess(file)
+      return aes[0]
     } catch (err) {
       throw warnError('filetreeReader loadKeysByUlid()', err)
     }
@@ -678,7 +804,7 @@ export class FiletreeReader implements IFiletreeReader {
         trackingNumber: '',
       }
       const aes = await this.extractViewAccess(bundle)
-      const msg = await cryptString(contents.msg, aes, 'decrypt', false)
+      const msg = await cryptString(contents.msg, aes[0], 'decrypt', false)
       return {
         sender: notificationData.from,
         receiver: notificationData.to,
@@ -745,6 +871,7 @@ export class FiletreeReader implements IFiletreeReader {
                 await this.jackalSigner.queries.fileTree.file(rootLookup)
               const lookup = (await this.decryptAndParseContents(
                 file,
+                path,
               )) as IRootLookupMetaData
               // console.log(lookup)
               if (!(ownerAddress in this.ulidLeaves)) {
@@ -805,9 +932,13 @@ export class FiletreeReader implements IFiletreeReader {
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !isCleartext
-          ? await this.decryptAndParseContents(file)
-          : (JSON.parse(contents) as TMetaDataSets)
+        let parsed
+        if (!isCleartext) {
+          const id = this.ulidLookup(path, ownerAddress)
+          parsed = await this.decryptAndParseContents(file, id)
+        } else {
+          parsed = JSON.parse(contents) as TMetaDataSets
+        }
         if (parsed.metaDataType === 'folder') {
           const count = hexToInt(parsed.count)
           if (ownerAddress === this.clientAddress) {
@@ -907,12 +1038,14 @@ export class FiletreeReader implements IFiletreeReader {
   /**
    *
    * @param {DFile} file
+   * @param {string} ulid
    * @param {[string, string]} [legacyPath]
    * @returns {Promise<TMetaDataSets>}
    * @protected
    */
   protected async loadMeta (
     file: DFile,
+    ulid: string,
     legacyPath?: [string, string],
   ): Promise<TMetaDataSets> {
     try {
@@ -931,7 +1064,7 @@ export class FiletreeReader implements IFiletreeReader {
             const { legacyMerkles } = safeParseLegacyMerkles(contents)
             return this.loadLegacyMeta(legacyMerkles, legacyPath)
           case contents.length > 0:
-            return await this.decryptAndParseContents(file)
+            return await this.decryptAndParseContents(file, ulid)
           default:
             throw new Error(`Empty contents`)
         }
@@ -1066,7 +1199,7 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<IAesBundle>}
    * @protected
    */
-  protected async extractViewAccess (data: DFile): Promise<IAesBundle> {
+  protected async extractViewAccess (data: DFile): Promise<TExtractedViewAccess> {
     try {
       const parsedAccess = JSON.parse(data.viewingAccess)
       const user = await hashAndHexUserAccess(
@@ -1076,9 +1209,17 @@ export class FiletreeReader implements IFiletreeReader {
       )
       if (user in parsedAccess) {
         if (parsedAccess[user] === 'public') {
-          return await genAesBundle()
+          return [await genAesBundle(), false]
         } else {
-          return await stringToAes(this.keyPair, parsedAccess[user])
+          try {
+            return [await stringToAes(this.keyPair, parsedAccess[user]), false]
+          } catch (_) {
+            try {
+              return [await stringToAes(this.defaultKeyPair, parsedAccess[user]), true]
+            } catch (err) {
+              throw err
+            }
+          }
         }
       } else {
         throw new Error('Not an authorized Viewer')
@@ -1111,18 +1252,22 @@ export class FiletreeReader implements IFiletreeReader {
   /**
    * Convert DFile from filetree to metadata.
    * @param {DFile} file - Filetree file.
+   * @param {string} id
    * @returns {Promise<IFolderMetaData>}
    * @protected
    */
-  protected async loadFolderMeta (file: DFile): Promise<IFolderMetaData> {
+  protected async loadFolderMeta (file: DFile, id: string): Promise<IFolderMetaData> {
     try {
       const { contents } = file
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
-        const parsed = !isCleartext
-          ? await this.decryptAndParseContents(file)
-          : safeParseFileTree(contents)
+        let parsed
+        if (!isCleartext) {
+          parsed = await this.decryptAndParseContents(file, id)
+        } else {
+          parsed = safeParseFileTree(contents)
+        }
         if (parsed.metaDataType === 'folder') {
           return parsed
         } else {
@@ -1139,14 +1284,18 @@ export class FiletreeReader implements IFiletreeReader {
   /**
    *
    * @param {DFile} data
-   * @returns {Promise<Record<string, any>>}
+   * @param {string} id
+   * @returns {Promise<TMetaDataSets>}
    * @protected
    */
-  protected async decryptAndParseContents (data: DFile): Promise<TMetaDataSets> {
+  protected async decryptAndParseContents (data: DFile, id: string): Promise<TMetaDataSets> {
     try {
       const safe = prepDecompressionForAmino(data.contents)
       const aes = await this.extractViewAccess(data)
-      let decrypted = await cryptString(safe, aes, 'decrypt')
+      if (aes[1]) {
+        this.conversionQueue.push(id)
+      }
+      let decrypted = await cryptString(safe, aes[0], 'decrypt')
       if (decrypted.startsWith('jklpc1')) {
         decrypted = safeDecompressData(decrypted)
       }

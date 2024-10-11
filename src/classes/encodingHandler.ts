@@ -1,4 +1,4 @@
-import { merkleParentAndChild, merkleParentAndIndex } from '@/utils/hash'
+import { merkleParentAndChild, merkleParentAndIndex, stringToShaHex } from '@/utils/hash'
 import { stringToUint8Array, timestampToBlockHeight } from '@/utils/converters'
 import { formatShareNotification } from '@/utils/notifications'
 import { cryptString, genAesBundle } from '@/utils/crypt'
@@ -53,6 +53,7 @@ export class EncodingHandler {
     jackalSigner: TJackalSigningClient,
     hostSigner: THostSigningClient,
     keyPair: PrivateKey,
+    defaultKeyPair: PrivateKey,
     accountAddress?: string,
   ) {
     this.jackalClient = client
@@ -66,6 +67,7 @@ export class EncodingHandler {
       client,
       jackalSigner,
       keyPair,
+      defaultKeyPair,
       client.getICAJackalAddress(),
     )
   }
@@ -73,13 +75,18 @@ export class EncodingHandler {
   /**
    *
    * @param {PrivateKey} keyPair
+   * @returns {Promise<void>}
    * @protected
    */
-  protected resetReader (keyPair: PrivateKey): void {
+  protected async resetReader (keyPair: PrivateKey): Promise<void> {
+    let dummyKey = await stringToShaHex('')
+    let defaultKeyPair = PrivateKey.fromHex(dummyKey)
+
     this.reader = new FiletreeReader(
       this.jackalClient,
       this.jackalSigner,
       keyPair,
+      defaultKeyPair,
       this.jackalClient.getICAJackalAddress(),
     )
   }
@@ -509,6 +516,22 @@ export class EncodingHandler {
       )
     } catch (err) {
       throw warnError('storageHandler encodeCreateNotification()', err)
+    }
+  }
+
+  protected async upcycleBaseFolderToMsgs (
+    pkg: IFileTreePackage,
+  ): Promise<IWrappedEncodeObject[]> {
+    try {
+      const fileTreeBaseFolder = this.encodeFileTreeBaseFolder(pkg)
+      return [
+        {
+          encodedObject: await fileTreeBaseFolder,
+          modifier: 0,
+        },
+      ]
+    } catch (err) {
+      throw warnError('storageHandler upcycleBaseFolderToMsgs()', err)
     }
   }
 

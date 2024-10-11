@@ -17,7 +17,7 @@ import {
   IShareFolderMetaData,
   IShareMetaData,
 } from '@/interfaces'
-import type { TMerkleParentChild, TMetaDataSets } from '@/types'
+import { TConversionPair, TMerkleParentChild, TMetaDataSets } from '@/types'
 
 export interface IFiletreeReader {
   refCountRead (path: string): Promise<number>
@@ -25,6 +25,10 @@ export interface IFiletreeReader {
   refCountIncrement (path: string): void
 
   refCountSet (path: string, value: number): void
+
+  getConversionQueueLength (): number
+
+  getConversions (): Promise<TConversionPair[]>
 
   ulidLookup (path: string, owner?: string): string
 

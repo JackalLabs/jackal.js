@@ -21,6 +21,7 @@ export type TMetaDataTypes =
   | 'share'
   | 'shareref'
   | 'sharefolder'
+  | 'rootlookup'
 export type TMetaDataSets =
   | TChildMetaData
   | TSharedMetaData

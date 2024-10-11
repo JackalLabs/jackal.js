@@ -286,7 +286,7 @@ export class FileMetaHandler implements IFileMetaHandler {
     if ('clone' in source) {
       const shortcut: IFileMetaFoundationalData = {
         ...source.clone,
-        refIndex: source.refIndex || 0,
+        refIndex: source.refIndex || -1,
       }
       return new FileMetaHandler(shortcut)
     } else {

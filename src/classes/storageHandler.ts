@@ -65,6 +65,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   protected stagedUploads: Record<string, IStagedUploadPackage>
   protected children: IChildMetaDataMap
   protected shared: TSharedRootMetaDataMap
+  protected upcycleQueue: IWrappedEncodeObject[]
 
   protected meta: IFolderMetaHandler
   protected providers: IProviderPool
@@ -76,10 +77,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     hostSigner: THostSigningClient,
     accountAddress: string,
     fullSignerState: TFullSignerState,
+    defaultKeyPair: PrivateKey,
     path: string,
     meta: IFolderMetaHandler,
   ) {
-    super(client, jackalSigner, hostSigner, fullSignerState[0], accountAddress)
+    super(client, jackalSigner, hostSigner, fullSignerState[0], defaultKeyPair, accountAddress)
 
     this.rns = rns
     this.path = path
@@ -99,6 +101,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     }
     this.mustConvert = false
     this.shared = {}
+    this.upcycleQueue = []
 
     this.meta = meta
     this.providers = {}
@@ -134,7 +137,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
     try {
       let dummyKey = await stringToShaHex('')
-      let keyPair: TFullSignerState = [PrivateKey.fromHex(dummyKey), false]
+      let defaultKeyPair = PrivateKey.fromHex(dummyKey)
+      let keyPair: TFullSignerState = [defaultKeyPair, false]
       if (setFullSigner) {
         keyPair = await this.enableFullSigner(client)
       }
@@ -150,6 +154,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         hostSigner,
         accountAddress,
         keyPair,
+        defaultKeyPair,
         path,
         meta,
       )
@@ -358,7 +363,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       ;[this.keyPair, this.fullSigner] = await StorageHandler.enableFullSigner(
         this.jackalClient,
       )
-      this.resetReader(this.keyPair)
+      await this.resetReader(this.keyPair)
     } catch (err) {
       throw warnError('storageHandler upgradeSigner()', err)
     }
@@ -1226,6 +1231,163 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       }
     } catch (err) {
       throw warnError('storageHandler convert()', err)
+    }
+  }
+
+  async checkAndUpcycle (options?: IBroadcastOptions): Promise<void> {
+    try {
+      if (this.reader.getConversionQueueLength() > 0) {
+        const msgs: IWrappedEncodeObject[] = []
+        const prep = await this.reader.getConversions()
+        const blockheight = await this.jackalClient.getJackalBlockHeight()
+
+        for (let one of prep) {
+          let upcycleMsgs
+          switch (one[0]) {
+            case 'file':
+              const pkg = await this.upcycleFile(one[1])
+              const { files } =
+                await this.jackalSigner.queries.storage.allFilesByMerkle({
+                  merkle: one[1].export().merkleRoot,
+                })
+              const [details] = files
+              const sourceMsgs = this.fileDeleteToMsgs({
+                creator: this.jklAddress,
+                merkle: details.merkle,
+                start: details.start,
+              })
+              upcycleMsgs = await this.pkgToMsgs(pkg, blockheight)
+              msgs.push(...sourceMsgs, ...upcycleMsgs)
+              break
+            case 'null':
+              upcycleMsgs = await this.filetreeDeleteToMsgs({ meta: one[1], aes: await genAesBundle() })
+              msgs.push(...upcycleMsgs)
+              break
+            case 'folder':
+              upcycleMsgs = await this.folderToMsgs({ meta: one[1], aes: await genAesBundle() })
+              msgs.push(...upcycleMsgs)
+              break
+            case 'rootlookup':
+              upcycleMsgs = await this.upcycleBaseFolderToMsgs({ meta: one[1], aes: await genAesBundle() })
+              msgs.push(...upcycleMsgs)
+              break
+          }
+        }
+        const ready = prompt('Ready to Upcycle?')
+        this.upcycleQueue = msgs
+        if (ready) {
+          await this.runUpcycleQueue(options)
+        }
+      }
+    } catch (err) {
+      throw warnError('storageHandler checkAndUpcycle()', err)
+    }
+  }
+
+  async runUpcycleQueue (options?: IBroadcastOptions): Promise<void> {
+    try {
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(this.upcycleQueue, options)
+      console.log('runUpcycleQueue:', postBroadcast)
+      if (!postBroadcast.error) {
+        if (!postBroadcast.txEvents.length) {
+          throw Error('tx has no events')
+        }
+        let remaining = [...this.upcycleQueue]
+        const uploadHeight = postBroadcast.txEvents[0].height
+        while (remaining.length > 0) {
+          const activeUploads = await this.batchUploads(remaining, uploadHeight)
+          const results = await Promise.allSettled(activeUploads)
+
+          const loop: IWrappedEncodeObject[] = []
+          for (let i = 0; i < results.length; i++) {
+            if (results[i].status === 'rejected') {
+              loop.push(remaining[i])
+            }
+          }
+          remaining = [...loop]
+        }
+      }
+      this.upcycleQueue = []
+    } catch (err) {
+      throw warnError('storageHandler runUpcycleQueue()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {FileMetaHandler} source
+   * @returns {Promise<IUploadPackage>}
+   * @protected
+   */
+  protected async upcycleFile (source: FileMetaHandler): Promise<IUploadPackage> {
+    try {
+      const sourceMeta = source.export()
+      const { providerIps } = await this.jackalSigner.queries.storage.findFile({
+        merkle: sourceMeta.merkleRoot,
+      })
+      let baseFile
+      for (const _ of providerIps) {
+        const provider =
+          providerIps[Math.floor(Math.random() * providerIps.length)]
+        const url = `${provider}/download/${sourceMeta.merkleHex}`
+        try {
+          const resp = await fetch(url, { method: 'GET' })
+          const contentLength = resp.headers.get('Content-Length')
+          if (resp.status !== 200 || resp.body === null || !contentLength) {
+            throw new Error('Download failed')
+          } else {
+            const reader = resp.body.getReader()
+            const chunks = []
+            let receivedLength = 0
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) {
+                break
+              }
+              chunks.push(value)
+              receivedLength += value.length
+            }
+            const { name, ...meta } = sourceMeta.fileMeta
+            baseFile = new File(chunks, name, meta)
+            const tmp = await baseFile.slice(0, 8).text()
+            if (Number(tmp) > 0) {
+              const parts: Blob[] = []
+              const aes = await this.reader.loadKeysByUlid(
+                source.getUlid(),
+                this.jklAddress,
+              )
+              for (let i = 0; i < baseFile.size;) {
+                const offset = i + 8
+                const segSize = Number(await baseFile.slice(i, offset).text())
+                const last = offset + segSize
+                const segment = baseFile.slice(offset, last)
+
+                parts.push(await aesBlobCrypt(segment, aes, 'decrypt'))
+                i = last
+              }
+              baseFile = new File(parts, name, meta)
+            }
+          }
+        } catch (err) {
+          console.warn(`Error fetching ${sourceMeta.fileMeta.name} from provider ${provider}: ${err}`)
+        }
+      }
+      if (!baseFile) {
+        throw new Error('Download failed')
+      }
+      const pkg = await this.processPrivate(baseFile, 0)
+      pkg.meta = await FileMetaHandler.create({
+        clone: {
+          ...pkg.meta.export(),
+          location: source.getLocation(),
+          ulid: source.getUlid(),
+        },
+        refIndex: source.getRefIndex(),
+      })
+      return pkg
+    } catch (err) {
+      throw warnError('storageHandler upcycleFile()', err)
     }
   }
 

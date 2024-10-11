@@ -20,7 +20,7 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
     hostSigner: THostSigningClient,
     keyPair: PrivateKey,
   ) {
-    super(client, jackalSigner, hostSigner, keyPair)
+    super(client, jackalSigner, hostSigner, keyPair, keyPair)
   }
 
   /**

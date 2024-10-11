@@ -32,7 +32,7 @@ export class SharedUpdater extends EncodingHandler implements ISharedUpdater {
     keyPair: PrivateKey,
     shared: TSharedRootMetaDataMap,
   ) {
-    super(client, jackalSigner, hostSigner, keyPair, client.getJackalAddress())
+    super(client, jackalSigner, hostSigner, keyPair, keyPair, client.getJackalAddress())
     this.keyPair = keyPair
     this.shared = shared
 
