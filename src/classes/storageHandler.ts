@@ -1234,6 +1234,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     }
   }
 
+  /**
+   *
+   * @param {IBroadcastOptions} [options]
+   * @returns {Promise<void>}
+   */
   async checkAndUpcycle (options?: IBroadcastOptions): Promise<void> {
     try {
       if (this.reader.getConversionQueueLength() > 0) {
@@ -1284,6 +1289,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     }
   }
 
+  /**
+   *
+   * @param {IBroadcastOptions} [options]
+   * @returns {Promise<void>}
+   */
   async runUpcycleQueue (options?: IBroadcastOptions): Promise<void> {
     try {
       const postBroadcast =
