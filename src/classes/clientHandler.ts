@@ -285,7 +285,7 @@ export class ClientHandler implements IClientHandler {
       const {
         connIdA = 'connection-18',
         connIdB = 'connection-50',
-        contract = 'archway1wzv0qsr6wrunw5x650gc8q9r54my0r8vl7n723377ss7jq0mjlts33gpgj',
+        contract = 'archway1z0wngtg6qwweqh3sfcz6l42srkhqly2guxp8enf9y6sny08c4gqq35jdc4',
       } = details
       this.myCosmwasm = await WasmHandler.init(this)
       const ica = await this.myCosmwasm.getICAContractAddress(contract).catch(err => {
@@ -302,12 +302,26 @@ export class ClientHandler implements IClientHandler {
           connIdA,
           connIdB,
         )
+        await new Promise(r => setTimeout(r, 5000));
         this.myContractAddress = await this.myCosmwasm.getICAContractAddress(contract)
       }
       console.log(this.myContractAddress)
       this.myIcaAddress = await this.myCosmwasm.getJackalAddressFromContract(
         this.myContractAddress,
       )
+      const state = await this.myCosmwasm.getContractChannelState(
+        this.myContractAddress,
+      )
+      console.log("State: ", state)
+      if (state === 'STATE_CLOSED') {
+        console.log("needs to re-open channel")
+        await this.myCosmwasm.reOpenChannel(
+          contract,
+          connIdA,
+          connIdB,
+        )
+      }
+
       return await StorageHandler.init(this, {
         accountAddress: this.myIcaAddress,
       })
@@ -594,6 +608,7 @@ export class ClientHandler implements IClientHandler {
         broadcastTimeoutHeight,
         monitorTimeout = 30,
         socketOverrides = {} as TSocketSet,
+        queryOverride,
       } = options
       const events: TxEvent[] = []
       const ready: IWrappedEncodeObject[] =
@@ -606,6 +621,7 @@ export class ClientHandler implements IClientHandler {
           events,
           msgs,
           this.myIcaAddress || this.hostAddress,
+          queryOverride,
           socketOverrides,
         )
       console.log('connectionBundles:', connectionBundles)

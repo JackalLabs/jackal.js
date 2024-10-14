@@ -75,10 +75,43 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
       const wrapped: IWrappedEncodeObject = { encodedObject: eo, modifier: 0 }
 
       const postBroadcast =
-        await this.jackalClient.broadcastAndMonitorMsgs(wrapped)
+        //{queryOverride: `execute._contract_address = '${contractAddress}'`}
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped, {queryOverride: `message.action = '/cosmwasm.wasm.v1.MsgExecuteContract' AND message.sender = '${this.hostAddress}'`})
       return postBroadcast.txResponse
     } catch (err) {
       throw warnError('wasmHandler instantiateICA()', err)
+    }
+  }
+
+  async reOpenChannel (
+    contractAddress: string,
+    connectionIdA: string,
+    connectionIdB: string
+  ): Promise<DDeliverTxResponse> {
+    try {
+      const msg = {
+        create_channel: {
+          channel_open_init_options: {
+            connection_id: connectionIdA,
+            counterparty_connection_id: connectionIdB,
+            tx_encoding: "proto3"
+          }
+        }
+      }
+
+      const eo = this.jackalClient.getTxs().cosmwasm.msgExecuteContract({
+        contract: contractAddress,
+        msg: stringToUint8Array(JSON.stringify(msg)),
+        funds: [],
+        sender: this.jackalClient.getHostAddress(),
+      })
+      const wrapped: IWrappedEncodeObject = { encodedObject: eo, modifier: 0 }
+
+      const postBroadcast =
+        await this.jackalClient.broadcastAndMonitorMsgs(wrapped, {queryOverride: `execute._contract_address = '${contractAddress}'`})
+      return postBroadcast.txResponse
+    } catch (err) {
+      throw warnError('wasmHandler reOpenChannel()', err)
     }
   }
 
@@ -136,8 +169,39 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
    * @returns {Promise<string>} - Jkl address.
    */
   async getJackalAddressFromContract (contractAddress: string): Promise<string> {
+    const retries = 30
+    let attempt = 0
+    while (attempt < retries) {
+      try {
+        const q = { get_contract_state: {} }
+
+        const req: DQuerySmartContractStateRequest = {
+          address: contractAddress,
+          queryData: stringToUint8Array(JSON.stringify(q)),
+        }
+
+        console.log(req)
+        const res = await this.hostSigner.queries.cosmwasm.smartContractState(req)
+        const str = uintArrayToString(res.data as Uint8Array)
+        console.log(str)
+        const data = JSON.parse(str)
+        if ("ica_info" in data) {
+          return data.ica_info.ica_address
+        }
+        attempt ++
+        await new Promise(r => setTimeout(r, 5000));
+      } catch (err) {
+        console.warn('wasmHandler getJackalAddressFromContract()', err)
+      }
+    }
+
+    throw warnError('wasmHandler getJackalAddressFromContract()', "can't get details from contract")
+  }
+
+
+  async getContractChannelState (contractAddress: string): Promise<string> {
     try {
-      const q = { get_contract_state: {} }
+      const q = { get_channel: {} }
 
       const req: DQuerySmartContractStateRequest = {
         address: contractAddress,
@@ -150,9 +214,9 @@ export class WasmHandler extends EncodingHandler implements IWasmHandler {
       console.log(str)
       const data = JSON.parse(str)
 
-      return data.ica_info.ica_address
+      return data.channel_status
     } catch (err) {
-      throw warnError('wasmHandler getJackalAddressFromContract()', err)
+      throw warnError('wasmHandler getContractChannelState()', err)
     }
   }
 

@@ -178,6 +178,7 @@ export function makeConnectionBundles (
   feed: TxEvent[],
   msgs: DEncodeObject[],
   addr: string,
+  queryOverride: string | undefined,
   socketOverrides: TSocketSet,
 ): IIbcEngageBundle<TxEvent>[] {
   const bundles: IIbcEngageBundle<TxEvent>[] = []
@@ -200,7 +201,7 @@ export function makeConnectionBundles (
       }
     }
 
-    const query = `${findQueryKey(url)} = '${addr}'`
+    const query = queryOverride || `${findQueryKey(url)} = '${addr}'`
     for (let id of networks) {
       const { chainId, endpoint } = socketOverrides[id] || sockets[id]
       console.log('makeConnectionBundles')

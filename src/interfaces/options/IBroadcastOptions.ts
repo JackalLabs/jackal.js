@@ -6,4 +6,5 @@ export interface IBroadcastOptions {
   broadcastTimeoutHeight?: bigint
   monitorTimeout?: number
   socketOverrides?: TSocketSet
+  queryOverride?: string
 }

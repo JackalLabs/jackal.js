@@ -7,11 +7,19 @@ export interface IWasmHandler {
     connectionIdB: string
   ): Promise<DDeliverTxResponse>
 
+  reOpenChannel (
+    contractAddress: string,
+    connectionIdA: string,
+    connectionIdB: string
+  ): Promise<DDeliverTxResponse>
+
   getICAContractAddress (contractAddress: string): Promise<string>
 
   getICAJackalAddress (contractAddress: string): Promise<string>
 
   getJackalAddressFromContract (contractAddress: string): Promise<string>
+
+  getContractChannelState (contractAddress: string): Promise<string>
 
   wrapEncodeObjectsForBroadcast (contract: string, msgs: DEncodeObject[]): DEncodeObject[]
 }
