@@ -171,6 +171,7 @@ export function shuffleArray<T> (source: T[]): T[] {
  * @param {DEncodeObject[]} msgs - Messages to broadcast to chain.
  * @param {string} addr - Address of signer.
  * @param {Record<TSockets, ISocketConfig>} socketOverrides - Object of possible override values for sockets.
+ * @param {string} [queryOverride] - Overrides generated query.
  * @returns {IIbcEngageBundle<TxEvent>[]} - Broadcast result.
  */
 export function makeConnectionBundles (
@@ -178,8 +179,8 @@ export function makeConnectionBundles (
   feed: TxEvent[],
   msgs: DEncodeObject[],
   addr: string,
-  queryOverride: string | undefined,
   socketOverrides: TSocketSet,
+  queryOverride?: string,
 ): IIbcEngageBundle<TxEvent>[] {
   const bundles: IIbcEngageBundle<TxEvent>[] = []
 

@@ -232,7 +232,7 @@ export class EncodingHandler {
   protected encodePostKey (key: string): DEncodeObject {
     const forKey: DMsgPostKey = {
       creator: this.jackalClient.getICAJackalAddress(),
-      key: key,
+      key,
     }
     return this.jackalSigner.txLibrary.fileTree.msgPostKey(forKey)
   }

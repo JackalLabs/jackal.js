@@ -1517,7 +1517,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       // console.log(providers)
       return await this.findProviderIps(providers)
     } catch (err) {
-      throw warnError('storageHandler loadProvidersFromChain()', err)
+      throw warnError('storageHandler getAllProviders()', err)
     }
   }
 

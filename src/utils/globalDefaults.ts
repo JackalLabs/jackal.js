@@ -67,32 +67,32 @@ export const sockets: Record<TSockets, ISocketConfig> = {
   jackal: {
     chainId: 'jackal-1',
     endpoint: 'wss://rpc.jackalprotocol.com',
-    gasMultiplier: 1100,
+    gasMultiplier: 1200,
   },
   jackaltest: {
     chainId: 'lupulella-2',
     endpoint: 'wss://testnet-rpc.jackalprotocol.com',
-    gasMultiplier: 1100,
+    gasMultiplier: 1200,
   },
   jackalv4: {
     chainId: 'mesomelas-1',
     endpoint: 'wss://jackal-testnet-v4-rpc.brocha.in',
-    gasMultiplier: 1100,
+    gasMultiplier: 1200,
   },
   jackallocal: {
     chainId: 'puppy-1',
     endpoint: 'ws://localhost:62744',
-    gasMultiplier: 1100,
+    gasMultiplier: 1200,
   },
   archway: {
     chainId: 'archway-1',
     endpoint: 'wss://rpc.mainnet.archway.io',
-    gasMultiplier: 2200,
+    gasMultiplier: 5500,
   },
   archwaytest: {
     chainId: 'constantine-3',
     endpoint: 'wss://rpc.constantine.archway.io',
-    gasMultiplier: 2200,
+    gasMultiplier: 5500,
   },
   wasm: {
     chainId: 'localwasm-1',
