@@ -53,6 +53,7 @@ export class FiletreeReader implements IFiletreeReader {
 
   protected ulidLeaves: Record<string, Record<string, string>>
   protected directoryLeaves: Record<string, Record<string, IChildMetaDataMap>>
+  protected directoriesByUlid: Record<string, Record<string, IChildMetaDataMap>>
   protected yellowpages: Record<string, Record<string, DQueryFileTreeFile>>
   protected legacyMetaLeaves: Record<string, ILegacyFolderMetaData>
   protected refCounts: Record<string, number>
@@ -76,6 +77,8 @@ export class FiletreeReader implements IFiletreeReader {
     this.ulidLeaves[ownerAddress] = {}
     this.directoryLeaves = {}
     this.directoryLeaves[ownerAddress] = {}
+    this.directoriesByUlid = {}
+    this.directoriesByUlid[ownerAddress] = {}
     this.yellowpages = {}
     this.yellowpages[ownerAddress] = {}
     this.legacyMetaLeaves = {}
@@ -139,11 +142,14 @@ export class FiletreeReader implements IFiletreeReader {
     try {
       const final: TConversionPair[] = []
       for (let ulid of this.conversionQueue) {
+        if (ulid === '-1') {
+          continue
+        }
         const meta = await this.loadMetaByUlid(ulid)
 
         if (meta.metaDataType === 'file') {
           const parent = meta.location.split('/').slice(-1)[0]
-          const files = this.directoryLeaves[this.clientAddress][parent].files
+          const { files } = this.readDirectoryLeafByUlid(parent)
           for (let index of Object.keys(files)) {
             if (files[Number(index)].fileMeta.name === meta.fileMeta.name) {
               const refIndex = Number(index)
@@ -163,7 +169,7 @@ export class FiletreeReader implements IFiletreeReader {
             final.push([meta.metaDataType, handler])
           } else {
             this.nullConversions.push(parent)
-            const nulls = this.directoryLeaves[this.clientAddress][parent].nulls
+            const { nulls } = this.readDirectoryLeafByUlid(parent)
             for (let index of Object.keys(nulls)) {
               const handler = await NullMetaHandler.create({
                 location: parent,
@@ -175,28 +181,41 @@ export class FiletreeReader implements IFiletreeReader {
           }
         } else if (meta.metaDataType === 'folder') {
           const parent = meta.location.split('/').slice(-1)[0]
-          const folders = this.directoryLeaves[this.clientAddress][parent].folders
-          for (let index of Object.keys(folders)) {
-            if (folders[Number(index)].whoAmI === meta.whoAmI) {
-              const refIndex = Number(index)
-              const handler = await FolderMetaHandler.create({
-                count: hexToInt(meta.count),
-                description: meta.description,
-                location: parent,
-                name: meta.whoAmI,
-                refIndex,
-                ulid,
-              })
-              final.push([meta.metaDataType, handler])
-              break
+          if (parent.length < 26) {
+            const handler = await FolderMetaHandler.create({
+              count: hexToInt(meta.count),
+              description: meta.description,
+              location: meta.whoAmI,
+              name: meta.whoAmI,
+              refIndex: 0,
+              ulid,
+            })
+            final.push([meta.metaDataType, handler])
+          } else {
+            const { folders } = this.readDirectoryLeafByUlid(parent)
+            for (let index of Object.keys(folders)) {
+              if (folders[Number(index)].whoAmI === meta.whoAmI) {
+                const refIndex = Number(index)
+                const handler = await FolderMetaHandler.create({
+                  count: hexToInt(meta.count),
+                  description: meta.description,
+                  location: parent,
+                  name: meta.whoAmI,
+                  refIndex,
+                  ulid,
+                })
+                final.push([meta.metaDataType, handler])
+                break
+              }
             }
           }
+
         } else if (meta.metaDataType === 'rootlookup') {
           const handler = await FolderMetaHandler.create({
             count: 0,
             location: 'ulid',
             name: 'Home',
-            ulid,
+            ulid: meta.ulid,
           })
           final.push([meta.metaDataType, handler])
         }
@@ -233,7 +252,7 @@ export class FiletreeReader implements IFiletreeReader {
     const segments = path.split('/')
     const parentPath = segments.slice(0, -1).join('/')
     const target = segments.slice(-1)[0]
-    const details = this.directoryLeaves[this.clientAddress][parentPath]
+    const details = this.readDirectoryLeafByPath(parentPath)
 
     for (let index of Object.keys(details.folders)) {
       const ref = Number(index)
@@ -270,10 +289,10 @@ export class FiletreeReader implements IFiletreeReader {
 
     try {
       if (this.directoryLeaves[owner][path] && !refresh) {
-        return this.directoryLeaves[owner][path]
+        return this.readDirectoryLeafByPath(path, owner)
       } else {
         await this.pathToLookupPostProcess(path, owner, this.yellowpages[owner][path])
-        return this.directoryLeaves[owner][path]
+        return this.readDirectoryLeafByPath(path, owner)
       }
     } catch (err) {
       throw warnError('filetreeReader readFolderContents()', err)
@@ -440,7 +459,7 @@ export class FiletreeReader implements IFiletreeReader {
         ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      const meta = await this.loadMeta(file, ulid)
+      const meta = await this.loadMeta(file, '-1')
       return (meta.metaDataType === 'ref') ? meta as IRefMetaData : meta as INullRefMetaData
     } catch (err) {
       throw warnError('filetreeReader loadRefMeta()', err)
@@ -501,7 +520,11 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<TMetaDataSets>}
    */
   async loadMetaByPath (path: string): Promise<TMetaDataSets> {
-    return await this.loadMetaByExternalPath(path, this.clientAddress)
+    try {
+      return await this.loadMetaByExternalPath(path, this.clientAddress)
+    } catch (err) {
+      throw warnError('filetreeReader loadMetaByPath()', err)
+    }
   }
 
   /**
@@ -932,9 +955,9 @@ export class FiletreeReader implements IFiletreeReader {
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
+        const id = this.ulidLookup(path, ownerAddress)
         let parsed
         if (!isCleartext) {
-          const id = this.ulidLookup(path, ownerAddress)
           parsed = await this.decryptAndParseContents(file, id)
         } else {
           parsed = JSON.parse(contents) as TMetaDataSets
@@ -944,7 +967,7 @@ export class FiletreeReader implements IFiletreeReader {
           if (ownerAddress === this.clientAddress) {
             this.refCountSet(path, count)
           }
-          this.directoryLeaves[ownerAddress][path] = this.basicFolderShell()
+          this.startDirectoryLeaf(path, id, ownerAddress)
           const post = []
           for (let i = 0; i < count; i++) {
             post.push(this.singleLoadMeta(path, ownerAddress, i))
@@ -979,7 +1002,7 @@ export class FiletreeReader implements IFiletreeReader {
       if (refMeta.metaDataType === 'nullref') {
         return
       }
-      const leaf = this.directoryLeaves[ownerAddress][path]
+      const leaf = this.readDirectoryLeafByPath(path, ownerAddress)
       const meta = await this.loadMetaByUlid(refMeta.pointsTo)
       if (meta.metaDataType === 'folder') {
         const loopPath = `${path}/${meta.whoAmI}`
@@ -1009,6 +1032,44 @@ export class FiletreeReader implements IFiletreeReader {
     } catch (err) {
       throw warnError('filetreeReader singleLoadMeta()', err)
     }
+  }
+
+  /**
+   *
+   * @param {string} path
+   * @param {string} ulid
+   * @param {string} [ownerAddress]
+   * @protected
+   */
+  protected startDirectoryLeaf (path: string, ulid: string, ownerAddress?: string): void {
+    const owner = ownerAddress || this.clientAddress
+    const shell = this.basicFolderShell()
+    this.directoryLeaves[owner][path] = shell
+    this.directoriesByUlid[owner][ulid] = shell
+  }
+
+  /**
+   *
+   * @param {string} path
+   * @param {string} [ownerAddress]
+   * @returns {IChildMetaDataMap}
+   * @protected
+   */
+  protected readDirectoryLeafByPath (path: string, ownerAddress?: string): IChildMetaDataMap {
+    const owner = ownerAddress || this.clientAddress
+    return this.directoryLeaves[owner][path]
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {string} [ownerAddress]
+   * @returns {IChildMetaDataMap}
+   * @protected
+   */
+  protected readDirectoryLeafByUlid (ulid: string, ownerAddress?: string): IChildMetaDataMap {
+    const owner = ownerAddress || this.clientAddress
+    return this.directoriesByUlid[owner][ulid]
   }
 
   /**
@@ -1212,10 +1273,12 @@ export class FiletreeReader implements IFiletreeReader {
           return [await genAesBundle(), false]
         } else {
           try {
-            return [await stringToAes(this.keyPair, parsedAccess[user]), false]
-          } catch (_) {
+            const parsed = await stringToAes(this.keyPair, parsedAccess[user])
+            return [parsed, false]
+          } catch {
             try {
-              return [await stringToAes(this.defaultKeyPair, parsedAccess[user]), true]
+              const parsed = await stringToAes(this.defaultKeyPair, parsedAccess[user])
+              return [parsed, true]
             } catch (err) {
               throw err
             }
@@ -1292,8 +1355,8 @@ export class FiletreeReader implements IFiletreeReader {
     try {
       const safe = prepDecompressionForAmino(data.contents)
       const aes = await this.extractViewAccess(data)
-      if (aes[1]) {
-        this.conversionQueue.push(id)
+      if (id !== '-1' && aes[1]) {
+        this.conversionQueue = [...new Set([...this.conversionQueue, id])]
       }
       let decrypted = await cryptString(safe, aes[0], 'decrypt')
       if (decrypted.startsWith('jklpc1')) {

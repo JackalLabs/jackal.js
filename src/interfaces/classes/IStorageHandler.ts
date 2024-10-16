@@ -102,6 +102,8 @@ export interface IStorageHandler {
 
   convert (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 
+  checkIfUpcycle (): boolean
+
   checkAndUpcycle (options?: IBroadcastOptions): Promise<void>
 
   runUpcycleQueue (options?: IBroadcastOptions): Promise<void>

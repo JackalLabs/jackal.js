@@ -192,32 +192,36 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
       const hostAddress = client.getHostAddress()
       const chainId = client.getHostChainId()
-      let signatureAsHex = ''
+      let signed, signatureAsHex
       switch (selectedWallet) {
         case 'keplr':
           if (!window.keplr) {
             throw 'Missing wallet extension'
           } else {
-            const { signature } = await window.keplr.signArbitrary(
+            signed = await window.keplr.signArbitrary(
               chainId,
               hostAddress,
               signatureSeed,
             )
-            signatureAsHex = await stringToShaHex(signature)
+            signatureAsHex = await stringToShaHex(signed.signature)
           }
           break
         case 'leap':
           if (!window.leap) {
             throw 'Missing wallet extension'
           } else {
-            const { signature } = await window.leap.signArbitrary(
+            signed = await window.leap.signArbitrary(
               chainId,
               hostAddress,
               signatureSeed,
             )
-            signatureAsHex = await stringToShaHex(signature)
+            signatureAsHex = await stringToShaHex(signed.signature)
           }
           break
+        default:
+          throw new Error(
+            'No wallet selected but one is required to init StorageHandler',
+          )
       }
       return [PrivateKey.fromHex(signatureAsHex), true]
     } catch (err) {
@@ -360,10 +364,12 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    */
   async upgradeSigner (): Promise<void> {
     try {
-      ;[this.keyPair, this.fullSigner] = await StorageHandler.enableFullSigner(
+      const [pair, signer] = await StorageHandler.enableFullSigner(
         this.jackalClient,
       )
-      await this.resetReader(this.keyPair)
+      this.keyPair = pair
+      this.fullSigner = signer
+      await this.resetReader(pair)
     } catch (err) {
       throw warnError('storageHandler upgradeSigner()', err)
     }
@@ -1236,6 +1242,16 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
+   * @returns {boolean}
+   */
+  checkIfUpcycle (): boolean {
+    const len = this.reader.getConversionQueueLength()
+    console.log('ConversionQueueLength:', len)
+    return len > 0
+  }
+
+  /**
+   *
    * @param {IBroadcastOptions} [options]
    * @returns {Promise<void>}
    */
@@ -1250,19 +1266,23 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           let upcycleMsgs
           switch (one[0]) {
             case 'file':
-              const pkg = await this.upcycleFile(one[1])
-              const { files } =
-                await this.jackalSigner.queries.storage.allFilesByMerkle({
-                  merkle: one[1].export().merkleRoot,
+              try {
+                const pkg = await this.upcycleFile(one[1])
+                const { files } =
+                  await this.jackalSigner.queries.storage.allFilesByMerkle({
+                    merkle: one[1].export().merkleRoot,
+                  })
+                const [details] = files
+                const sourceMsgs = this.fileDeleteToMsgs({
+                  creator: this.jklAddress,
+                  merkle: details.merkle,
+                  start: details.start,
                 })
-              const [details] = files
-              const sourceMsgs = this.fileDeleteToMsgs({
-                creator: this.jklAddress,
-                merkle: details.merkle,
-                start: details.start,
-              })
-              upcycleMsgs = await this.pkgToMsgs(pkg, blockheight)
-              msgs.push(...sourceMsgs, ...upcycleMsgs)
+                upcycleMsgs = await this.pkgToMsgs(pkg, blockheight)
+                msgs.push(...sourceMsgs, ...upcycleMsgs)
+              } catch {
+                console.log(`Skipping ${one[1].export().fileMeta.name}`)
+              }
               break
             case 'null':
               upcycleMsgs = await this.filetreeDeleteToMsgs({ meta: one[1], aes: await genAesBundle() })
@@ -1278,7 +1298,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
               break
           }
         }
-        const ready = prompt('Ready to Upcycle?')
+        const ready = confirm('Are you ready to Upcycle?')
         this.upcycleQueue = msgs
         if (ready) {
           await this.runUpcycleQueue(options)
@@ -1336,10 +1356,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const { providerIps } = await this.jackalSigner.queries.storage.findFile({
         merkle: sourceMeta.merkleRoot,
       })
+      console.log('providerIps:', providerIps)
       let baseFile
-      for (const _ of providerIps) {
-        const provider =
-          providerIps[Math.floor(Math.random() * providerIps.length)]
+      for (let i = 0; i < providerIps.length; i++) {
+        const provider = providerIps[0]
         const url = `${provider}/download/${sourceMeta.merkleHex}`
         try {
           const resp = await fetch(url, { method: 'GET' })

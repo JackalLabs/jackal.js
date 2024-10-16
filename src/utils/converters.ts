@@ -370,7 +370,7 @@ export function safeStringifyFileTree (source: TMetaDataSets): string {
 export function safeParseFileTree (source: string): TMetaDataSets {
   try {
     const base = JSON.parse(source)
-    if (base.merkleRoot) {
+    if ('merkleRoot' in base) {
       if (Array.isArray(base.merkleRoot)) {
         base.merkleRoot = new Uint8Array(base.merkleRoot)
       } else {
