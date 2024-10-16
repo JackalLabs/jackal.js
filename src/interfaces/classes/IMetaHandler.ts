@@ -4,7 +4,6 @@ import type {
   INullMetaData,
   INullRefMetaData,
   IRefMetaData,
-  IShareFolderMetaData,
   IShareMetaData,
   IShareRefMetaData,
 } from '@/interfaces'
@@ -57,26 +56,12 @@ export interface IFileMetaHandler extends IRefMetaHandler {
   exportRef (): IRefMetaData
 }
 
-export interface IShareFolderMetaHandler extends IRefMetaHandler {
-  addAndReturnCount (value: number): number
-
-  getCount (): number
-
-  getUlid (): string
-
-  getLocation (): string
-
-  export (): IShareFolderMetaData
-}
-
 export interface IShareMetaHandler extends IRefMetaHandler {
-  setLabel (label: string): void
-
-  getLabel (): string
-
-  getLocation (): string
+  getIsFile (): boolean
 
   getUlid (): string
+
+  getLocation (): string
 
   export (): IShareMetaData
 

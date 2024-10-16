@@ -29,6 +29,7 @@ import {
   IRootLookupMetaData,
   IShareFolderMetaHandler,
   IShareMetaHandler,
+  ISharePackage,
   IUploadPackage,
   IWrappedEncodeObject,
 } from '@/interfaces'
@@ -492,13 +493,12 @@ export class EncodingHandler {
     pkg: INotificationPackage,
   ): Promise<DEncodeObject> {
     try {
-      const { isPrivate, receiver, path, isFile } = pkg
-      const base = formatShareNotification(path, isFile)
-      let contents = JSON.stringify(base)
+      const { isPrivate, receiver, msg } = pkg
+      let { contents } = pkg
       if (isPrivate) {
         const aes = await genAesBundle()
         const keys = await this.reader.protectNotification(receiver, aes)
-        const encMsg = await cryptString(base.msg, aes, 'encrypt', false)
+        const encMsg = await cryptString(msg, aes, 'encrypt', false)
         contents = JSON.stringify({
           private: true,
           keys,
@@ -897,11 +897,14 @@ export class EncodingHandler {
    * @protected
    */
   protected async shareToMsgs (
-    pkg: INotificationPackage,
+    pkg: ISharePackage,
     additionalViewers: string[] = [],
   ): Promise<IWrappedEncodeObject[]> {
     try {
+      const base = formatShareNotification(path, isFile)
+
       const share = this.encodeFileTreeFileShare(pkg.path, additionalViewers)
+
       const notification = this.encodeCreateNotification(pkg)
       return [
         {

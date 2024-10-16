@@ -119,30 +119,9 @@ export interface IFileMetaData extends IBaseMetaData {
   ulid: string
 }
 
-export interface ISharedFolderMetaDataSource {
-  count: number
-  location: string
-  name: string
-  refIndex?: number
-  ulid?: string
-}
-
-export interface ISharedFolderMetaFoundationalData {
-  count: number
-  location: string
-  refIndex: number
-  ulid: string
-  whoAmI: string
-}
-
-export interface IShareFolderMetaData extends Omit<IFolderMetaData, 'metaDataType'> {
-  metaDataType: 'sharefolder'
-  pointsTo: string
-}
-
 export interface IShareMetaDataSource {
-  label: string
-  location: string
+  isFile: boolean
+  name: string
   owner: string
   pointsTo: string
   refIndex?: number
@@ -150,18 +129,21 @@ export interface IShareMetaDataSource {
 }
 
 export interface IShareMetaFoundationalData {
-  label: string
+  isFile: boolean
   location: string
-  owner: string
+  name: string
   pointsTo: string
   refIndex: number
   ulid: string
 }
 
 export interface IShareMetaData extends Omit<IRefMetaData, 'metaDataType'> {
-  label: string
+  isFile: boolean
+  location: string
   metaDataType: 'share'
-  owner: string
+  name: string
+  pointsTo: string
+  ulid: string
 }
 
 export interface ISharedMetaDataMap

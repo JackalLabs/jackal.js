@@ -13,14 +13,14 @@ export function formatNotification (msg: string): INotification {
 
 /**
  * Standardize share notification message format.
- * @param {string} path - Path to shared resource.
- * @param {boolean} isFile - True if path points to a file.
+ * @param {string} ulid - ULID of shared resource.
+ * @param {boolean} isFile - True if ulid points to a file.
  * @returns {INotification} - Formatted message.
  */
 export function formatShareNotification (
-  path: string,
+  ulid: string,
   isFile: boolean,
 ): INotification {
-  const msg = `${isFile ? 'file' : 'folder'}|${path}`
+  const msg = `${isFile ? 'file' : 'folder'}|${ulid}`
   return formatNotification(msg)
 }

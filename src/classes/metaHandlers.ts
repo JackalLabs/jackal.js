@@ -18,10 +18,6 @@ import {
   INullMetaHandler,
   INullRefMetaData,
   IRefMetaData,
-  ISharedFolderMetaDataSource,
-  ISharedFolderMetaFoundationalData,
-  IShareFolderMetaData,
-  IShareFolderMetaHandler,
   IShareMetaData,
   IShareMetaDataSource,
   IShareMetaFoundationalData,
@@ -399,124 +395,18 @@ export class FileMetaHandler implements IFileMetaHandler {
   }
 }
 
-export class ShareFolderMetaHandler implements IShareFolderMetaHandler {
-  protected count: number
-  protected readonly location: string
-  protected refIndex: number
-  protected readonly ulid: string
-  protected readonly whoAmI: string
-
-  protected constructor (source: ISharedFolderMetaFoundationalData) {
-    this.count = source.count
-    this.location = source.location
-    this.refIndex = source.refIndex
-    this.ulid = source.ulid
-    this.whoAmI = source.whoAmI
-  }
-
-  /**
-   *
-   * @param {ISharedFolderMetaDataSource} source
-   * @returns {Promise<ShareFolderMetaHandler>}
-   */
-  static async create (source: ISharedFolderMetaDataSource) {
-    const rdy: ISharedFolderMetaFoundationalData = {
-      count: source.count,
-      location: `s/ulid/${source.location}`,
-      refIndex: source.refIndex || 0,
-      ulid: source.ulid || ulid(),
-      whoAmI: source.name,
-    }
-    return new ShareFolderMetaHandler(rdy)
-  }
-
-  /**
-   *
-   * @param {number} value
-   * @returns {number}
-   */
-  addAndReturnCount (value: number): number {
-    this.count += value
-    return this.count
-  }
-
-  /**
-   *
-   * @returns {number}
-   */
-  getCount (): number {
-    return this.count
-  }
-
-  /**
-   *
-   * @param {number} refIndex
-   */
-  setRefIndex (refIndex: number): void {
-    this.refIndex = refIndex
-  }
-
-  /**
-   *
-   * @returns {number}
-   */
-  getRefIndex (): number {
-    return this.refIndex
-  }
-
-  /**
-   *
-   * @returns {string}
-   */
-  getRefString (): string {
-    return intToHex(this.refIndex)
-  }
-
-  /**
-   *
-   * @returns {string}
-   */
-  getUlid (): string {
-    return this.ulid
-  }
-
-  /**
-   *
-   * @returns {string}
-   */
-  getLocation (): string {
-    return this.location
-  }
-
-  /**
-   *
-   * @returns {IShareFolderMetaData}
-   */
-  export (): IShareFolderMetaData {
-    return {
-      count: intToHex(this.count),
-      description: '',
-      location: `${this.location}/${intToHex(this.refIndex)}`,
-      merkleHex: '',
-      metaDataType: 'sharefolder',
-      pointsTo: this.ulid,
-      whoAmI: this.whoAmI,
-    }
-  }
-}
-
 export class ShareMetaHandler implements IShareMetaHandler {
-  protected label: string
+  protected readonly isFile: boolean
   protected readonly location: string
-  protected readonly owner: string
+  protected readonly name: string
   protected readonly pointsTo: string
   protected refIndex: number
   protected readonly ulid: string
 
   protected constructor (source: IShareMetaFoundationalData) {
-    this.label = source.label
+    this.isFile = source.isFile
     this.location = source.location
-    this.owner = source.owner
+    this.name = source.name
     this.pointsTo = source.pointsTo
     this.refIndex = source.refIndex
     this.ulid = source.ulid
@@ -529,14 +419,13 @@ export class ShareMetaHandler implements IShareMetaHandler {
    */
   static async create (source: IShareMetaDataSource) {
     const rdy: IShareMetaFoundationalData = {
-      label: source.label,
-      location: `s/ulid/${source.location}`,
-      owner: source.owner,
+      isFile: source.isFile,
+      location: `s/ulid/${source.owner}`,
+      name: source.name,
       pointsTo: source.pointsTo,
-      refIndex: source.refIndex || 0,
+      refIndex: source.refIndex || -1,
       ulid: source.ulid || ulid(),
     }
-
     return new ShareMetaHandler(rdy)
   }
 
@@ -566,18 +455,10 @@ export class ShareMetaHandler implements IShareMetaHandler {
 
   /**
    *
-   * @param {string} label
+   * @returns {boolean}
    */
-  setLabel (label: string): void {
-    this.label = label
-  }
-
-  /**
-   *
-   * @returns {string}
-   */
-  getLabel (): string {
-    return this.label
+  getIsFile (): boolean {
+    return this.isFile
   }
 
   /**
@@ -602,12 +483,13 @@ export class ShareMetaHandler implements IShareMetaHandler {
    */
   export (): IShareMetaData {
     return {
-      label: '',
+      isFile: this.isFile,
       location: this.location,
       merkleHex: '',
       metaDataType: 'share',
-      owner: this.owner,
+      name: this.name,
       pointsTo: this.pointsTo,
+      ulid: this.ulid,
     }
   }
 

@@ -18,8 +18,8 @@ import {
   IRefMetaData,
   IRootLookupMetaData,
   ISharedMetaDataMap,
-  IShareFolderMetaData,
   IShareMetaData,
+  TSetMetaViewersOptions,
 } from '@/interfaces'
 import type { PrivateKey } from 'eciesjs'
 import type {
@@ -589,17 +589,26 @@ export class FiletreeReader implements IFiletreeReader {
 
   /**
    * Write list of authorized readers of Filetree data.
-   * @param {string} path - Path of resource.
-   * @param {string[]} additionalViewers - Array of wallet addresses.
+   * @param {TSetMetaViewersOptions} options
    * @returns {Promise<IReconstructedFileTree>}
    */
-  async setMetaViewers (
-    path: string,
-    additionalViewers: string[],
-  ): Promise<IReconstructedFileTree> {
+  async setMetaViewers (options: TSetMetaViewersOptions): Promise<IReconstructedFileTree> {
     try {
-      const allViewers = [this.clientAddress, ...additionalViewers]
-      const lookup = await this.pathToLookup(path)
+      const allViewers = [this.clientAddress, ...options.additionalViewers]
+
+      let lookup, curr
+      if ('path' in options) {
+        curr = options.path
+        lookup = await this.pathToLookup(options.path)
+      } else {
+        const hexAddress = await merklePath(`s/ulid/${options.ulid}`)
+        curr = options.ulid
+        lookup = {
+          address: hexAddress,
+          ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
+        }
+      }
+
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents, trackingNumber } = file
       const isCleartext = contents.includes('metaDataType')
@@ -628,7 +637,7 @@ export class FiletreeReader implements IFiletreeReader {
             trackingNumber,
           }
         } else {
-          throw new Error(`Empty contents for ${path}`)
+          throw new Error(`Empty contents for ${curr}`)
         }
       } else {
         throw new Error('Not Authorized')
@@ -764,19 +773,19 @@ export class FiletreeReader implements IFiletreeReader {
 
   /**
    *
-   * @param {string} path
+   * @param {string} ulid
    * @param {TMerkleParentChild} location
    * @param {string[]} additionalViewers
    * @returns {Promise<DMsgFileTreePostFile>}
    */
   async encodeExistingPostFile (
-    path: string,
+    ulid: string,
     location: TMerkleParentChild,
     additionalViewers: string[],
   ): Promise<DMsgFileTreePostFile> {
     try {
       const [hashParent, hashChild] = location
-      const ready = await this.setMetaViewers(path, additionalViewers)
+      const ready = await this.setMetaViewers({ ulid, additionalViewers })
       return {
         creator: this.clientAddress,
         account: await hashAndHex(this.clientAddress),

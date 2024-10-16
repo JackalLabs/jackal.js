@@ -16,6 +16,7 @@ import {
   ISharedMetaDataMap,
   IShareFolderMetaData,
   IShareMetaData,
+  TSetMetaViewersOptions,
 } from '@/interfaces'
 import { TConversionPair, TMerkleParentChild, TMetaDataSets } from '@/types'
 
@@ -68,10 +69,7 @@ export interface IFiletreeReader {
     fileMeta: IFileMeta,
   ): Promise<IFileMetaHandler>
 
-  setMetaViewers (
-    path: string,
-    additionalViewers: string[],
-  ): Promise<IReconstructedFileTree>
+  setMetaViewers (options: TSetMetaViewersOptions): Promise<IReconstructedFileTree>
 
   loadKeysByPath (path: string, ownerAddress: string): Promise<IAesBundle>
 
