@@ -33,6 +33,7 @@ import {
   IWrappedEncodeObject,
 } from '@/interfaces'
 import { TSockets, TSocketSet } from '@/types'
+import { Coin, DeliverTxResponse, StdFee } from '@cosmjs/stargate'
 
 export class ClientHandler implements IClientHandler {
   protected readonly jklQuery: TJackalQueryClient
@@ -282,24 +283,45 @@ export class ClientHandler implements IClientHandler {
   async createWasmStorageHandler (details: IWasmDetails = {}): Promise<IStorageHandler> {
     try {
       const {
-        addressIndex = 1,
-        codeId = 546,
         connIdA = 'connection-18',
         connIdB = 'connection-50',
+        contract = 'archway1z0wngtg6qwweqh3sfcz6l42srkhqly2guxp8enf9y6sny08c4gqq35jdc4',
       } = details
       this.myCosmwasm = await WasmHandler.init(this)
-      this.myContractAddress = await this.myCosmwasm.getICAContractAddress(addressIndex)
-      if (!this.myContractAddress) {
+      const ica = await this.myCosmwasm.getICAContractAddress(contract).catch(err => {
+        console.warn("can't get ica", err)
+      })
+      console.log("ICA: ", ica)
+      if (ica) {
+        console.log("Set ICA correctly")
+        this.myContractAddress = ica
+      } else {
+        console.log("Failed to set ICA")
         await this.myCosmwasm.instantiateICA(
+          contract,
           connIdA,
           connIdB,
-          codeId,
         )
-        this.myContractAddress = await this.myCosmwasm.getICAContractAddress(addressIndex)
+        await new Promise(r => setTimeout(r, 5000));
+        this.myContractAddress = await this.myCosmwasm.getICAContractAddress(contract)
       }
+      console.log(this.myContractAddress)
       this.myIcaAddress = await this.myCosmwasm.getJackalAddressFromContract(
         this.myContractAddress,
       )
+      const state = await this.myCosmwasm.getContractChannelState(
+        this.myContractAddress,
+      )
+      console.log("State: ", state)
+      if (state === 'STATE_CLOSED') {
+        console.log("needs to re-open channel")
+        await this.myCosmwasm.reOpenChannel(
+          contract,
+          connIdA,
+          connIdB,
+        )
+      }
+
       return await StorageHandler.init(this, {
         accountAddress: this.myIcaAddress,
       })
@@ -433,17 +455,59 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<DCoin>}
    */
   async getJklBalance (): Promise<DCoin> {
+    return this.getJackalNetworkBalance(this.getICAJackalAddress())
+  }
+
+  async ibcSend (address: string, amount: Coin, sourceChannel: string): Promise<DeliverTxResponse> {
+    if (!this.hostSigner) {
+      throw new Error(signerNotEnabled('ClientHandler', 'ibcSend'))
+    }
+
+
+    const fee: Coin = {amount: "35774392000000000", denom: "aarch"}
+    const f: StdFee = {amount: [fee], gas: "200000"}
+    try {
+      return await this.hostSigner.sendIbcTokens(this.hostAddress, address, amount, "transfer", sourceChannel, undefined, Date.now() * 1000 * 1000 + 2 * 60 * 60 * 1000 * 1000 * 1000, f, undefined)
+    } catch (err) {
+      throw warnError('clientHandler ibcSend()', err)
+    }
+  }
+
+  /**
+   *
+   * @returns {Promise<DCoin>}
+   */
+  async getJackalNetworkBalance (address: string): Promise<DCoin> {
     if (!this.jklSigner) {
-      throw new Error(signerNotEnabled('ClientHandler', 'getJklBalance'))
+      throw new Error(signerNotEnabled('ClientHandler', 'getJackalNetworkBalance'))
     }
     try {
       const res = await this.jklQuery.queries.bank.balance({
-        address: this.getICAJackalAddress(),
+        address: address,
         denom: 'ujkl',
       })
       return res.balance as DCoin
     } catch (err) {
-      throw warnError('clientHandler getJklBalance()', err)
+      throw warnError('clientHandler getJackalNetworkBalance()', err)
+    }
+  }
+
+  /**
+   *
+   * @returns {Promise<DCoin>}
+   */
+  async getHostNetworkBalance (address: string, denom: string): Promise<DCoin> {
+    if (!this.jklSigner) {
+      throw new Error(signerNotEnabled('ClientHandler', 'getHostNetworkBalance'))
+    }
+    if (!this.hostQuery) {
+      throw new Error(signerNotEnabled('ClientHandler', 'getHostNetworkBalance'))
+    }
+    try {
+      const res = await this.hostQuery.getBalance(address,denom)
+      return res
+    } catch (err) {
+      throw warnError('clientHandler getHostNetworkBalance()', err)
     }
   }
 
@@ -544,6 +608,7 @@ export class ClientHandler implements IClientHandler {
         broadcastTimeoutHeight,
         monitorTimeout = 30,
         socketOverrides = {} as TSocketSet,
+        queryOverride,
       } = options
       const events: TxEvent[] = []
       const ready: IWrappedEncodeObject[] =
@@ -556,6 +621,7 @@ export class ClientHandler implements IClientHandler {
           events,
           msgs,
           this.myIcaAddress || this.hostAddress,
+          queryOverride,
           socketOverrides,
         )
       console.log('connectionBundles:', connectionBundles)

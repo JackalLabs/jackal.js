@@ -2,16 +2,24 @@ import type { DDeliverTxResponse, DEncodeObject } from '@jackallabs/jackal.js-pr
 
 export interface IWasmHandler {
   instantiateICA (
+    contractAddress: string,
     connectionIdA: string,
-    connectionIdB: string,
-    codeId: number,
+    connectionIdB: string
   ): Promise<DDeliverTxResponse>
 
-  getICAContractAddress (index?: number): Promise<string>
+  reOpenChannel (
+    contractAddress: string,
+    connectionIdA: string,
+    connectionIdB: string
+  ): Promise<DDeliverTxResponse>
 
-  getICAJackalAddress (): Promise<string>
+  getICAContractAddress (contractAddress: string): Promise<string>
+
+  getICAJackalAddress (contractAddress: string): Promise<string>
 
   getJackalAddressFromContract (contractAddress: string): Promise<string>
+
+  getContractChannelState (contractAddress: string): Promise<string>
 
   wrapEncodeObjectsForBroadcast (contract: string, msgs: DEncodeObject[]): DEncodeObject[]
 }
