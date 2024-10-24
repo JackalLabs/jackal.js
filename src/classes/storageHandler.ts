@@ -11,7 +11,7 @@ import { isItPastDate, shuffleArray, signerNotEnabled, tidyString, warnError } f
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
 import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
 import { aesBlobCrypt, genAesBundle, genIv, genKey } from '@/utils/crypt'
-import { hashAndHex, stringToShaHex } from '@/utils/hash'
+import { hashAndHex, hexToBuffer, stringToShaHex } from '@/utils/hash'
 import { EncodingHandler } from '@/classes/encodingHandler'
 import { SharedUpdater } from '@/classes/sharedUpdater'
 import { bech32 } from '@jackallabs/bech32'
@@ -1553,6 +1553,22 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         const { file, merkle } = msgs[i]
         if (file && merkle) {
           this.uploadsInProgress = true
+
+          const { providerIps } = await this.jackalSigner.queries.storage.findFile({
+            merkle: hexToBuffer(merkle),
+          })
+          if (providerIps.length >= copies) {
+            const p: IProviderUploadResponse = {
+              merkle:  hexToBuffer(merkle),
+              owner: this.jklAddress,
+              start: uploadHeight,
+            }
+            const promise:Promise<IProviderUploadResponse> = new Promise((resolve) => {
+              resolve(p)
+            })
+            activeUploads.push(promise)
+            continue
+          }
 
           const used: number[] = []
           for (let i = 0; i < copies; i++) {
