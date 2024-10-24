@@ -1007,6 +1007,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       for (const _ of providerList) {
         const provider =
           providerList[Math.floor(Math.random() * providerList.length)]
+        if (provider == "undefined") {
+          continue
+        }
+
         const url = `${provider}/download/${particulars.merkleLocation}`
         try {
           const resp = await fetch(url, { method: 'GET' })
