@@ -1003,6 +1003,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     }
     try {
       const particulars = await this.getFileParticulars(filePath)
+      if (particulars.providerIps.length == 0) {
+        throw new Error("No providers found")
+      }
       const providerList = shuffleArray(particulars.providerIps)
       for (const _ of providerList) {
         const provider =
