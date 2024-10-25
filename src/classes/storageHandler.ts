@@ -8,12 +8,11 @@ import type {
 import { PrivateKey } from 'eciesjs'
 import { extractFileMetaData, hexToInt, maybeMakeThumbnail } from '@/utils/converters'
 import { isItPastDate, shuffleArray, signerNotEnabled, tidyString, warnError } from '@/utils/misc'
-import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
+import { FileMetaHandler, FolderMetaHandler, NullMetaHandler, ShareMetaHandler } from '@/classes/metaHandlers'
 import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
 import { aesBlobCrypt, genAesBundle, genIv, genKey } from '@/utils/crypt'
 import { hashAndHex, stringToShaHex } from '@/utils/hash'
 import { EncodingHandler } from '@/classes/encodingHandler'
-import { SharedUpdater } from '@/classes/sharedUpdater'
 import { bech32 } from '@jackallabs/bech32'
 import {
   IAesBundle,
@@ -31,16 +30,17 @@ import {
   IFileTreePackage,
   IFolderMetaData,
   IFolderMetaHandler,
+  ILegacyFolderMetaData,
   IMoveRenameResourceOptions,
   IMoveRenameTarget,
-  INotification,
-  INotificationPackage,
+  INotificationRecord,
   IProviderIpSet,
   IProviderPool,
   IProviderUploadResponse,
   IReadFolderContentOptions,
   IRnsHandler,
   IShareOptions,
+  ISharePackage,
   IStagedUploadPackage,
   IStorageHandler,
   IStorageOptions,
@@ -48,7 +48,7 @@ import {
   IUploadPackage,
   IWrappedEncodeObject,
 } from '@/interfaces'
-import type { TMetaHandler, TSharedRootMetaDataMap } from '@/types'
+import type { TMetaHandler } from '@/types'
 import { IConversionFolderBundle } from '@/interfaces/IConversionFolderBundle'
 import { TFullSignerState } from '@/types/TFullSignerState'
 
@@ -63,8 +63,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   protected uploadsInProgress: boolean
   protected uploadQueue: IUploadPackage[]
   protected stagedUploads: Record<string, IStagedUploadPackage>
+  protected notifications: INotificationRecord[]
   protected children: IChildMetaDataMap
-  protected shared: TSharedRootMetaDataMap
   protected upcycleQueue: IWrappedEncodeObject[]
 
   protected meta: IFolderMetaHandler
@@ -93,6 +93,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     this.uploadsInProgress = false
     this.uploadQueue = []
     this.stagedUploads = {}
+    this.notifications = []
 
     this.children = {
       files: {},
@@ -100,7 +101,6 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       nulls: {},
     }
     this.mustConvert = false
-    this.shared = {}
     this.upcycleQueue = []
 
     this.meta = meta
@@ -1113,7 +1113,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const { receiver, paths } = options
       const rec = await this.possibleRnsToAddress(receiver)
       const msgs: IWrappedEncodeObject[] = []
-      const pkg: INotificationPackage = {
+      const pkg: ISharePackage = {
         isPrivate: true,
         receiver: rec,
         path: 'tbd',
@@ -1122,11 +1122,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       if (paths instanceof Array) {
         for (let path of paths) {
           pkg.path = path
-          msgs.push(...(await this.shareToMsgs(pkg, [rec])))
+          msgs.push(...(await this.sendShareToMsgs(pkg, [rec])))
         }
       } else {
         pkg.path = paths
-        msgs.push(...(await this.shareToMsgs(pkg, [rec])))
+        msgs.push(...(await this.sendShareToMsgs(pkg, [rec])))
       }
 
       if (options?.chain) {
@@ -1151,14 +1151,17 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       throw new Error('Locked.')
     }
     try {
-      const updater = new SharedUpdater(
-        this.jackalClient,
-        this.jackalSigner,
-        this.jackalSigner,
-        this.keyPair,
-        this.shared,
-      )
-      return await updater.fetchNotifications()
+      const received = []
+      const raw =
+        await this.jackalSigner.queries.notifications.allNotificationsByAddress(
+          { to: this.jklAddress },
+        )
+      for (let one of raw.notifications) {
+        const rec = await this.reader.readShareNotification(one)
+        received.push(rec)
+      }
+      this.notifications = received
+      return received.length
     } catch (err) {
       throw warnError('storageHandler checkNotifications()', err)
     }
@@ -1166,29 +1169,113 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @returns {Promise<TSharedRootMetaDataMap>}
+   * @param {IBroadcastOrChainOptions} options
+   * @returns {Promise<IWrappedEncodeObject[]>}
    */
-  async processPendingNotifications (): Promise<TSharedRootMetaDataMap> {
+  async processPendingNotifications (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]> {
     if (
       await this.checkLocked({ noConvert: true, exists: true, signer: true })
     ) {
       throw new Error('Locked.')
     }
     try {
-      const updater = new SharedUpdater(
-        this.jackalClient,
-        this.jackalSigner,
-        this.jackalSigner,
-        this.keyPair,
-        this.shared,
-      )
-      const count = await updater.fetchNotifications()
-      if (count > 0) {
-        await updater.digest()
-        await this.loadShared()
-        return this.shared
+      let msgs: IWrappedEncodeObject[] = []
+      let pendDelMsgs: IWrappedEncodeObject[] = []
+      const senders: Record<string, IFolderMetaHandler> = {}
+      const fresh: string[] = []
+      const pendLength = await this.checkNotifications()
+      if (pendLength > 0) {
+        let [errorCode, baseRefCount] = await this.reader.readSharingRefCount()
+        let baseUlid
+        if (errorCode === 0) {
+          baseUlid = this.reader.ulidLookup('Shared')
+        }
+        const baseMeta = await FolderMetaHandler.create({
+          count: baseRefCount,
+          location: 'ulid',
+          name: 'Shared',
+          ulid: baseUlid,
+        })
+        for (let one of this.notifications) {
+          if (one.msg.indexOf('|') > 4) {
+            const parts = one.msg.split('|')
+            let isFile
+            switch (parts[0]) {
+              case 'file':
+                isFile = true
+                break
+              case 'folder':
+                isFile = false
+                break
+              default:
+                continue
+            }
+            let [senderErrorCode, senderRefCount] = await this.reader.readSharingRefCount(one.sender)
+            let senderIndex
+            if (senderErrorCode > 0) {
+              fresh.push(one.sender)
+              senderIndex = baseMeta.getCount()
+              baseMeta.addAndReturnCount(1)
+            }
+            if (!senders[one.sender]) {
+              senders[one.sender] = await FolderMetaHandler.create({
+                count: senderRefCount,
+                location: baseMeta.getUlid(),
+                name: one.sender,
+                refIndex: senderIndex,
+              })
+            }
+            const mH = ShareMetaHandler.create({
+              isFile,
+              name: parts[2],
+              owner: one.sender,
+              pointsTo: parts[1],
+              refIndex: senders[one.sender].getCount(),
+            })
+            senders[one.sender].addAndReturnCount(1)
+            const shared = await this.receiveShareToMsgs({
+              meta: mH,
+              aes: await genAesBundle(),
+            })
+            msgs.push(...shared)
+            const tidy = await this.tidyReceivedNotifications({ from: one.sender, time: one.time })
+            pendDelMsgs.push(...tidy)
+          }
+        }
+        const sub: IWrappedEncodeObject[] = []
+        for (let index of Object.keys(senders)) {
+          let some
+          if (fresh.includes(index)) {
+            some = await this.folderToMsgs({
+              meta: senders[index],
+              aes: await genAesBundle(),
+            })
+          } else {
+            some = await this.existingFolderToMsgs({
+              meta: senders[index],
+              aes: await genAesBundle(),
+            })
+          }
+          sub.push(...some)
+        }
+        msgs = [...sub, ...msgs, ...pendDelMsgs]
+        if (errorCode === 1) {
+          const local = await this.baseFolderToMsgs({
+            meta: baseMeta,
+            aes: await genAesBundle(),
+          })
+          msgs = [...local, ...msgs]
+        }
+        if (options?.chain) {
+          return msgs
+        } else {
+          const postBroadcast =
+            await this.jackalClient.broadcastAndMonitorMsgs(msgs, options?.broadcastOptions)
+          console.log('processPendingNotifications:', postBroadcast)
+          return []
+        }
       } else {
-        return this.shared
+        return []
       }
     } catch (err) {
       throw warnError('storageHandler processPendingNotifications()', err)
@@ -1197,10 +1284,15 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
-   * @returns {TSharedRootMetaDataMap}
+   * @param {string} sharer
+   * @returns {string[]}
    */
-  readSharing (): TSharedRootMetaDataMap {
-    return this.shared
+  readSharing (sharer?: string): string[] {
+    try {
+      return this.reader.sharingLookup(sharer)
+    } catch (err) {
+      throw warnError('storageHandler readSharing()', err)
+    }
   }
 
   /**
@@ -1735,15 +1827,17 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   /**
    *
    * @param {string} name
+   * @param {number} [count]
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
   protected async makeCreateBaseFolderMsgs (
     name: string,
+    count?: number,
   ): Promise<IWrappedEncodeObject[]> {
     try {
       const baseMeta = await FolderMetaHandler.create({
-        count: 0,
+        count: count || 0,
         location: 'ulid',
         name,
       })
@@ -1820,34 +1914,6 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     if (this.uploadsInProgress) {
       ev.preventDefault()
       ev.returnValue = true
-    }
-  }
-
-  /**
-   *
-   * @returns {Promise<INotification[]>}
-   * @protected
-   */
-  protected async loadMyNotifications (): Promise<INotification[]> {
-    try {
-      const noti =
-        await this.jackalSigner.queries.notifications.allNotificationsByAddress(
-          { to: this.jklAddress },
-        )
-
-      const messages: INotification[] = []
-      for (let data of noti.notifications) {
-        const contents = JSON.parse(data.contents)
-        if ('private' in contents) {
-          const clean = await this.reader.readShareNotification(data)
-          messages.push(clean)
-        } else {
-          messages.push(contents)
-        }
-      }
-      return messages
-    } catch (err) {
-      throw warnError('storageHandler loadMyNotifications()', err)
     }
   }
 
@@ -2026,15 +2092,16 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     try {
       const data = await this.reader.loadMetaByPath(path)
       if (data.metaDataType === undefined) {
+        const meta = data as ILegacyFolderMetaData
         const msgs: IWrappedEncodeObject[] = []
         let ii = 0
         const parent = await FolderMetaHandler.create({
           count: 0,
           location: '',
-          name: data.whoAmI,
+          name: meta.whoAmI,
         })
 
-        for (let dir of data.dirChildren) {
+        for (let dir of meta.dirChildren) {
           const child = await this.buildConversion(`${path}/${dir}`)
           if (child) {
             child.handler.setLocation(parent.getUlid())
@@ -2048,7 +2115,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           }
         }
 
-        for (let fileMeta of Object.values(data.fileChildren)) {
+        for (let fileMeta of Object.values(meta.fileChildren)) {
           ii++
           const meta = await this.reader.loadFromLegacyMerkles(
             path,

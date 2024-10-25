@@ -5,6 +5,7 @@ export interface INotification {
 export interface INotificationRecord extends INotification {
   sender: string
   receiver: string
+  time: number
 }
 
 export interface IPrivateNotification extends INotification {

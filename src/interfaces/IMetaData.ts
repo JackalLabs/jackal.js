@@ -146,11 +146,12 @@ export interface IShareMetaData extends Omit<IRefMetaData, 'metaDataType'> {
   ulid: string
 }
 
-export interface ISharedMetaDataMap
-  extends Record<string, ISharedMetaDataMap | IShareMetaData> {
-}
-
 export interface IRootLookupMetaData {
   metaDataType: 'rootlookup'
   ulid: string
 }
+
+export interface ISharingMap extends Record<string, string[]> {
+  sharers: string[]
+}
+

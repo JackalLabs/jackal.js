@@ -13,9 +13,8 @@ import {
   IReadFolderContentOptions,
   IReconstructedFileTree,
   IRefMetaData,
-  ISharedMetaDataMap,
-  IShareFolderMetaData,
   IShareMetaData,
+  IViewerSetAddRemove,
   TSetMetaViewersOptions,
 } from '@/interfaces'
 import { TConversionPair, TMerkleParentChild, TMetaDataSets } from '@/types'
@@ -27,9 +26,13 @@ export interface IFiletreeReader {
 
   refCountSet (path: string, value: number): void
 
+  readSharingRefCount (sharer?: string): Promise<[number, number]>
+
   getConversionQueueLength (): number
 
   getConversions (): Promise<TConversionPair[]>
+
+  sharingLookup (sharer?: string): string[]
 
   ulidLookup (path: string, owner?: string): string
 
@@ -42,8 +45,6 @@ export interface IFiletreeReader {
   loadFolderMetaByUlid (ulid: string): Promise<IFolderMetaData>
 
   loadFolderMetaHandler (path: string): Promise<IFolderMetaHandler>
-
-  loadShareFolderMeta (path: string): Promise<IShareFolderMetaData>
 
   loadShareMeta (path: string): Promise<IShareMetaData>
 
@@ -84,9 +85,9 @@ export interface IFiletreeReader {
   ): Promise<DMsgFileTreePostFile>
 
   encodeExistingPostFile (
-    path: string,
+    ulid: string,
     location: TMerkleParentChild,
-    additionalViewers: string[],
+    viewers: IViewerSetAddRemove,
   ): Promise<DMsgFileTreePostFile>
 
   protectNotification (receiverAddress: string, aes: IAesBundle): Promise<string>
@@ -94,6 +95,4 @@ export interface IFiletreeReader {
   readShareNotification (
     notificationData: DNotification,
   ): Promise<INotificationRecord>
-
-  loadSharingFolder (ulid: string): Promise<ISharedMetaDataMap>
 }

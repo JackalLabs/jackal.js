@@ -17,7 +17,6 @@ import {
   IStorageStatus,
   IWrappedEncodeObject,
 } from '@/interfaces'
-import type { TSharedRootMetaDataMap } from '@/types'
 
 export interface IStorageHandler {
   cleanShutdown (): void
@@ -96,9 +95,9 @@ export interface IStorageHandler {
 
   checkNotifications (): Promise<number>
 
-  processPendingNotifications (): Promise<TSharedRootMetaDataMap>
+  processPendingNotifications (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 
-  readSharing (): TSharedRootMetaDataMap
+  readSharing (sharer?: string): string[]
 
   convert (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 

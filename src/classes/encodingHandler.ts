@@ -6,6 +6,7 @@ import { warnError } from '@/utils/misc'
 import {
   DEncodeObject,
   DMsgCreateNotification,
+  DMsgDeleteNotification,
   DMsgExecuteContract,
   DMsgInstantiateContract,
   DMsgPostKey,
@@ -24,10 +25,10 @@ import {
   IFileTreePackage,
   IFiletreeReader,
   IFolderMetaHandler,
+  INotificationDeletePackage,
   INotificationPackage,
   INullMetaHandler,
   IRootLookupMetaData,
-  IShareFolderMetaHandler,
   IShareMetaHandler,
   ISharePackage,
   IUploadPackage,
@@ -315,7 +316,7 @@ export class EncodingHandler {
     try {
       const meta = pkg.meta.export()
       const parentAndChild = await merkleParentAndChild(
-        `s/ulid/${pkg.meta.getUlid()}`,
+        `s/ulid/${meta.ulid}`,
       )
       return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
     } catch (err) {
@@ -325,21 +326,23 @@ export class EncodingHandler {
 
   /**
    *
-   * @param {string} path
-   * @param {string[]} additionalViewers
+   * @param {string} ulid
+   * @param {string[]} addViewers
+   * @param {string[]} removeViewers
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
   protected async encodeFileTreeFileShare (
-    path: string,
-    additionalViewers: string[],
+    ulid: string,
+    addViewers: string[],
+    removeViewers: string[],
   ): Promise<DEncodeObject> {
     try {
-      const parentAndChild = await merkleParentAndChild(path)
+      const parentAndChild = await merkleParentAndChild(`s/ulid/${ulid}`)
       const forFileTree = await this.reader.encodeExistingPostFile(
-        path,
+        ulid,
         parentAndChild,
-        additionalViewers,
+        { add: addViewers, remove: removeViewers },
       )
       return this.jackalClient.getTxs().fileTree.msgPostFile(forFileTree)
     } catch (err) {
@@ -406,34 +409,11 @@ export class EncodingHandler {
     try {
       const mH = pkg.meta as IShareMetaHandler
       const meta = mH.export()
-      const parentAndChild = await merkleParentAndChild(meta.location)
+      const parentAndChild = await merkleParentAndChild(`s/ulid/${mH.getUlid()}`)
       return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
     } catch (err) {
       throw warnError('encodingHandler encodeFileTreeShared()', err)
     }
-  }
-
-  /**
-   *
-   * @param {IFileTreePackage} pkg
-   * @returns {Promise<DEncodeObject>}
-   * @protected
-   */
-  protected async encodeFileTreeSharedFolder (
-    pkg: IFileTreePackage,
-  ): Promise<DEncodeObject> {
-    try {
-      const mH = pkg.meta as IShareFolderMetaHandler
-      const meta = mH.export()
-      const parentAndChild = await merkleParentAndIndex(
-        mH.getLocation(),
-        mH.getRefString(),
-      )
-      return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
-    } catch (err) {
-      throw warnError('encodingHandler encodeFileTreeSharedFolder()', err)
-    }
-
   }
 
   /**
@@ -519,6 +499,36 @@ export class EncodingHandler {
     }
   }
 
+  /**
+   *
+   * @param {INotificationDeletePackage} pkg
+   * @returns {Promise<DEncodeObject>}
+   * @protected
+   */
+  protected async encodeDeleteNotification (
+    pkg: INotificationDeletePackage,
+  ): Promise<DEncodeObject> {
+    try {
+      const { from, time } = pkg
+      const data: DMsgDeleteNotification = {
+        creator: this.jklAddress,
+        from,
+        time,
+      }
+      return this.jackalSigner.txLibrary.notifications.msgDeleteNotification(
+        data,
+      )
+    } catch (err) {
+      throw warnError('storageHandler encodeDeleteNotification()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {IFileTreePackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
   protected async upcycleBaseFolderToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
@@ -648,60 +658,6 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async sharedFolderToMsgs (
-    pkg: IFileTreePackage,
-  ): Promise<IWrappedEncodeObject[]> {
-    try {
-      const fileTreeFolder = this.encodeFileTreeFolder(pkg)
-      const ref = this.encodeFileTreeSharedFolder(pkg)
-      return [
-        {
-          encodedObject: await fileTreeFolder,
-          modifier: 0,
-        },
-        {
-          encodedObject: await ref,
-          modifier: 0,
-        },
-      ]
-    } catch (err) {
-      throw warnError('storageHandler sharedFolderToMsgs()', err)
-    }
-  }
-
-  /**
-   *
-   * @param {IFileTreePackage} pkg
-   * @returns {Promise<IWrappedEncodeObject[]>}
-   * @protected
-   */
-  protected async sharedFileToMsgs (
-    pkg: IFileTreePackage,
-  ): Promise<IWrappedEncodeObject[]> {
-    try {
-      const fileTreeShared = this.encodeFileTreeShared(pkg)
-      const ref = this.encodeFileTreeRef(pkg)
-      return [
-        {
-          encodedObject: await fileTreeShared,
-          modifier: 0,
-        },
-        {
-          encodedObject: await ref,
-          modifier: 0,
-        },
-      ]
-    } catch (err) {
-      throw warnError('storageHandler sharedFileToMsgs()', err)
-    }
-  }
-
-  /**
-   *
-   * @param {IFileTreePackage} pkg
-   * @returns {Promise<IWrappedEncodeObject[]>}
-   * @protected
-   */
   protected async filetreeDeleteToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
@@ -781,6 +737,12 @@ export class EncodingHandler {
     }
   }
 
+  /**
+   *
+   * @param {IFileTreePackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
   protected async movePkgToMsgs (
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
@@ -896,16 +858,21 @@ export class EncodingHandler {
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
-  protected async shareToMsgs (
+  protected async sendShareToMsgs (
     pkg: ISharePackage,
     additionalViewers: string[] = [],
   ): Promise<IWrappedEncodeObject[]> {
     try {
-      const base = formatShareNotification(path, isFile)
-
-      const share = this.encodeFileTreeFileShare(pkg.path, additionalViewers)
-
-      const notification = this.encodeCreateNotification(pkg)
+      const id = this.reader.ulidLookup(pkg.path)
+      const name = pkg.path.split('/').slice(-1)[0]
+      const baseNoti = formatShareNotification(id, name, pkg.isFile)
+      const share = this.encodeFileTreeFileShare(id, additionalViewers, [])
+      const notification = this.encodeCreateNotification({
+        isPrivate: pkg.isPrivate,
+        receiver: pkg.receiver,
+        msg: baseNoti.msg,
+        contents: JSON.stringify(baseNoti),
+      })
       return [
         {
           encodedObject: await share,
@@ -918,6 +885,55 @@ export class EncodingHandler {
       ]
     } catch (err) {
       throw warnError('storageHandler shareToMsgs()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {IFileTreePackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
+  protected async receiveShareToMsgs (
+    pkg: IFileTreePackage,
+  ): Promise<IWrappedEncodeObject[]> {
+    try {
+      const fileTreeShared = this.encodeFileTreeShared(pkg)
+      const ref = this.encodeFileTreeRef(pkg)
+      return [
+        {
+          encodedObject: await fileTreeShared,
+          modifier: 0,
+        },
+        {
+          encodedObject: await ref,
+          modifier: 0,
+        },
+      ]
+    } catch (err) {
+      throw warnError('storageHandler sharedFileToMsgs()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {INotificationDeletePackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
+  protected async tidyReceivedNotifications (
+    pkg: INotificationDeletePackage,
+  ): Promise<IWrappedEncodeObject[]> {
+    try {
+      const delNotification = this.encodeDeleteNotification(pkg)
+      return [
+        {
+          encodedObject: await delNotification,
+          modifier: 0,
+        },
+      ]
+    } catch (err) {
+      throw warnError('storageHandler tidyReceivedNotifications()', err)
     }
   }
 
