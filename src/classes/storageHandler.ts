@@ -51,6 +51,7 @@ import {
 import type { TMetaHandler, TSharedRootMetaDataMap } from '@/types'
 import { IConversionFolderBundle } from '@/interfaces/IConversionFolderBundle'
 import { TFullSignerState } from '@/types/TFullSignerState'
+import { MnemonicWallet } from '@/classes/mnemonicWallet'
 
 export class StorageHandler extends EncodingHandler implements IStorageHandler {
   protected readonly rns: IRnsHandler | null
@@ -106,7 +107,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     this.meta = meta
     this.providers = {}
 
-    window.addEventListener('beforeunload', this.beforeUnloadHandler)
+    if (window) {
+      if ('addEventListener' in window) {
+        window.addEventListener('beforeunload', this.beforeUnloadHandler)
+      }
+    }
   }
 
   /**
@@ -184,6 +189,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             throw new Error('Leap Wallet selected but unavailable')
           }
           break
+        case 'mnemonic':
+          break
         default:
           throw new Error(
             'No wallet selected but one is required to init StorageHandler',
@@ -218,6 +225,18 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             signatureAsHex = await stringToShaHex(signed.signature)
           }
           break
+        case 'mnemonic':
+          const w = window as any
+          if (!w.mnemonicWallet) {
+            throw 'Missing mnemonic wallet'
+          } else {
+            const seedWallet = w.mnemonicWallet as MnemonicWallet
+            signed = await seedWallet.signArbitrary(
+              chainId,
+            )
+            signatureAsHex = await stringToShaHex(signed.signature)
+          }
+          break
         default:
           throw new Error(
             'No wallet selected but one is required to init StorageHandler',
@@ -233,7 +252,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    *
    */
   cleanShutdown (): void {
-    window.removeEventListener('beforeunload', this.beforeUnloadHandler)
+    if (window) {
+      if ('removeEventListener' in window) {
+        window.removeEventListener('beforeunload', this.beforeUnloadHandler)
+      }
+    }
   }
 
   /**
