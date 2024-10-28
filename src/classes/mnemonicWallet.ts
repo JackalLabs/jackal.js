@@ -3,6 +3,7 @@ import { Secp256k1HdWallet } from '@cosmjs/amino'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import type { IMnemonicWallet } from '@/interfaces/classes'
 import { TMergedSigner } from '@jackallabs/jackal.js-protos'
+import { MnemonicSigner } from '@/classes/mnemonicSigner'
 
 export class MnemonicWallet implements IMnemonicWallet {
   private readonly mergedSigner: TMergedSigner
@@ -35,10 +36,7 @@ export class MnemonicWallet implements IMnemonicWallet {
     /* Destroy mnemonic */
     mnemonic = ''
 
-    const mergedSigner = {
-      ...aminoWallet,
-      ...directWallet,
-    } as TMergedSigner
+    const mergedSigner = new MnemonicSigner(directWallet, aminoWallet);
     const { address } = (await mergedSigner.getAccounts())[0]
     return new MnemonicWallet(mergedSigner, address)
   }

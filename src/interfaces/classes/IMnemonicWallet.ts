@@ -1,5 +1,5 @@
 import type { StdSignature } from '@cosmjs/amino'
-import type { TMergedSigner } from '@jackallabs/jackal.js-protos'
+import { TMergedSigner } from '@jackallabs/jackal.js-protos'
 
 export interface IMnemonicWallet {
   getOfflineSigner (): TMergedSigner
