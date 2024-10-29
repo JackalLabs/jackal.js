@@ -107,7 +107,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     this.meta = meta
     this.providers = {}
 
-    if (window) {
+    if (typeof window !== "undefined") {
       if ('addEventListener' in window) {
         window.addEventListener('beforeunload', this.beforeUnloadHandler)
       }
@@ -226,7 +226,12 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           }
           break
         case 'mnemonic':
-          const w = window as any
+          let w: any = {}
+          if (typeof window !== "undefined") {
+            w = window as any
+          } else {
+            w = global as any
+          }
           if (!w.mnemonicWallet) {
             throw 'Missing mnemonic wallet'
           } else {
@@ -252,7 +257,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    *
    */
   cleanShutdown (): void {
-    if (window) {
+    if (typeof window !== "undefined") {
       if ('removeEventListener' in window) {
         window.removeEventListener('beforeunload', this.beforeUnloadHandler)
       }

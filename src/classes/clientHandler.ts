@@ -208,13 +208,12 @@ export class ClientHandler implements IClientHandler {
             jklAddress = wallet.getAddress()
             hostSigner = jklSigner
             hostAddress = jklAddress
-            if (window) {
+            if (typeof window !== "undefined") {
               const w = window as any
               w.mnemonicWallet = wallet
             } else {
-              throw new Error(
-                'Window not available',
-              )
+              const g = global as any
+              g.mnemonicWallet = wallet
             }
           }
           break
