@@ -64,7 +64,7 @@
     "@jackallabs/jackal.js-protos": "2.3.1",
     "@karnthis/plzsu": "^1.0.0",
     "@keplr-wallet/types": "^0.12.44",
-    "browserify-aes": "^1.2.0",
+    "browserify-aes": "git+https://github.com/JackalLabs/browserify-aes.git",
     "browserify-des": "^1.0.2",
     "browserify-sign": "^4.2.2",
     "cosmjs-types": "^0.9.0",

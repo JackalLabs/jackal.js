@@ -232,7 +232,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           } else {
             const seedWallet = w.mnemonicWallet as MnemonicWallet
             signed = await seedWallet.signArbitrary(
-              chainId,
+              signatureSeed,
             )
             signatureAsHex = await stringToShaHex(signed.signature)
           }

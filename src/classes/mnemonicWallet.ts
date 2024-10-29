@@ -63,25 +63,33 @@ export class MnemonicWallet implements IMnemonicWallet {
    * @returns {Promise<StdSignature>} - Resulting AminoSignResponse.signature.
    */
   async signArbitrary (message: string): Promise<StdSignature> {
-    const signed = await this.mergedSigner.signAmino(this.address, {
-      chain_id: '',
-      account_number: '0',
-      sequence: '0',
+    if (typeof message === "string") {
+      message = Buffer.from(message).toString("base64");
+    } else {
+      message = Buffer.from(message).toString("base64");
+    }
+
+    const doc= {
+      chain_id: "",
+      account_number: "0",
+      sequence: "0",
       fee: {
-        gas: '0',
+        gas: "0",
         amount: [],
       },
       msgs: [
         {
-          type: 'sign/MsgSignData',
+          type: "sign/MsgSignData",
           value: {
             signer: this.address,
-            data: btoa(message),
+           data:  message,
           },
         },
       ],
-      memo: '',
-    })
+      memo: "",
+    };
+
+    const signed = await this.mergedSigner.signAmino(this.address, doc)
     return signed.signature
   }
 }
