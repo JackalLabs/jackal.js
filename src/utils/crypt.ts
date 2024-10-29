@@ -20,7 +20,11 @@ import type { IAesBundle } from '@/interfaces'
  * @private
  */
 export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
-  return new Uint8Array(await crypto.subtle.exportKey('raw', key))
+  try {
+    return new Uint8Array(await crypto.subtle.exportKey('raw', key))
+  } catch (err) {
+    throw warnError('exportJackalKey()', err)
+  }
 }
 
 /**
@@ -30,10 +34,14 @@ export async function exportJackalKey (key: CryptoKey): Promise<Uint8Array> {
  * @private
  */
 export function importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, [
-    'encrypt',
-    'decrypt',
-  ])
+  try {
+    return crypto.subtle.importKey('raw', rawExport, 'AES-GCM', true, [
+      'encrypt',
+      'decrypt',
+    ])
+  } catch (err) {
+    throw warnError('importJackalKey()', err)
+  }
 }
 
 /**
@@ -42,7 +50,11 @@ export function importJackalKey (rawExport: Uint8Array): Promise<CryptoKey> {
  * @private
  */
 export function genKey (): Promise<CryptoKey> {
-  return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])
+  try {
+    return crypto.subtle.generateKey(keyAlgo, true, ['encrypt', 'decrypt'])
+  } catch (err) {
+    throw warnError('genKey()', err)
+  }
 }
 
 /**
@@ -60,9 +72,13 @@ export function genIv (): Uint8Array {
  * @private
  */
 export async function genAesBundle (): Promise<IAesBundle> {
-  return {
-    iv: genIv(),
-    key: await genKey(),
+  try {
+    return {
+      iv: genIv(),
+      key: await genKey(),
+    }
+  } catch (err) {
+    throw warnError('genAesBundle()', err)
   }
 }
 
@@ -79,12 +95,13 @@ export async function aesBlobCrypt (
   aes: IAesBundle,
   mode: 'encrypt' | 'decrypt',
 ): Promise<Blob> {
-  const workingData = await data.arrayBuffer()
-  const result = await aesCrypt(workingData, aes, mode).catch((err) => {
-    warnError('aesBlobCrypt()', err)
-    throw err
-  })
-  return new Blob([result])
+  try {
+    const workingData = await data.arrayBuffer()
+    const result = await aesCrypt(workingData, aes, mode)
+    return new Blob([result])
+  } catch (err) {
+    throw warnError('aesBlobCrypt()', err)
+  }
 }
 
 /**
@@ -100,20 +117,30 @@ export async function aesCrypt (
   aes: IAesBundle,
   mode: 'encrypt' | 'decrypt',
 ): Promise<ArrayBuffer> {
-  const algo = {
-    name: 'AES-GCM',
-    iv: aes.iv,
-  }
-  if (data.byteLength < 1) {
-    return new ArrayBuffer(0)
-  } else if (mode?.toLowerCase() === 'encrypt') {
-    return await crypto.subtle.encrypt(algo, aes.key, data).catch((err) => {
-      throw warnError('aesCrypt(encrypt)', err)
-    })
-  } else {
-    return await crypto.subtle.decrypt(algo, aes.key, data).catch((err) => {
-      throw warnError('aesCrypt(decrypt)', err)
-    })
+  try {
+    const algo = {
+      name: 'AES-GCM',
+      iv: aes.iv,
+    }
+    if (data.byteLength < 1) {
+      return new ArrayBuffer(0)
+    } else if (mode?.toLowerCase() === 'encrypt') {
+      try {
+        return await crypto.subtle.encrypt(algo, aes.key, data)
+      } catch (err) {
+        console.warn('encrypt')
+        throw err
+      }
+    } else {
+      try {
+        return await crypto.subtle.decrypt(algo, aes.key, data)
+      } catch (err) {
+        console.warn('decrypt')
+        throw err
+      }
+    }
+  } catch (err) {
+    throw warnError('aesCrypt()', err)
   }
 }
 
@@ -162,10 +189,14 @@ export async function aesToString (
   pubKey: string,
   aes: IAesBundle,
 ): Promise<string> {
-  const theIv = eciesEncryptWithPubKey(pubKey, aes.iv)
-  const key = await exportJackalKey(aes.key)
-  const theKey = eciesEncryptWithPubKey(pubKey, key)
-  return `${theIv}|${theKey}`
+  try {
+    const theIv = eciesEncryptWithPubKey(pubKey, aes.iv)
+    const key = await exportJackalKey(aes.key)
+    const theKey = eciesEncryptWithPubKey(pubKey, key)
+    return `${theIv}|${theKey}`
+  } catch (err) {
+    throw warnError('aesToString()', err)
+  }
 }
 
 /**
@@ -206,13 +237,12 @@ export async function compressEncryptString (
   aes: IAesBundle,
   isLedger: boolean,
 ): Promise<string> {
-  const compressedString = safeCompressData(input)
-  return await cryptString(compressedString, aes, 'encrypt', isLedger).catch(
-    (err) => {
-      warnError('compressEncryptString(encrypt)', err)
-      throw err
-    },
-  )
+  try {
+    const compressedString = safeCompressData(input)
+    return await cryptString(compressedString, aes, 'encrypt', isLedger)
+  } catch (err) {
+    throw warnError('compressEncryptString()', err)
+  }
 }
 
 /**
@@ -226,12 +256,13 @@ export async function decryptDecompressString (
   input: string,
   aes: IAesBundle,
 ): Promise<string> {
-  const safe = prepDecompressionForAmino(input)
-  const ready = await cryptString(safe, aes, 'decrypt').catch((err) => {
-    warnError('decryptDecompressString(decrypt)', err)
-    throw err
-  })
-  return safeDecompressData(ready)
+  try {
+    const safe = prepDecompressionForAmino(input)
+    const ready = await cryptString(safe, aes, 'decrypt')
+    return safeDecompressData(ready)
+  } catch (err) {
+    throw warnError('decryptDecompressString()', err)
+  }
 }
 
 /**

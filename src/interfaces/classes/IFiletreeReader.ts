@@ -26,6 +26,12 @@ export interface IFiletreeReader {
 
   refCountSet (path: string, value: number): void
 
+  sharerCountRead (ulid: string): Promise<number>
+
+  sharerCountIncrement (ulid: string): void
+
+  sharerCountSet (ulid: string, value: number): void
+
   readSharingRefCount (sharer?: string): Promise<[number, number]>
 
   getConversionQueueLength (): number
@@ -33,6 +39,10 @@ export interface IFiletreeReader {
   getConversions (): Promise<TConversionPair[]>
 
   sharingLookup (sharer?: string): string[]
+
+  viewerSave (ulid: string, access: Record<string, string>): void
+
+  viewerLookup (ulid: string): Promise<Record<string, string>>
 
   ulidLookup (path: string, owner?: string): string
 

@@ -32,8 +32,8 @@ export interface IRefMetaData extends IBaseMetaData {
   pointsTo: string
 }
 
-export interface IShareRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
-  metaDataType: 'shareref'
+export interface ISharerRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
+  metaDataType: 'sharerref'
 }
 
 export interface INullRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
@@ -54,20 +54,30 @@ export interface INullMetaData extends IBaseMetaData {
   removed: true
 }
 
-export interface IFolderMetaDataSource {
+export interface ICloneFolderMetaDataSource {
+  clone: IFolderMetaData
+  ulid: string
+  refIndex?: number
+}
+
+export interface INoCloneFolderMetaDataSource {
   count: number
   description?: string
   location: string
   name: string
   refIndex?: number
+  sharerCount?: number
   ulid?: string
 }
+
+export type TFolderMetaDataSource = ICloneFolderMetaDataSource | INoCloneFolderMetaDataSource
 
 export interface IFolderMetaFoundationalData {
   count: number
   description: string
   location: string
   refIndex: number
+  sharerCount: number
   ulid: string
   whoAmI: string
 }
@@ -76,6 +86,7 @@ export interface IFolderMetaData extends IBaseMetaData {
   count: string
   description: string
   metaDataType: 'folder'
+  sharerCount?: string
   whoAmI: string
 }
 
@@ -91,6 +102,7 @@ export interface INoCloneFileMetaDataSource {
   legacyMerkles?: Uint8Array[]
   location: string
   refIndex?: number
+  sharerCount?: number
   thumbnail?: string
   ulid?: string
 }
@@ -105,6 +117,7 @@ export interface IFileMetaFoundationalData {
   merkleMem: string
   merkleRoot: Uint8Array
   refIndex: number
+  sharerCount: number
   thumbnail: string
   ulid: string
 }
@@ -115,6 +128,7 @@ export interface IFileMetaData extends IBaseMetaData {
   metaDataType: 'file'
   merkleMem: string
   merkleRoot: Uint8Array
+  sharerCount?: string
   thumbnail: string
   ulid: string
 }
@@ -155,3 +169,23 @@ export interface ISharingMap extends Record<string, string[]> {
   sharers: string[]
 }
 
+export interface ISharerMetaDataSource {
+  location: string
+  sharer: string
+  refIndex?: number
+  ulid?: string
+}
+
+export interface ISharerMetaFoundationalData {
+  location: string
+  sharer: string
+  refIndex: number
+  ulid: string
+}
+
+export interface ISharerMetaData extends Omit<IBaseMetaData, 'metaDataType'> {
+  location: string
+  metaDataType: 'sharer'
+  sharer: string
+  ulid: string
+}

@@ -31,6 +31,7 @@ import {
   IRootLookupMetaData,
   IShareMetaHandler,
   ISharePackage,
+  ISharerMetaHandler,
   IUploadPackage,
   IWrappedEncodeObject,
 } from '@/interfaces'
@@ -38,7 +39,7 @@ import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 import { CosmosMsgForEmpty, ExecuteMsg, InstantiateMsg } from '@/types/StorageOutpost.client.types'
 import { PrivateKey } from 'eciesjs'
 import { FiletreeReader } from '@/classes/filetreeReader'
-import { FolderMetaHandler } from '@/classes/metaHandlers'
+import { FolderMetaHandler, SharerMetaHandler } from '@/classes/metaHandlers'
 
 export class EncodingHandler {
   protected readonly jackalClient: IClientHandler
@@ -356,6 +357,25 @@ export class EncodingHandler {
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
+  protected async encodeFileTreeSharer (
+    pkg: IFileTreePackage,
+  ): Promise<DEncodeObject> {
+    try {
+      const mH = pkg.meta as ISharerMetaHandler
+      const meta = mH.export()
+      const parentAndChild = await merkleParentAndChild(meta.location)
+      return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
+    } catch (err) {
+      throw warnError('encodingHandler encodeFileTreeSharer()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {IFileTreePackage} pkg
+   * @returns {Promise<DEncodeObject>}
+   * @protected
+   */
   protected async encodeFileTreeBaseFolder (
     pkg: IFileTreePackage,
   ): Promise<DEncodeObject> {
@@ -460,7 +480,25 @@ export class EncodingHandler {
     } catch (err) {
       throw warnError('encodingHandler encodeFileTreeRef()', err)
     }
+  }
 
+  /**
+   *
+   * @param {IFileTreePackage} pkg
+   * @returns {Promise<DEncodeObject>}
+   * @protected
+   */
+  protected async encodeFileTreeSharerRef (
+    pkg: IFileTreePackage,
+  ): Promise<DEncodeObject> {
+    try {
+      const mH = pkg.meta as ISharerMetaHandler
+      const meta = mH.exportRef()
+      const parentAndChild = await merkleParentAndChild(meta.location)
+      return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
+    } catch (err) {
+      throw warnError('encodingHandler encodeFileTreeSharerRef()', err)
+    }
   }
 
   /**
@@ -864,9 +902,21 @@ export class EncodingHandler {
   ): Promise<IWrappedEncodeObject[]> {
     try {
       const id = this.reader.ulidLookup(pkg.path)
+      const sharerCount = await this.reader.sharerCountRead(id)
       const name = pkg.path.split('/').slice(-1)[0]
       const baseNoti = formatShareNotification(id, name, pkg.isFile)
       const share = this.encodeFileTreeFileShare(id, additionalViewers, [])
+      const sharerPkg = {
+        meta: await SharerMetaHandler.create({
+          location: id,
+          sharer: pkg.receiver,
+          refIndex: sharerCount,
+        }),
+        aes: await genAesBundle(),
+      }
+      this.reader.sharerCountIncrement(id)
+      const sharer = this.encodeFileTreeSharer(sharerPkg)
+      const sharerRef = this.encodeFileTreeSharerRef(sharerPkg)
       const notification = this.encodeCreateNotification({
         isPrivate: pkg.isPrivate,
         receiver: pkg.receiver,
@@ -876,6 +926,14 @@ export class EncodingHandler {
       return [
         {
           encodedObject: await share,
+          modifier: 0,
+        },
+        {
+          encodedObject: await sharer,
+          modifier: 0,
+        },
+        {
+          encodedObject: await sharerRef,
           modifier: 0,
         },
         {

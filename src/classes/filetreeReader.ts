@@ -55,11 +55,13 @@ export class FiletreeReader implements IFiletreeReader {
 
   protected ulidLeaves: Record<string, Record<string, string>>
   protected sharingLeaves: ISharingMap
+  protected viewerLeaves: Record<string, Record<string, string>>
   protected directoryLeaves: Record<string, Record<string, IChildMetaDataMap>>
   protected directoriesByUlid: Record<string, Record<string, IChildMetaDataMap>>
   protected yellowpages: Record<string, Record<string, DQueryFileTreeFile>>
   protected legacyMetaLeaves: Record<string, ILegacyFolderMetaData>
   protected refCounts: Record<string, number>
+  protected sharerCounts: Record<string, number>
   protected conversionQueue: string[]
   protected nullConversions: string[]
 
@@ -79,6 +81,7 @@ export class FiletreeReader implements IFiletreeReader {
     this.ulidLeaves = {}
     this.ulidLeaves[ownerAddress] = {}
     this.sharingLeaves = { sharers: [] }
+    this.viewerLeaves = {}
     this.directoryLeaves = {}
     this.directoryLeaves[ownerAddress] = {}
     this.directoriesByUlid = {}
@@ -87,6 +90,7 @@ export class FiletreeReader implements IFiletreeReader {
     this.yellowpages[ownerAddress] = {}
     this.legacyMetaLeaves = {}
     this.refCounts = {}
+    this.sharerCounts = {}
     this.conversionQueue = []
     this.nullConversions = []
   }
@@ -97,13 +101,17 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {Promise<number>}
    */
   async refCountRead (path: string): Promise<number> {
-    if (path in this.refCounts) {
-      return this.refCounts[path]
-    } else {
-      const meta = await this.loadFolderMetaByPath(path)
-      const count = hexToInt(meta.count)
-      this.refCountSet(path, count)
-      return count
+    try {
+      if (path in this.refCounts) {
+        return this.refCounts[path]
+      } else {
+        const meta = await this.loadFolderMetaByPath(path)
+        const count = hexToInt(meta.count)
+        this.refCountSet(path, count)
+        return count
+      }
+    } catch (err) {
+      throw warnError('filetreeReader refCountRead()', err)
     }
   }
 
@@ -127,6 +135,53 @@ export class FiletreeReader implements IFiletreeReader {
   refCountSet (path: string, value: number): void {
     if (!this.refCounts[path]) {
       this.refCounts[path] = value
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @returns {Promise<number>}
+   */
+  async sharerCountRead (ulid: string): Promise<number> {
+    try {
+      if (ulid in this.sharerCounts) {
+        return this.sharerCounts[ulid]
+      } else {
+        const meta = await this.loadMetaByUlid(ulid)
+        if ('sharerCount' in meta) {
+          const count = hexToInt(meta.sharerCount || '')
+          this.sharerCountSet(ulid, count)
+          return count
+        } else {
+          throw new Error('Invalid meta type')
+        }
+      }
+    } catch (err) {
+      throw warnError('filetreeReader sharerCountRead()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   */
+  sharerCountIncrement (ulid: string): void {
+    if (this.sharerCounts[ulid]) {
+      this.sharerCounts[ulid]++
+    } else {
+      this.sharerCounts[ulid] = 1
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {number} value
+   */
+  sharerCountSet (ulid: string, value: number): void {
+    if (!this.sharerCounts[ulid]) {
+      this.sharerCounts[ulid] = value
     }
   }
 
@@ -278,6 +333,40 @@ export class FiletreeReader implements IFiletreeReader {
       } else {
         throw warnError('filetreeReader sharingLookup()', new Error('No Sharer Found'))
       }
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {Record<string, string>} access
+   */
+  viewerSave (ulid: string, access: Record<string, string>): void {
+    this.viewerLeaves[ulid] = access
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @returns {Promise<Record<string, string>>}
+   */
+  async viewerLookup (ulid: string): Promise<Record<string, string>> {
+    try {
+      if (!this.viewerLeaves[ulid]) {
+        const hexAddress = await merklePath(`s/ulid/${ulid}`)
+        const lookup = {
+          address: hexAddress,
+          ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
+        }
+        const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
+        const viewAccess: Record<string, string> = JSON.parse(file.viewingAccess)
+        this.viewerSave(ulid, viewAccess)
+        return viewAccess
+      } else {
+        return this.viewerLeaves[ulid]
+      }
+    } catch (err) {
+      throw warnError('filetreeReader viewerLookup()', err)
     }
   }
 
@@ -614,28 +703,43 @@ export class FiletreeReader implements IFiletreeReader {
    */
   async setMetaViewers (options: TSetMetaViewersOptions): Promise<IReconstructedFileTree> {
     try {
-      let lookup, curr
+      let lookup, curr, ulid
       if ('path' in options) {
         curr = options.path
+        ulid = this.ulidLookup(options.path)
         lookup = await this.pathToLookup(options.path)
       } else {
         const hexAddress = await merklePath(`s/ulid/${options.ulid}`)
         curr = options.ulid
+        ulid = options.ulid
         lookup = {
           address: hexAddress,
           ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
         }
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      const { contents, trackingNumber } = file
+      let { contents, trackingNumber } = file
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext)
 
       if (access) {
         if (isCleartext) {
+          if (ulid in this.sharerCounts) {
+            const working = JSON.parse(contents)
+            let mH
+            if ('count' in working) {
+              mH = await FolderMetaHandler.create({ clone: working, ulid })
+            } else {
+              mH = await FileMetaHandler.create({ clone: working })
+            }
+            const sharers = await this.sharerCountRead(ulid)
+            mH.setSharerCount(sharers)
+            const ready = mH.export()
+            contents = JSON.stringify(ready)
+          }
           return {
             contents,
-            viewers: await this.createViewAccess({ access: file, trackingNumber, viewers: options.viewers }),
+            viewers: await this.createViewAccess({ trackingNumber, viewers: options.viewers, ulid }),
             editors: await this.createEditAccess(trackingNumber),
             trackingNumber,
           }
@@ -644,13 +748,35 @@ export class FiletreeReader implements IFiletreeReader {
           if (aes[1]) {
             throw new Error('Requires rekey')
           }
+          if (ulid in this.sharerCounts) {
+            const safeContents = prepDecompressionForAmino(contents)
+            let decrypted = await cryptString(safeContents, aes[0], 'decrypt')
+            if (decrypted.startsWith('jklpc1')) {
+              decrypted = safeDecompressData(decrypted)
+            }
+            const working = safeParseFileTree(decrypted)
+            let mH
+            if ('count' in working) {
+              mH = await FolderMetaHandler.create({ clone: working, ulid })
+            } else {
+              mH = await FileMetaHandler.create({ clone: working as IFileMetaData })
+            }
+            const sharers = await this.sharerCountRead(ulid)
+            mH.setSharerCount(sharers)
+            const ready = JSON.stringify(mH.export())
+            contents = await compressEncryptString(
+              ready,
+              aes[0],
+              this.jackalClient.getIsLedger(),
+            )
+          }
           return {
             contents,
             viewers: await this.createViewAccess({
-              access: file,
               trackingNumber,
               viewers: options.viewers,
               aes: aes[0],
+              ulid,
             }),
             editors: await this.createEditAccess(trackingNumber),
             trackingNumber,
@@ -717,17 +843,9 @@ export class FiletreeReader implements IFiletreeReader {
   async encodeProvisionFileTree (): Promise<DMsgProvisionFileTree> {
     try {
       const trackingNumber = crypto.randomUUID()
-      const fakeFile: DFile = {
-        address: '',
-        owner: '',
-        contents: '',
-        editAccess: '',
-        viewingAccess: '{}',
-        trackingNumber,
-      }
       return {
         creator: this.clientAddress,
-        viewers: await this.createViewAccess({ access: fakeFile, trackingNumber, viewers: { overwrite: [] } }),
+        viewers: await this.createViewAccess({ trackingNumber, viewers: { overwrite: [] } }),
         editors: await this.createEditAccess(trackingNumber),
         trackingNumber: trackingNumber,
       }
@@ -751,15 +869,6 @@ export class FiletreeReader implements IFiletreeReader {
     try {
       const { additionalViewers = [], aes = null } = options
       const [hashParent, hashChild] = location
-
-      const fakeFile: DFile = {
-        address: '',
-        owner: '',
-        contents: '',
-        editAccess: '',
-        viewingAccess: '{}',
-        trackingNumber: '',
-      }
       const forFileTree: DMsgFileTreePostFile = {
         creator: this.clientAddress,
         account: await hashAndHex(this.clientAddress),
@@ -779,7 +888,6 @@ export class FiletreeReader implements IFiletreeReader {
           this.jackalClient.getIsLedger(),
         )
         forFileTree.viewers = await this.createViewAccess({
-          access: fakeFile,
           trackingNumber,
           viewers: { overwrite: additionalViewers },
           aes,
@@ -789,7 +897,6 @@ export class FiletreeReader implements IFiletreeReader {
       } else {
         forFileTree.contents = stringedMeta
         forFileTree.viewers = await this.createViewAccess({
-          access: fakeFile,
           trackingNumber,
           viewers: { overwrite: additionalViewers },
         })
@@ -839,16 +946,7 @@ export class FiletreeReader implements IFiletreeReader {
     receiverAddress: string,
     aes: IAesBundle,
   ): Promise<string> {
-    const fakeFile: DFile = {
-      address: '',
-      owner: '',
-      contents: '',
-      editAccess: '',
-      viewingAccess: '{}',
-      trackingNumber: '',
-    }
     return await this.createViewAccess({
-      access: fakeFile,
       trackingNumber: '',
       viewers: { overwrite: [receiverAddress] },
       aes,
@@ -1214,13 +1312,13 @@ export class FiletreeReader implements IFiletreeReader {
   ): Promise<string> {
     try {
       const {
-        access,
+        ulid,
         trackingNumber,
         viewers,
         aes,
       } = options
       let groupViewers
-      let viewAccess: Record<string, string> = JSON.parse(access.viewingAccess)
+      let viewAccess = ulid ? await this.viewerLookup(ulid) : {}
       if ('overwrite' in viewers) {
         groupViewers = [...new Set([...viewers.overwrite, this.clientAddress])]
         viewAccess = {}
@@ -1248,6 +1346,9 @@ export class FiletreeReader implements IFiletreeReader {
         } else {
           viewAccess[entry] = 'public'
         }
+      }
+      if (ulid) {
+        this.viewerSave(ulid, viewAccess)
       }
       return JSON.stringify(viewAccess)
     } catch (err) {

@@ -1,7 +1,7 @@
 import { Merkletree } from '@jackallabs/dogwood-tree'
 import { ulid } from 'ulid'
 import { chunkSize } from '@/utils/globalDefaults'
-import { intToHex, uintArrayToString } from '@/utils/converters'
+import { hexToInt, intToHex, uintArrayToString } from '@/utils/converters'
 import { bufferToHex } from '@/utils/hash'
 import {
   IFileMeta,
@@ -9,7 +9,6 @@ import {
   IFileMetaFoundationalData,
   IFileMetaHandler,
   IFolderMetaData,
-  IFolderMetaDataSource,
   IFolderMetaFoundationalData,
   IFolderMetaHandler,
   INullMetaData,
@@ -22,8 +21,13 @@ import {
   IShareMetaDataSource,
   IShareMetaFoundationalData,
   IShareMetaHandler,
-  IShareRefMetaData,
+  ISharerMetaData,
+  ISharerMetaDataSource,
+  ISharerMetaFoundationalData,
+  ISharerMetaHandler,
+  ISharerRefMetaData,
   TFileMetaDataSource,
+  TFolderMetaDataSource,
 } from '@/interfaces'
 
 export class NullMetaHandler implements INullMetaHandler {
@@ -118,6 +122,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
   protected description: string
   protected location: string
   protected refIndex: number
+  protected sharerCount: number
   protected readonly ulid: string
   protected whoAmI: string
 
@@ -126,25 +131,38 @@ export class FolderMetaHandler implements IFolderMetaHandler {
     this.description = source.description
     this.location = source.location
     this.refIndex = source.refIndex
+    this.sharerCount = source.sharerCount
     this.ulid = source.ulid
     this.whoAmI = source.whoAmI
   }
 
   /**
    *
-   * @param {IFolderMetaDataSource} source
+   * @param {TFolderMetaDataSource} source
    * @returns {Promise<FolderMetaHandler>}
    */
-  static async create (source: IFolderMetaDataSource) {
-    const rdy: IFolderMetaFoundationalData = {
-      count: source.count,
-      description: source.description || '',
-      location: `s/ulid/${source.location}`,
-      refIndex: source.refIndex || 0,
-      ulid: source.ulid || ulid(),
-      whoAmI: source.name,
+  static async create (source: TFolderMetaDataSource) {
+    if ('clone' in source) {
+      const shortcut: IFolderMetaFoundationalData = {
+        ...source.clone,
+        count: hexToInt(source.clone.count),
+        sharerCount: hexToInt(source.clone.sharerCount || ''),
+        ulid: source.ulid,
+        refIndex: source.refIndex || 0,
+      }
+      return new FolderMetaHandler(shortcut)
+    } else {
+      const rdy: IFolderMetaFoundationalData = {
+        count: source.count,
+        description: source.description || '',
+        location: `s/ulid/${source.location}`,
+        refIndex: source.refIndex || 0,
+        sharerCount: source.sharerCount || 0,
+        ulid: source.ulid || ulid(),
+        whoAmI: source.name,
+      }
+      return new FolderMetaHandler(rdy)
     }
-    return new FolderMetaHandler(rdy)
   }
 
   /**
@@ -171,6 +189,32 @@ export class FolderMetaHandler implements IFolderMetaHandler {
    */
   getCount (): number {
     return this.count
+  }
+
+  /**
+   *
+   * @param {number} value
+   * @returns {number}
+   */
+  addAndReturnSharerCount (value: number): number {
+    this.sharerCount += value
+    return this.sharerCount
+  }
+
+  /**
+   *
+   * @param {number} count
+   */
+  setSharerCount (count: number): void {
+    this.sharerCount = count
+  }
+
+  /**
+   *
+   * @returns {number}
+   */
+  getSharerCount (): number {
+    return this.sharerCount
   }
 
   /**
@@ -232,6 +276,7 @@ export class FolderMetaHandler implements IFolderMetaHandler {
       location: this.location,
       merkleHex: '',
       metaDataType: 'folder',
+      sharerCount: intToHex(this.sharerCount),
       whoAmI: this.whoAmI,
     }
   }
@@ -258,6 +303,7 @@ export class FileMetaHandler implements IFileMetaHandler {
   protected readonly merkleMem: string
   protected readonly merkleRoot: Uint8Array
   protected refIndex: number
+  protected sharerCount: number
   protected readonly thumbnail: string
   protected readonly ulid: string
 
@@ -269,6 +315,7 @@ export class FileMetaHandler implements IFileMetaHandler {
     this.merkleMem = source.merkleMem
     this.merkleRoot = source.merkleRoot
     this.refIndex = source.refIndex
+    this.sharerCount = source.sharerCount
     this.thumbnail = source.thumbnail
     this.ulid = source.ulid
   }
@@ -283,6 +330,7 @@ export class FileMetaHandler implements IFileMetaHandler {
       const shortcut: IFileMetaFoundationalData = {
         ...source.clone,
         refIndex: source.refIndex || -1,
+        sharerCount: hexToInt(source.clone.sharerCount || ''),
       }
       return new FileMetaHandler(shortcut)
     } else {
@@ -294,6 +342,7 @@ export class FileMetaHandler implements IFileMetaHandler {
         merkleMem: '',
         merkleRoot: new Uint8Array(),
         refIndex: source.refIndex || 0,
+        sharerCount: source.sharerCount || 0,
         thumbnail: source.thumbnail || '',
         ulid: source.ulid || ulid(),
       }
@@ -341,6 +390,32 @@ export class FileMetaHandler implements IFileMetaHandler {
 
   /**
    *
+   * @param {number} value
+   * @returns {number}
+   */
+  addAndReturnSharerCount (value: number): number {
+    this.sharerCount += value
+    return this.sharerCount
+  }
+
+  /**
+   *
+   * @param {number} count
+   */
+  setSharerCount (count: number): void {
+    this.sharerCount = count
+  }
+
+  /**
+   *
+   * @returns {number}
+   */
+  getSharerCount (): number {
+    return this.sharerCount
+  }
+
+  /**
+   *
    * @returns {string}
    */
   getUlid (): string {
@@ -376,6 +451,7 @@ export class FileMetaHandler implements IFileMetaHandler {
       merkleMem: this.merkleMem,
       merkleRoot: this.merkleRoot,
       metaDataType: 'file',
+      sharerCount: intToHex(this.sharerCount),
       thumbnail: this.thumbnail,
       ulid: this.ulid,
     }
@@ -495,13 +571,109 @@ export class ShareMetaHandler implements IShareMetaHandler {
 
   /**
    *
-   * @returns {IShareRefMetaData}
+   * @returns {IRefMetaData}
    */
-  exportRef (): IShareRefMetaData {
+  exportRef (): IRefMetaData {
     return {
       location: `${this.location}/${intToHex(this.refIndex)}`,
       merkleHex: '',
-      metaDataType: 'shareref',
+      metaDataType: 'ref',
+      pointsTo: this.ulid,
+    }
+  }
+}
+
+export class SharerMetaHandler implements ISharerMetaHandler {
+  protected readonly location: string
+  protected readonly sharer: string
+  protected refIndex: number
+  protected readonly ulid: string
+
+  protected constructor (source: ISharerMetaFoundationalData) {
+    this.location = source.location
+    this.sharer = source.sharer
+    this.refIndex = source.refIndex
+    this.ulid = source.ulid
+  }
+
+  /**
+   *
+   * @param {ISharerMetaDataSource} source
+   * @returns {Promise<SharerMetaHandler>}
+   */
+  static async create (source: ISharerMetaDataSource) {
+    const rdy: ISharerMetaFoundationalData = {
+      location: `s/ulid/${source.location}`,
+      sharer: source.sharer,
+      refIndex: source.refIndex || -1,
+      ulid: source.ulid || ulid(),
+    }
+    return new SharerMetaHandler(rdy)
+  }
+
+  /**
+   *
+   * @param {number} refIndex
+   */
+  setRefIndex (refIndex: number): void {
+    this.refIndex = refIndex
+  }
+
+  /**
+   *
+   * @returns {number}
+   */
+  getRefIndex (): number {
+    return this.refIndex
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  getRefString (): string {
+    return intToHex(this.refIndex)
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  getUlid (): string {
+    return this.ulid
+  }
+
+  /**
+   *
+   * @returns {string}
+   */
+  getLocation (): string {
+    return this.location
+  }
+
+  /**
+   *
+   * @returns {ISharerMetaData}
+   */
+  export (): ISharerMetaData {
+    return {
+      location: this.location,
+      merkleHex: '',
+      metaDataType: 'sharer',
+      sharer: this.sharer,
+      ulid: this.ulid,
+    }
+  }
+
+  /**
+   *
+   * @returns {ISharerRefMetaData}
+   */
+  exportRef (): ISharerRefMetaData {
+    return {
+      location: `${this.location}/s-${intToHex(this.refIndex)}`,
+      merkleHex: '',
+      metaDataType: 'sharerref',
       pointsTo: this.ulid,
     }
   }

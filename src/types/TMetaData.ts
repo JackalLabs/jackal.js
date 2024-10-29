@@ -8,6 +8,8 @@ import {
   IRefMetaData,
   IRootLookupMetaData,
   IShareMetaData,
+  ISharerMetaData,
+  ISharerRefMetaData,
 } from '@/interfaces'
 
 export type TMetaDataTypes =
@@ -17,12 +19,14 @@ export type TMetaDataTypes =
   | 'null'
   | 'nullref'
   | 'share'
-  | 'shareref'
-  | 'sharefolder'
+  | 'sharer'
+  | 'sharerref'
   | 'rootlookup'
 export type TMetaDataSets =
   | TChildMetaData
   | IShareMetaData
+  | ISharerMetaData
+  | ISharerRefMetaData
   | IRefMetaData
   | INullRefMetaData
   | ILegacyFolderMetaData
