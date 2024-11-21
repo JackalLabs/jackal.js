@@ -78,4 +78,6 @@ export interface IRnsHandler {
   addSubRns (options: IAddSubRnsOptions): Promise<IWrappedEncodeObject[]>
 
   removeSubRns (options: IRemoveSubRnsOptions): Promise<IWrappedEncodeObject[]>
+
+  setNewPrimary (options: ISetNewPrimaryOptions): Promise<IWrappedEncodeObject[]>
 }
