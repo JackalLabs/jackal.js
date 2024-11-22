@@ -2207,7 +2207,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           })
           if (providerIps.length >= copies) {
             const fakeResponse: IProviderUploadResponse = {
-              merkle:  hexToBuffer(merkle),
+              merkle: hexToBuffer(merkle),
               owner: this.jklAddress,
               start: uploadHeight,
             }

@@ -19,6 +19,7 @@ import {
   IPageRequest,
   IRegisterOptions,
   IRemoveSubRnsOptions,
+  ISetNewPrimaryOptions,
   ITransferOptions,
   IUpdateOptions,
   IWrappedEncodeObject,

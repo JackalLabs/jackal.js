@@ -1,5 +1,5 @@
 import { AccountData, DirectSignResponse, OfflineDirectSigner } from '@cosmjs/proto-signing'
-import { AminoSignResponse, StdSignDoc, OfflineAminoSigner } from '@cosmjs/amino'
+import { AminoSignResponse, OfflineAminoSigner, StdSignDoc } from '@cosmjs/amino'
 import { IMnemonicSigner, ISignDoc } from '@/interfaces'
 
 export class MnemonicSigner implements IMnemonicSigner {

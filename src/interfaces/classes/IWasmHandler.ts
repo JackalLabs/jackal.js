@@ -4,13 +4,13 @@ export interface IWasmHandler {
   instantiateICA (
     contractAddress: string,
     connectionIdA: string,
-    connectionIdB: string
+    connectionIdB: string,
   ): Promise<DDeliverTxResponse>
 
   reOpenChannel (
     contractAddress: string,
     connectionIdA: string,
-    connectionIdB: string
+    connectionIdB: string,
   ): Promise<DDeliverTxResponse>
 
   getICAContractAddress (contractAddress: string): Promise<string>
