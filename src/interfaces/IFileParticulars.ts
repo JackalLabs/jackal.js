@@ -1,4 +1,4 @@
-import { IFileMeta } from '@/interfaces/IMetaData'
+import { IFileMeta } from '@/interfaces'
 
 export interface IFileParticulars {
   fileMeta: IFileMeta

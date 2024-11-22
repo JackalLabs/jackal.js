@@ -16,18 +16,19 @@ import {
   INullMetaFoundationalData,
   INullMetaHandler,
   INullRefMetaData,
+  INullSharerRefMetaData,
   IRefMetaData,
   IShareMetaData,
   IShareMetaDataSource,
   IShareMetaFoundationalData,
   IShareMetaHandler,
-  ISharerMetaData,
   ISharerMetaDataSource,
   ISharerMetaFoundationalData,
   ISharerMetaHandler,
   ISharerRefMetaData,
   TFileMetaDataSource,
   TFolderMetaDataSource,
+  TSharerType,
 } from '@/interfaces'
 
 export class NullMetaHandler implements INullMetaHandler {
@@ -112,6 +113,18 @@ export class NullMetaHandler implements INullMetaHandler {
       location: `${this.location}/${intToHex(this.refIndex)}`,
       merkleHex: '',
       metaDataType: 'nullref',
+      pointsTo: '',
+    }
+  }
+
+  exportSharerRef (): INullSharerRefMetaData {
+    return {
+      location: `${this.location}/s-${intToHex(this.refIndex)}`,
+      merkleHex: '',
+      metaDataType: 'nullsharerref',
+      sharer: '',
+      type: 'null',
+      when: 0,
       pointsTo: '',
     }
   }
@@ -475,7 +488,9 @@ export class ShareMetaHandler implements IShareMetaHandler {
   protected readonly isFile: boolean
   protected readonly location: string
   protected readonly name: string
+  protected readonly owner: string
   protected readonly pointsTo: string
+  protected readonly received: number
   protected refIndex: number
   protected readonly ulid: string
 
@@ -483,7 +498,9 @@ export class ShareMetaHandler implements IShareMetaHandler {
     this.isFile = source.isFile
     this.location = source.location
     this.name = source.name
+    this.owner = source.owner
     this.pointsTo = source.pointsTo
+    this.received = source.received
     this.refIndex = source.refIndex
     this.ulid = source.ulid
   }
@@ -496,10 +513,12 @@ export class ShareMetaHandler implements IShareMetaHandler {
   static async create (source: IShareMetaDataSource) {
     const rdy: IShareMetaFoundationalData = {
       isFile: source.isFile,
-      location: `s/ulid/${source.owner}`,
+      location: `s/ulid/${source.location}`,
       name: source.name,
+      owner: source.owner,
       pointsTo: source.pointsTo,
-      refIndex: source.refIndex || -1,
+      received: source.received,
+      refIndex: source.refIndex || 0,
       ulid: source.ulid || ulid(),
     }
     return new ShareMetaHandler(rdy)
@@ -564,7 +583,9 @@ export class ShareMetaHandler implements IShareMetaHandler {
       merkleHex: '',
       metaDataType: 'share',
       name: this.name,
+      owner: this.owner,
       pointsTo: this.pointsTo,
+      received: this.received,
       ulid: this.ulid,
     }
   }
@@ -586,12 +607,16 @@ export class ShareMetaHandler implements IShareMetaHandler {
 export class SharerMetaHandler implements ISharerMetaHandler {
   protected readonly location: string
   protected readonly sharer: string
+  protected readonly type: TSharerType
+  protected readonly when: number
   protected refIndex: number
   protected readonly ulid: string
 
   protected constructor (source: ISharerMetaFoundationalData) {
     this.location = source.location
     this.sharer = source.sharer
+    this.type = source.type
+    this.when = source.when
     this.refIndex = source.refIndex
     this.ulid = source.ulid
   }
@@ -605,7 +630,9 @@ export class SharerMetaHandler implements ISharerMetaHandler {
     const rdy: ISharerMetaFoundationalData = {
       location: `s/ulid/${source.location}`,
       sharer: source.sharer,
-      refIndex: source.refIndex || -1,
+      type: source.type || 'user',
+      when: Date.now(),
+      refIndex: source.refIndex || 0,
       ulid: source.ulid || ulid(),
     }
     return new SharerMetaHandler(rdy)
@@ -653,27 +680,16 @@ export class SharerMetaHandler implements ISharerMetaHandler {
 
   /**
    *
-   * @returns {ISharerMetaData}
-   */
-  export (): ISharerMetaData {
-    return {
-      location: this.location,
-      merkleHex: '',
-      metaDataType: 'sharer',
-      sharer: this.sharer,
-      ulid: this.ulid,
-    }
-  }
-
-  /**
-   *
    * @returns {ISharerRefMetaData}
    */
-  exportRef (): ISharerRefMetaData {
+  exportSharerRef (): ISharerRefMetaData {
     return {
       location: `${this.location}/s-${intToHex(this.refIndex)}`,
       merkleHex: '',
       metaDataType: 'sharerref',
+      sharer: this.sharer,
+      type: this.type,
+      when: this.when,
       pointsTo: this.ulid,
     }
   }

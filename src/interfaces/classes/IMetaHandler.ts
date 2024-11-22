@@ -3,9 +3,9 @@ import {
   IFolderMetaData,
   INullMetaData,
   INullRefMetaData,
+  INullSharerRefMetaData,
   IRefMetaData,
   IShareMetaData,
-  ISharerMetaData,
   ISharerRefMetaData,
 } from '@/interfaces'
 
@@ -25,6 +25,8 @@ export interface INullMetaHandler extends IRefMetaHandler {
   export (): INullMetaData
 
   exportRef (): INullRefMetaData
+
+  exportSharerRef (): INullSharerRefMetaData
 }
 
 export interface IFolderMetaHandler extends IRefMetaHandler {
@@ -86,7 +88,5 @@ export interface ISharerMetaHandler extends IRefMetaHandler {
 
   getLocation (): string
 
-  export (): ISharerMetaData
-
-  exportRef (): ISharerRefMetaData
+  exportSharerRef (): ISharerRefMetaData
 }

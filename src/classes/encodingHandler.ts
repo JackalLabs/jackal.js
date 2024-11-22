@@ -1,5 +1,5 @@
 import { merkleParentAndChild, merkleParentAndIndex, stringToShaHex } from '@/utils/hash'
-import { stringToUint8Array, timestampToBlockHeight } from '@/utils/converters'
+import { intToHex, stringToUint8Array, timestampToBlockHeight } from '@/utils/converters'
 import { formatShareNotification } from '@/utils/notifications'
 import { cryptString, genAesBundle } from '@/utils/crypt'
 import { warnError } from '@/utils/misc'
@@ -19,6 +19,7 @@ import {
 } from '@jackallabs/jackal.js-protos'
 import {
   IClientHandler,
+  IClonePackage,
   IFileDeletePackage,
   IFileMetaHandler,
   IFileTreeOptions,
@@ -29,17 +30,18 @@ import {
   INotificationPackage,
   INullMetaHandler,
   IRootLookupMetaData,
+  IShareDirectPackage,
+  IShareLinkPackage,
   IShareMetaHandler,
-  ISharePackage,
   ISharerMetaHandler,
+  IUnsharePackage,
   IUploadPackage,
   IWrappedEncodeObject,
 } from '@/interfaces'
 import type { TMerkleParentChild, TMetaDataSets } from '@/types'
 import { CosmosMsgForEmpty, ExecuteMsg, InstantiateMsg } from '@/types/StorageOutpost.client.types'
 import { PrivateKey } from 'eciesjs'
-import { FiletreeReader } from '@/classes/filetreeReader'
-import { FolderMetaHandler, SharerMetaHandler } from '@/classes/metaHandlers'
+import { FiletreeReader, FolderMetaHandler, NullMetaHandler, SharerMetaHandler } from '@/classes'
 
 export class EncodingHandler {
   protected readonly jackalClient: IClientHandler
@@ -264,6 +266,23 @@ export class EncodingHandler {
     return this.jackalSigner.txLibrary.storage.msgPostFile(forStorage)
   }
 
+  protected encodeStorageCloneFile (
+    pkg: IClonePackage,
+    currentBlock: number,
+  ): DEncodeObject {
+    const forStorage: DMsgStoragePostFile = {
+      creator: this.jklAddress,
+      merkle: pkg.meta.export().merkleRoot,
+      fileSize: pkg.size,
+      proofInterval: this.proofInterval,
+      proofType: 0,
+      maxProofs: 3,
+      expires: this.createExpiresValue(pkg.duration, currentBlock),
+      note: JSON.stringify({}),
+    }
+    return this.jackalSigner.txLibrary.storage.msgPostFile(forStorage)
+  }
+
   /**
    *
    * @param {DUnifiedFile} item
@@ -312,7 +331,7 @@ export class EncodingHandler {
    * @protected
    */
   protected async encodeFileTreeFile (
-    pkg: IUploadPackage,
+    pkg: IUploadPackage | IClonePackage,
   ): Promise<DEncodeObject> {
     try {
       const meta = pkg.meta.export()
@@ -322,6 +341,35 @@ export class EncodingHandler {
       return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
     } catch (err) {
       throw warnError('encodingHandler encodeFileTreeFile()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {number} index
+   * @param {string[]} addViewers
+   * @param {string[]} removeViewers
+   * @returns {Promise<DEncodeObject>}
+   * @protected
+   */
+  protected async encodeFileTreeRefShare (
+    ulid: string,
+    index: number,
+    addViewers: string[],
+    removeViewers: string[],
+  ): Promise<DEncodeObject> {
+    try {
+      const parentAndChild = await merkleParentAndIndex(`s/ulid/${ulid}`, intToHex(index))
+      const forFileTree = await this.reader.encodeExistingRef({
+        location: parentAndChild,
+        ref: index,
+        ulid,
+        viewers: { add: addViewers, remove: removeViewers },
+      })
+      return this.jackalClient.getTxs().fileTree.msgPostFile(forFileTree)
+    } catch (err) {
+      throw warnError('encodingHandler encodeFileTreeFileShare()', err)
     }
   }
 
@@ -353,20 +401,25 @@ export class EncodingHandler {
 
   /**
    *
-   * @param {IFileTreePackage} pkg
+   * @param {string} ulid
+   * @param {string} link
    * @returns {Promise<DEncodeObject>}
    * @protected
    */
-  protected async encodeFileTreeSharer (
-    pkg: IFileTreePackage,
+  protected async encodeFileTreeFileShareLink (
+    ulid: string,
+    link: string,
   ): Promise<DEncodeObject> {
     try {
-      const mH = pkg.meta as ISharerMetaHandler
-      const meta = mH.export()
-      const parentAndChild = await merkleParentAndChild(meta.location)
-      return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
+      const parentAndChild = await merkleParentAndChild(`s/ulid/${ulid}`)
+      const forFileTree = await this.reader.encodeExistingPostFile(
+        ulid,
+        parentAndChild,
+        { add: [link] },
+      )
+      return this.jackalClient.getTxs().fileTree.msgPostFile(forFileTree)
     } catch (err) {
-      throw warnError('encodingHandler encodeFileTreeSharer()', err)
+      throw warnError('encodingHandler encodeFileTreeFileShareLink()', err)
     }
   }
 
@@ -493,7 +546,7 @@ export class EncodingHandler {
   ): Promise<DEncodeObject> {
     try {
       const mH = pkg.meta as ISharerMetaHandler
-      const meta = mH.exportRef()
+      const meta = mH.exportSharerRef()
       const parentAndChild = await merkleParentAndChild(meta.location)
       return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
     } catch (err) {
@@ -777,6 +830,40 @@ export class EncodingHandler {
 
   /**
    *
+   * @param {IClonePackage} pkg
+   * @param {number} blockHeight
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
+  protected async clonePkgToMsgs (
+    pkg: IClonePackage,
+    blockHeight: number,
+  ): Promise<IWrappedEncodeObject[]> {
+    try {
+      const storageFile = this.encodeStorageCloneFile(pkg, blockHeight)
+      const fileTreeFile = this.encodeFileTreeFile(pkg)
+      const ref = this.encodeFileTreeRef(pkg)
+      return [
+        {
+          encodedObject: storageFile,
+          modifier: 0,
+        },
+        {
+          encodedObject: await fileTreeFile,
+          modifier: 0,
+        },
+        {
+          encodedObject: await ref,
+          modifier: 0,
+        },
+      ]
+    } catch (err) {
+      throw warnError('storageHandler pkgToMsgs()', err)
+    }
+  }
+
+  /**
+   *
    * @param {IFileTreePackage} pkg
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
@@ -891,21 +978,83 @@ export class EncodingHandler {
 
   /**
    *
-   * @param {INotificationPackage} pkg
+   * @param {IShareLinkPackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
+  protected async shareLinkToMsgs (
+    pkg: IShareLinkPackage,
+  ): Promise<IWrappedEncodeObject[]> {
+    try {
+      const refs = []
+      const id = this.reader.ulidLookup(pkg.path)
+      const sharerCount = await this.reader.sharerCountRead(id)
+      const share = this.encodeFileTreeFileShareLink(id, pkg.link)
+      if (!pkg.isFile) {
+        const count = await this.reader.refCountRead(pkg.path)
+        for (let i = 0; i < count; i++) {
+          const local = this.encodeFileTreeRefShare(id, i, [pkg.link], [])
+          refs.push(local)
+        }
+      }
+      const sharerPkg = {
+        meta: await SharerMetaHandler.create({
+          location: id,
+          sharer: pkg.link,
+          type: 'link',
+          refIndex: sharerCount,
+        }),
+        aes: await genAesBundle(),
+      }
+      this.reader.sharerCountIncrement(id)
+      const sharerRef = this.encodeFileTreeSharerRef(sharerPkg)
+      const final = [
+        {
+          encodedObject: await share,
+          modifier: 0,
+        },
+        {
+          encodedObject: await sharerRef,
+          modifier: 0,
+        },
+      ]
+      for (let one of refs) {
+        final.push({
+          encodedObject: await one,
+          modifier: 0,
+        })
+      }
+      return final
+    } catch (err) {
+      throw warnError('storageHandler shareLinkToMsgs()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {IShareDirectPackage} pkg
    * @param {string[]} [additionalViewers]
    * @returns {Promise<IWrappedEncodeObject[]>}
    * @protected
    */
   protected async sendShareToMsgs (
-    pkg: ISharePackage,
+    pkg: IShareDirectPackage,
     additionalViewers: string[] = [],
   ): Promise<IWrappedEncodeObject[]> {
     try {
+      const refs = []
       const id = this.reader.ulidLookup(pkg.path)
       const sharerCount = await this.reader.sharerCountRead(id)
       const name = pkg.path.split('/').slice(-1)[0]
       const baseNoti = formatShareNotification(id, name, pkg.isFile)
       const share = this.encodeFileTreeFileShare(id, additionalViewers, [])
+      if (!pkg.isFile) {
+        const count = await this.reader.refCountRead(pkg.path)
+        for (let i = 0; i < count; i++) {
+          const local = this.encodeFileTreeRefShare(id, i, additionalViewers, [])
+          refs.push(local)
+        }
+      }
       const sharerPkg = {
         meta: await SharerMetaHandler.create({
           location: id,
@@ -915,7 +1064,6 @@ export class EncodingHandler {
         aes: await genAesBundle(),
       }
       this.reader.sharerCountIncrement(id)
-      const sharer = this.encodeFileTreeSharer(sharerPkg)
       const sharerRef = this.encodeFileTreeSharerRef(sharerPkg)
       const notification = this.encodeCreateNotification({
         isPrivate: pkg.isPrivate,
@@ -923,13 +1071,9 @@ export class EncodingHandler {
         msg: baseNoti.msg,
         contents: JSON.stringify(baseNoti),
       })
-      return [
+      const final = [
         {
           encodedObject: await share,
-          modifier: 0,
-        },
-        {
-          encodedObject: await sharer,
           modifier: 0,
         },
         {
@@ -941,8 +1085,60 @@ export class EncodingHandler {
           modifier: 0,
         },
       ]
+      for (let one of refs) {
+        final.push({
+          encodedObject: await one,
+          modifier: 0,
+        })
+      }
+      return final
     } catch (err) {
-      throw warnError('storageHandler shareToMsgs()', err)
+      throw warnError('storageHandler sendShareToMsgs()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {IUnsharePackage} pkg
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   * @protected
+   */
+  protected async sendUnshareToMsgs (pkg: IUnsharePackage): Promise<IWrappedEncodeObject[]> {
+    try {
+      const sharerUpdates = []
+      const id = this.reader.ulidLookup(pkg.path)
+      const share = this.encodeFileTreeFileShare(id, [], pkg.removed)
+      const meta = await this.reader.loadMetaByPath(pkg.path)
+      if ('location' in meta) {
+        const location = meta.location.split('/').slice(-1)[0]
+        for (let one of pkg.removed) {
+          const refIndex = await this.reader.sharerRefRead(pkg.path, one)
+          const nullMeta = await NullMetaHandler.create({
+            location,
+            refIndex,
+            ulid: id,
+          })
+          const ref = this.encodeFileTreeSharerRef({ meta: nullMeta, aes: await genAesBundle() })
+          sharerUpdates.push(ref)
+        }
+      } else {
+        throw new Error('Invalid Meta')
+      }
+      const final = [
+        {
+          encodedObject: await share,
+          modifier: 0,
+        },
+      ]
+      for (let one of sharerUpdates) {
+        final.push({
+          encodedObject: await one,
+          modifier: 0,
+        })
+      }
+      return final
+    } catch (err) {
+      throw warnError('storageHandler sendUnshareToMsgs()', err)
     }
   }
 
@@ -969,7 +1165,7 @@ export class EncodingHandler {
         },
       ]
     } catch (err) {
-      throw warnError('storageHandler sharedFileToMsgs()', err)
+      throw warnError('storageHandler receiveShareToMsgs()', err)
     }
   }
 

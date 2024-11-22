@@ -4,7 +4,7 @@
     "useDefineForClassFields": true,
     "module": "ESNext",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
+    "types": ["node", "vite/client"],
     "skipLibCheck": true,
     "allowJs": false,
     "esModuleInterop": true,
@@ -33,6 +33,7 @@
       "@/*": ["src/*"]
     },
     "typeRoots": [
+      "node_modules/@types",
       "./src/interfaces",
       "./src/types"
     ]

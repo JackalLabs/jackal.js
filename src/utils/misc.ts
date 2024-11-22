@@ -2,7 +2,6 @@ import { DEncodeObject, findQueryKey, IIbcEngageBundle, TxEvent } from '@jackall
 import { secondToMS } from '@/utils/converters'
 import { sockets } from '@/utils/globalDefaults'
 import { TSockets, TSocketSet, TTidyStringModes } from '@/types'
-import type { ISharedMetaDataMap } from '@/interfaces'
 
 /**
  * Notify that function is deprecated and should no longer be used.
@@ -78,45 +77,6 @@ export function tidyString (
 export async function setDelay (seconds: number): Promise<void> {
   const delay = secondToMS(Number(seconds))
   await new Promise((resolve) => setTimeout(resolve, delay))
-}
-
-/**
- * Find minimum nested depth of match.
- * @param {ISharedMetaDataMap} obj - Nested object to explore.
- * @param {string[]} path - Path within object to check.
- * @returns {number} - Depth of match.
- */
-export function findNestedSharedDepth (
-  obj: ISharedMetaDataMap,
-  path: string[],
-): number {
-  let findings = 0
-  const first = path.shift() as string
-  if (first in obj) {
-    findings++
-    if (path.length > 0) {
-      findings += findNestedSharedDepth(obj[first] as ISharedMetaDataMap, path)
-    }
-  }
-  return findings
-}
-
-/**
- * Find number of matching nested objects exist in tree.
- * @param {ISharedMetaDataMap} obj - Nested object to explore.
- * @param {string[]} path - Path within object to check.
- * @returns {number} - Number of matches found.
- */
-export function findNestedContentsCount (
-  obj: ISharedMetaDataMap,
-  path: string[],
-): number {
-  if (path.length > 0) {
-    const first = path.shift() as string
-    return findNestedContentsCount(obj[first] as ISharedMetaDataMap, path)
-  } else {
-    return Object.keys(obj).length
-  }
 }
 
 /**

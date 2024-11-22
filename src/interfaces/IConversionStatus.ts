@@ -1,4 +1,4 @@
-import { IFolderMetaData, ILegacyFolderMetaData } from '@/interfaces/IMetaData'
+import { IFolderMetaData, ILegacyFolderMetaData } from '@/interfaces'
 
 export interface IConversionNeededBundle {
   requiresConversion: true

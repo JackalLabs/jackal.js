@@ -20,7 +20,7 @@ export default defineConfig({
       rollupTypes: true,
       logLevel: 'error'
     }),
-    nodePolyfills({ include: ['crypto'] })
+    nodePolyfills({ include: ['buffer', 'crypto'] })
   ],
   resolve: {
     preserveSymlinks: true,
@@ -47,7 +47,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, "src/index.ts"),
       fileName: (format) => `index.${format}.js`,
-      formats: ['es'],
+      formats: ['cjs', 'es'],
       name: 'Jackal.js'
     },
     rollupOptions: {
@@ -59,9 +59,10 @@ export default defineConfig({
         'protobufjs',
         'ts-proto',
         /* Jackal.js */
-        'browserify-sign',
+        '@jackallabs/browserify-aes',
         'browserify-aes',
         'browserify-des',
+        'browserify-sign',
         'ripemd160',
         'create-hash',
         'for-each',

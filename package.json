@@ -9,8 +9,12 @@
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.es.js"
+        "default": "./dist/index.es.js",
+        "types": "./dist/index.d.mts"
+      },
+      "require": {
+        "default": "./dist/index.cjs.js",
+        "types": "./dist/index.d.ts"
       }
     }
   },
@@ -57,18 +61,18 @@
   },
   "homepage": "https://github.com/JackalLabs/jackal.js/#README",
   "dependencies": {
-    "@cosmjs/proto-signing": "^0.31.3",
-    "@cosmjs/stargate": "^0.32.2",
+    "@cosmjs/proto-signing": "^0.32.3",
+    "@cosmjs/stargate": "^0.32.3",
     "@jackallabs/bech32": "^1.2.0",
+    "@jackallabs/browserify-aes": "^11.2.0-CCM.1",
     "@jackallabs/dogwood-tree": "^1.0.1",
     "@jackallabs/jackal.js-protos": "2.3.1",
     "@karnthis/plzsu": "^1.0.0",
     "@keplr-wallet/types": "^0.12.44",
-    "browserify-aes": "^1.2.0",
     "browserify-des": "^1.0.2",
     "browserify-sign": "^4.2.2",
     "create-hash": "^1.2.0",
-    "eciesjs": "^0.4.2",
+    "eciesjs": "^0.4.11",
     "for-each": "^0.3.3",
     "ripemd160": "^2.0.2",
     "ulid": "^2.3.0"
@@ -77,6 +81,7 @@
     "@btmills/prettier": "3.0.3",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-typescript": "^11.1.5",
+    "@types/node": "^22.9.0",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "@typescript-eslint/parser": "^6.10.0",
     "@vitest/coverage-v8": "0.34.6",
@@ -91,5 +96,8 @@
     "vite-plugin-node-polyfills": "^0.17.0",
     "vite-tsconfig-paths": "^4.2.1",
     "vitest": "0.34.6"
+  },
+  "overrides": {
+    "browserify-aes": "@jackallabs/browserify-aes@11.2.0-CCM.1"
   }
 }

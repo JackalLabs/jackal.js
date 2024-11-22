@@ -3,8 +3,8 @@ import {
   IFileMetaHandler,
   IFolderMetaHandler,
   INullMetaHandler,
-  IShareFolderMetaHandler,
   IShareMetaHandler,
+  ISharerMetaHandler,
   type ISocketConfig,
 } from '@/interfaces'
 
@@ -19,8 +19,8 @@ export type TMetaHandler =
   INullMetaHandler
   | IFolderMetaHandler
   | IFileMetaHandler
-  | IShareFolderMetaHandler
   | IShareMetaHandler
+  | ISharerMetaHandler
 
 export type TSockets =
   | 'jackal'

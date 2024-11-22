@@ -1,4 +1,4 @@
-import type { IAesBundle } from '@/interfaces/IAesBundle'
+import type { IAesBundle } from '@/interfaces'
 
 export interface IFileTreeOptions {
   aes?: IAesBundle

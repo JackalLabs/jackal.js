@@ -3,6 +3,7 @@ import { Secp256k1HdWallet } from '@cosmjs/amino'
 import { DirectSecp256k1HdWallet } from '@cosmjs/proto-signing'
 import type { IMnemonicWallet } from '@/interfaces/classes'
 import { TMergedSigner } from '@jackallabs/jackal.js-protos'
+import { MnemonicSigner } from '@/classes/mnemonicSigner'
 
 export class MnemonicWallet implements IMnemonicWallet {
   private readonly mergedSigner: TMergedSigner
@@ -35,10 +36,7 @@ export class MnemonicWallet implements IMnemonicWallet {
     /* Destroy mnemonic */
     mnemonic = ''
 
-    const mergedSigner = {
-      ...aminoWallet,
-      ...directWallet,
-    } as TMergedSigner
+    const mergedSigner = new MnemonicSigner(directWallet, aminoWallet)
     const { address } = (await mergedSigner.getAccounts())[0]
     return new MnemonicWallet(mergedSigner, address)
   }
@@ -65,6 +63,12 @@ export class MnemonicWallet implements IMnemonicWallet {
    * @returns {Promise<StdSignature>} - Resulting AminoSignResponse.signature.
    */
   async signArbitrary (message: string): Promise<StdSignature> {
+    let data
+    if (window) {
+      data = btoa(message)
+    } else {
+      data = Buffer.from(message).toString('base64')
+    }
     const signed = await this.mergedSigner.signAmino(this.address, {
       chain_id: '',
       account_number: '0',
@@ -78,7 +82,7 @@ export class MnemonicWallet implements IMnemonicWallet {
           type: 'sign/MsgSignData',
           value: {
             signer: this.address,
-            data: btoa(message),
+            data,
           },
         },
       ],

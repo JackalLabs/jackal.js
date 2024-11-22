@@ -34,10 +34,17 @@ export interface IRefMetaData extends IBaseMetaData {
 
 export interface ISharerRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
   metaDataType: 'sharerref'
+  sharer: string
+  type: TSharerType
+  when: number
 }
 
 export interface INullRefMetaData extends Omit<IRefMetaData, 'metaDataType'> {
   metaDataType: 'nullref'
+}
+
+export interface INullSharerRefMetaData extends Omit<ISharerRefMetaData, 'metaDataType'> {
+  metaDataType: 'nullsharerref'
 }
 
 export interface INullMetaDataSource {
@@ -135,9 +142,11 @@ export interface IFileMetaData extends IBaseMetaData {
 
 export interface IShareMetaDataSource {
   isFile: boolean
+  location: string
   name: string
   owner: string
   pointsTo: string
+  received: number
   refIndex?: number
   ulid?: string
 }
@@ -146,7 +155,9 @@ export interface IShareMetaFoundationalData {
   isFile: boolean
   location: string
   name: string
+  owner: string
   pointsTo: string
+  received: number
   refIndex: number
   ulid: string
 }
@@ -156,7 +167,9 @@ export interface IShareMetaData extends Omit<IRefMetaData, 'metaDataType'> {
   location: string
   metaDataType: 'share'
   name: string
+  owner: string
   pointsTo: string
+  received: number
   ulid: string
 }
 
@@ -165,13 +178,12 @@ export interface IRootLookupMetaData {
   ulid: string
 }
 
-export interface ISharingMap extends Record<string, string[]> {
-  sharers: string[]
-}
+export type TSharerType = 'link' | 'user' | 'null'
 
 export interface ISharerMetaDataSource {
   location: string
   sharer: string
+  type?: TSharerType
   refIndex?: number
   ulid?: string
 }
@@ -179,13 +191,8 @@ export interface ISharerMetaDataSource {
 export interface ISharerMetaFoundationalData {
   location: string
   sharer: string
+  type: TSharerType
+  when: number
   refIndex: number
-  ulid: string
-}
-
-export interface ISharerMetaData extends Omit<IBaseMetaData, 'metaDataType'> {
-  location: string
-  metaDataType: 'sharer'
-  sharer: string
   ulid: string
 }

@@ -208,6 +208,12 @@ export class ClientHandler implements IClientHandler {
             jklAddress = wallet.getAddress()
             hostSigner = jklSigner
             hostAddress = jklAddress
+
+            if (typeof window === 'undefined') {
+              global.mnemonicWallet = wallet
+            } else {
+              window.mnemonicWallet = wallet
+            }
           }
           break
         default:
@@ -407,18 +413,21 @@ export class ClientHandler implements IClientHandler {
   /**
    *
    * @returns {Promise<number>}
-   * @protected
    */
   async getJackalBlockHeight (): Promise<number> {
     if (!this.jklSigner) {
       throw new Error(signerNotEnabled('ClientHandler', 'getJackalBlockHeight'))
     }
-    return await this.jklSigner.getHeight()
+    try {
+      return await this.jklSigner.getHeight()
+    } catch (err) {
+      throw warnError('clientHandler getJackalBlockHeight()', err)
+    }
   }
 
   /**
    *
-   * @returns {TJackalSigningClient}
+   * @returns {TJackalSigningClient | null}
    */
   getJackalSigner (): TJackalSigningClient | null {
     return this.jklSigner
@@ -426,7 +435,7 @@ export class ClientHandler implements IClientHandler {
 
   /**
    *
-   * @returns {TJackalSigningClient}
+   * @returns {THostSigningClient | null}
    */
   getHostSigner (): THostSigningClient | null {
     return this.hostSigner
@@ -456,7 +465,11 @@ export class ClientHandler implements IClientHandler {
    * @returns {Promise<DCoin>}
    */
   async getJklBalance (): Promise<DCoin> {
-    return this.getJackalNetworkBalance(this.getICAJackalAddress())
+    try {
+      return await this.getJackalNetworkBalance(this.getICAJackalAddress())
+    } catch (err) {
+      throw warnError('clientHandler getJklBalance()', err)
+    }
   }
 
   /**

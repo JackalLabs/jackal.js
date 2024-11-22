@@ -5,10 +5,10 @@ import {
   INullMetaData,
   INullMetaHandler,
   INullRefMetaData,
+  INullSharerRefMetaData,
   IRefMetaData,
   IRootLookupMetaData,
   IShareMetaData,
-  ISharerMetaData,
   ISharerRefMetaData,
 } from '@/interfaces'
 
@@ -18,17 +18,17 @@ export type TMetaDataTypes =
   | 'ref'
   | 'null'
   | 'nullref'
+  | 'nullsharerref'
   | 'share'
-  | 'sharer'
   | 'sharerref'
   | 'rootlookup'
 export type TMetaDataSets =
   | TChildMetaData
   | IShareMetaData
-  | ISharerMetaData
   | ISharerRefMetaData
   | IRefMetaData
   | INullRefMetaData
+  | INullSharerRefMetaData
   | ILegacyFolderMetaData
   | IRootLookupMetaData
 export type TChildMetaData = INullMetaData | IFolderMetaData | IFileMetaData

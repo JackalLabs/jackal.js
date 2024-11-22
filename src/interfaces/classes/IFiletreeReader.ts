@@ -2,29 +2,41 @@ import type { DMsgFileTreePostFile, DMsgProvisionFileTree, DNotification } from 
 import {
   IAesBundle,
   IChildMetaDataMap,
+  IEncodeExistingRefOptions,
   IFileMeta,
   IFileMetaData,
   IFileMetaHandler,
   IFileTreeOptions,
   IFolderMetaData,
   IFolderMetaHandler,
+  ILoadRefMetaOptions,
+  IMetaDataByUlidOptions,
   INotificationRecord,
   INullRefMetaData,
+  INullSharerRefMetaData,
   IReadFolderContentOptions,
   IReconstructedFileTree,
   IRefMetaData,
   IShareMetaData,
+  ISharerRefMetaData,
+  ISharingLookupOptions,
   IViewerSetAddRemove,
   TSetMetaViewersOptions,
 } from '@/interfaces'
 import { TConversionPair, TMerkleParentChild, TMetaDataSets } from '@/types'
 
 export interface IFiletreeReader {
+  sharersRead (path: string): Promise<string[]>
+
+  sharerRefRead (path: string, sharer: string): Promise<number>
+
   refCountRead (path: string): Promise<number>
 
   refCountIncrement (path: string): void
 
   refCountSet (path: string, value: number): void
+
+  readSharingRefCount (sharer?: string): Promise<[number, number]>
 
   sharerCountRead (ulid: string): Promise<number>
 
@@ -32,17 +44,17 @@ export interface IFiletreeReader {
 
   sharerCountSet (ulid: string, value: number): void
 
-  readSharingRefCount (sharer?: string): Promise<[number, number]>
-
   getConversionQueueLength (): number
 
   getConversions (): Promise<TConversionPair[]>
 
-  sharingLookup (sharer?: string): string[]
+  sharingLookup (options?: ISharingLookupOptions): Promise<IFolderMetaData[] | IShareMetaData[]>
 
-  viewerSave (ulid: string, access: Record<string, string>): void
+  readViewerShares (ulid: string, index?: number): string[]
 
-  viewerLookup (ulid: string): Promise<Record<string, string>>
+  viewerSave (ulid: string, access: Record<string, string>, index?: number): void
+
+  viewerLookup (ulid: string, index?: number): Promise<Record<string, string>>
 
   ulidLookup (path: string, owner?: string): string
 
@@ -58,20 +70,28 @@ export interface IFiletreeReader {
 
   loadShareMeta (path: string): Promise<IShareMetaData>
 
-  loadRefMeta (ulid: string, ref: number): Promise<IRefMetaData | INullRefMetaData>
+  loadRefMeta (options: ILoadRefMetaOptions): Promise<IRefMetaData | INullRefMetaData>
+
+  loadSharerRefMeta (ulid: string, ref: number): Promise<ISharerRefMetaData | INullSharerRefMetaData>
 
   loadLegacyMeta (
     legacyMerkles: Uint8Array[],
     legacyPath: [string, string],
   ): Promise<IFileMetaData>
 
-  loadMetaByUlid (ulid: string): Promise<TMetaDataSets>
+  loadMetaByUlid (options: IMetaDataByUlidOptions): Promise<TMetaDataSets>
 
   loadMetaByPath (path: string): Promise<TMetaDataSets>
 
   loadMetaByExternalPath (
     path: string,
     ownerAddress: string,
+  ): Promise<TMetaDataSets>
+
+  loadMetaByExternalUlid (
+    ulid: string,
+    ownerAddress: string,
+    linkKey?: string,
   ): Promise<TMetaDataSets>
 
   loadFromLegacyMerkles (
@@ -84,7 +104,9 @@ export interface IFiletreeReader {
 
   loadKeysByPath (path: string, ownerAddress: string): Promise<IAesBundle>
 
-  loadKeysByUlid (ulid: string, ownerAddress: string): Promise<IAesBundle>
+  loadKeysByUlid (ulid: string, ownerAddress: string, linkKey?: string): Promise<IAesBundle>
+
+  livenessCheck (ulid: string, ownerAddress: string): Promise<boolean>
 
   encodeProvisionFileTree (): Promise<DMsgProvisionFileTree>
 
@@ -99,6 +121,8 @@ export interface IFiletreeReader {
     location: TMerkleParentChild,
     viewers: IViewerSetAddRemove,
   ): Promise<DMsgFileTreePostFile>
+
+  encodeExistingRef (options: IEncodeExistingRefOptions): Promise<DMsgFileTreePostFile>
 
   protectNotification (receiverAddress: string, aes: IAesBundle): Promise<string>
 

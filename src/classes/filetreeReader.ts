@@ -3,6 +3,7 @@ import {
   IChildMetaDataMap,
   IClientHandler,
   ICreateViewAccessOptions,
+  IEncodeExistingRefOptions,
   IFileMeta,
   IFileMetaData,
   IFileMetaHandler,
@@ -11,15 +12,20 @@ import {
   IFolderMetaData,
   IFolderMetaHandler,
   ILegacyFolderMetaData,
+  ILoadMetaOptions,
+  ILoadRefMetaOptions,
+  IMetaDataByUlidOptions,
   INotificationRecord,
   INullRefMetaData,
+  INullSharerRefMetaData,
+  IPathToLookupOptions,
   IPrivateNotification,
   IReadFolderContentOptions,
   IReconstructedFileTree,
   IRefMetaData,
-  IRootLookupMetaData,
   IShareMetaData,
-  ISharingMap,
+  ISharerRefMetaData,
+  ISharingLookupOptions,
   IViewerSetAddRemove,
   TSetMetaViewersOptions,
 } from '@/interfaces'
@@ -36,13 +42,21 @@ import { warnError } from '@/utils/misc'
 import { hashAndHex, hashAndHexOwner, hashAndHexUserAccess, merklePath, merklePathPlusIndex } from '@/utils/hash'
 import {
   hexToInt,
+  intToHex,
   prepDecompressionForAmino,
   safeDecompressData,
   safeParseFileTree,
   safeParseLegacyMerkles,
   safeStringifyFileTree,
 } from '@/utils/converters'
-import { aesToString, compressEncryptString, cryptString, genAesBundle, stringToAes } from '@/utils/crypt'
+import {
+  aesToString,
+  compressEncryptString,
+  cryptString,
+  genAesBundle,
+  linkPrivateKey,
+  stringToAes,
+} from '@/utils/crypt'
 import { TConversionPair, TExtractedViewAccess, TMerkleParentChild, TMetaDataSets } from '@/types'
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
 
@@ -54,8 +68,11 @@ export class FiletreeReader implements IFiletreeReader {
   protected readonly clientAddress: string
 
   protected ulidLeaves: Record<string, Record<string, string>>
-  protected sharingLeaves: ISharingMap
+  protected sharerRefs: Record<string, Record<string, number>>
+  protected sharers: Record<string, IFolderMetaData>
+  protected sharingLeaves: Record<string, IShareMetaData[]>
   protected viewerLeaves: Record<string, Record<string, string>>
+  protected viewerShares: Record<string, string[]>
   protected directoryLeaves: Record<string, Record<string, IChildMetaDataMap>>
   protected directoriesByUlid: Record<string, Record<string, IChildMetaDataMap>>
   protected yellowpages: Record<string, Record<string, DQueryFileTreeFile>>
@@ -80,8 +97,11 @@ export class FiletreeReader implements IFiletreeReader {
 
     this.ulidLeaves = {}
     this.ulidLeaves[ownerAddress] = {}
-    this.sharingLeaves = { sharers: [] }
+    this.sharerRefs = {}
+    this.sharers = {}
+    this.sharingLeaves = {}
     this.viewerLeaves = {}
+    this.viewerShares = {}
     this.directoryLeaves = {}
     this.directoryLeaves[ownerAddress] = {}
     this.directoriesByUlid = {}
@@ -93,6 +113,38 @@ export class FiletreeReader implements IFiletreeReader {
     this.sharerCounts = {}
     this.conversionQueue = []
     this.nullConversions = []
+  }
+
+  /**
+   *
+   * @param {string} path
+   * @returns {Promise<string[]>}
+   */
+  async sharersRead (path: string): Promise<string[]> {
+    try {
+      return await this.loadSharerRefs(path)
+    } catch (err) {
+      throw warnError('filetreeReader sharersRead()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} path
+   * @param {string} sharer
+   * @returns {Promise<number>}
+   */
+  async sharerRefRead (path: string, sharer: string): Promise<number> {
+    try {
+      await this.loadSharerRefs(path)
+      if (sharer in this.sharerRefs[path]) {
+        return this.sharerRefs[path][sharer]
+      } else {
+        throw new Error('Invalid Ref')
+      }
+    } catch (err) {
+      throw warnError('filetreeReader sharerRefRead()', err)
+    }
   }
 
   /**
@@ -140,53 +192,6 @@ export class FiletreeReader implements IFiletreeReader {
 
   /**
    *
-   * @param {string} ulid
-   * @returns {Promise<number>}
-   */
-  async sharerCountRead (ulid: string): Promise<number> {
-    try {
-      if (ulid in this.sharerCounts) {
-        return this.sharerCounts[ulid]
-      } else {
-        const meta = await this.loadMetaByUlid(ulid)
-        if ('sharerCount' in meta) {
-          const count = hexToInt(meta.sharerCount || '')
-          this.sharerCountSet(ulid, count)
-          return count
-        } else {
-          throw new Error('Invalid meta type')
-        }
-      }
-    } catch (err) {
-      throw warnError('filetreeReader sharerCountRead()', err)
-    }
-  }
-
-  /**
-   *
-   * @param {string} ulid
-   */
-  sharerCountIncrement (ulid: string): void {
-    if (this.sharerCounts[ulid]) {
-      this.sharerCounts[ulid]++
-    } else {
-      this.sharerCounts[ulid] = 1
-    }
-  }
-
-  /**
-   *
-   * @param {string} ulid
-   * @param {number} value
-   */
-  sharerCountSet (ulid: string, value: number): void {
-    if (!this.sharerCounts[ulid]) {
-      this.sharerCounts[ulid] = value
-    }
-  }
-
-  /**
-   *
    * @param {string} [sharer]
    * @returns {Promise<[number, number]>}
    */
@@ -224,6 +229,54 @@ export class FiletreeReader implements IFiletreeReader {
 
   /**
    *
+   * @param {string} ulid
+   * @returns {Promise<number>}
+   */
+  async sharerCountRead (ulid: string): Promise<number> {
+    try {
+      if (ulid in this.sharerCounts) {
+        return this.sharerCounts[ulid]
+      } else {
+        let meta = await this.loadMetaByUlid({ ulid })
+        if (meta.metaDataType === 'folder' || meta.metaDataType === 'file') {
+          meta = meta as IFolderMetaData | IFileMetaData
+          const count = hexToInt(meta.sharerCount || '')
+          this.sharerCountSet(ulid, count)
+          return count
+        } else {
+          throw new Error('Invalid meta type')
+        }
+      }
+    } catch (err) {
+      throw warnError('filetreeReader sharerCountRead()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   */
+  sharerCountIncrement (ulid: string): void {
+    if (this.sharerCounts[ulid]) {
+      this.sharerCounts[ulid]++
+    } else {
+      this.sharerCounts[ulid] = 1
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {number} value
+   */
+  sharerCountSet (ulid: string, value: number): void {
+    if (!this.sharerCounts[ulid]) {
+      this.sharerCounts[ulid] = value
+    }
+  }
+
+  /**
+   *
    * @returns {number}
    */
   getConversionQueueLength (): number {
@@ -241,7 +294,7 @@ export class FiletreeReader implements IFiletreeReader {
         if (ulid === '-1') {
           continue
         }
-        const meta = await this.loadMetaByUlid(ulid)
+        const meta = await this.loadMetaByUlid({ ulid })
 
         if (meta.metaDataType === 'file') {
           const parent = meta.location.split('/').slice(-1)[0]
@@ -324,15 +377,48 @@ export class FiletreeReader implements IFiletreeReader {
     }
   }
 
-  sharingLookup (sharer?: string): string[] {
-    if (!sharer) {
-      return this.sharingLeaves.sharers
-    } else {
-      if (this.sharingLeaves[sharer]) {
-        return this.sharingLeaves[sharer]
+  /**
+   *
+   * @param {ISharingLookupOptions} [options]
+   * @returns {Promise<string[]>}
+   */
+  async sharingLookup (options: ISharingLookupOptions = {}): Promise<IFolderMetaData[] | IShareMetaData[]> {
+    try {
+      if (!options.sharer) {
+        let sharers = Object.values(this.sharers)
+        if (options.refresh || sharers.length === 0) {
+          await this.pathToLookup({ path: 'Shared' })
+          return Object.values(this.sharers)
+        } else {
+          return sharers
+        }
       } else {
-        throw warnError('filetreeReader sharingLookup()', new Error('No Sharer Found'))
+        if (options.refresh) {
+          await this.sharingToLookup(options.sharer)
+        }
+        if (this.sharingLeaves[`Shared/${options.sharer}`]) {
+          return this.sharingLeaves[`Shared/${options.sharer}`]
+        } else {
+          throw new Error('No Sharer Found')
+        }
       }
+    } catch (err) {
+      throw warnError('filetreeReader sharingLookup()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {number} [index]
+   * @returns {string[]}
+   */
+  readViewerShares (ulid: string, index?: number): string[] {
+    const reference = (typeof index !== 'undefined') ? `${ulid}/${intToHex(index)}` : ulid
+    if (this.viewerShares[reference]) {
+      return this.viewerShares[reference]
+    } else {
+      throw warnError('filetreeReader readViewerShares()', new Error('Not Found'))
     }
   }
 
@@ -340,30 +426,40 @@ export class FiletreeReader implements IFiletreeReader {
    *
    * @param {string} ulid
    * @param {Record<string, string>} access
+   * @param {number} [index]
    */
-  viewerSave (ulid: string, access: Record<string, string>): void {
-    this.viewerLeaves[ulid] = access
+  viewerSave (ulid: string, access: Record<string, string>, index?: number): void {
+    const reference = (typeof index !== 'undefined') ? `${ulid}/${intToHex(index)}` : ulid
+    this.viewerLeaves[reference] = access
   }
 
   /**
    *
    * @param {string} ulid
+   * @param {number} [index]
    * @returns {Promise<Record<string, string>>}
    */
-  async viewerLookup (ulid: string): Promise<Record<string, string>> {
+  async viewerLookup (ulid: string, index?: number): Promise<Record<string, string>> {
     try {
-      if (!this.viewerLeaves[ulid]) {
-        const hexAddress = await merklePath(`s/ulid/${ulid}`)
+      const reference = (typeof index !== 'undefined') ? `${ulid}/${intToHex(index)}` : ulid
+      if (!this.viewerLeaves[reference]) {
+        let hexAddress
+        if (typeof index !== 'undefined') {
+          hexAddress = await merklePathPlusIndex(`s/ulid/${ulid}`, index)
+        } else {
+          hexAddress = await merklePath(`s/ulid/${ulid}`)
+        }
         const lookup = {
           address: hexAddress,
           ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
         }
         const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
         const viewAccess: Record<string, string> = JSON.parse(file.viewingAccess)
-        this.viewerSave(ulid, viewAccess)
+        await this.loadSharedWith(ulid, index)
+        this.viewerSave(reference, viewAccess)
         return viewAccess
       } else {
-        return this.viewerLeaves[ulid]
+        return this.viewerLeaves[reference]
       }
     } catch (err) {
       throw warnError('filetreeReader viewerLookup()', err)
@@ -420,20 +516,20 @@ export class FiletreeReader implements IFiletreeReader {
    * @returns {IChildMetaDataMap} - Contents structure.
    */
   async readFolderContents (path: string, options: IReadFolderContentOptions = {}): Promise<IChildMetaDataMap> {
-    // console.log(path)
     const {
       owner = this.clientAddress,
       refresh = false,
+      linkKey,
     } = options
-    // console.log(options)
-    // console.log(this.directoryLeaves[owner])
-    // console.log(this.yellowpages[owner])
-
     try {
-      if (this.directoryLeaves[owner][path] && !refresh) {
+      if (this.directoryLeaves[owner] && this.directoryLeaves[owner][path] && !refresh) {
         return this.readDirectoryLeafByPath(path, owner)
       } else {
-        await this.pathToLookupPostProcess(path, owner, this.yellowpages[owner][path])
+        if (!this.yellowpages[owner] || !this.yellowpages[owner][path]) {
+          await this.pathToLookup({ linkKey, owner, path })
+        } else {
+          await this.pathToLookupPostProcess(path, owner, this.yellowpages[owner][path], linkKey)
+        }
         return this.readDirectoryLeafByPath(path, owner)
       }
     } catch (err) {
@@ -448,7 +544,7 @@ export class FiletreeReader implements IFiletreeReader {
    */
   async loadFolderMetaByPath (path: string): Promise<IFolderMetaData> {
     try {
-      const lookup = await this.pathToLookup(path)
+      const lookup = await this.pathToLookup({ path })
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const id = this.ulidLookup(path)
       return await this.loadFolderMeta(file, id)
@@ -486,7 +582,7 @@ export class FiletreeReader implements IFiletreeReader {
    */
   async loadFolderMetaHandler (path: string): Promise<IFolderMetaHandler> {
     try {
-      const lookup = await this.pathToLookup(path)
+      const lookup = await this.pathToLookup({ path })
       // console.log("lookup:", lookup)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       // console.log("File: ", file)
@@ -528,7 +624,7 @@ export class FiletreeReader implements IFiletreeReader {
    */
   async loadShareMeta (path: string): Promise<IShareMetaData> {
     try {
-      const lookup = await this.pathToLookup(path)
+      const lookup = await this.pathToLookup({ path })
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
       const isCleartext = contents.includes('metaDataType')
@@ -556,20 +652,46 @@ export class FiletreeReader implements IFiletreeReader {
 
   /**
    * Look up ref meta data by ulid.
-   * @param {string} ulid
-   * @param {number} ref
+   * @param {ILoadRefMetaOptions} options
    * @returns {Promise<IRefMetaData | INullRefMetaData>}
    */
-  async loadRefMeta (ulid: string, ref: number): Promise<IRefMetaData | INullRefMetaData> {
+  async loadRefMeta (options: ILoadRefMetaOptions): Promise<IRefMetaData | INullRefMetaData> {
     try {
+      const {
+        ref,
+        ulid,
+        linkKey,
+        ownerAddress = this.clientAddress,
+      } = options
       const hexAddress = await merklePathPlusIndex(`s/ulid/${ulid}`, ref)
+      const lookup = {
+        address: hexAddress,
+        ownerAddress: await hashAndHexOwner(hexAddress, ownerAddress),
+      }
+      const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
+      const meta = await this.loadMeta({ file, linkKey, ulid: '-1' })
+      return (meta.metaDataType === 'ref') ? meta as IRefMetaData : meta as INullRefMetaData
+    } catch (err) {
+      throw warnError('filetreeReader loadRefMeta()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {number} ref
+   * @returns {Promise<ISharerRefMetaData | INullSharerRefMetaData>}
+   */
+  async loadSharerRefMeta (ulid: string, ref: number): Promise<ISharerRefMetaData | INullSharerRefMetaData> {
+    try {
+      const hexAddress = await merklePath(`s/ulid/${ulid}/s-${intToHex(ref)}`)
       const lookup = {
         address: hexAddress,
         ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      const meta = await this.loadMeta(file, '-1')
-      return (meta.metaDataType === 'ref') ? meta as IRefMetaData : meta as INullRefMetaData
+      const meta = await this.loadMeta({ file, ulid: '-1' })
+      return (meta.metaDataType === 'sharerref') ? meta as ISharerRefMetaData : meta as INullSharerRefMetaData
     } catch (err) {
       throw warnError('filetreeReader loadRefMeta()', err)
     }
@@ -605,19 +727,24 @@ export class FiletreeReader implements IFiletreeReader {
   }
 
   /**
-   * Look up meta data by ulid.
-   * @param {string} ulid
+   *
+   * @param {IMetaDataByUlidOptions} options
    * @returns {Promise<TMetaDataSets>}
    */
-  async loadMetaByUlid (ulid: string): Promise<TMetaDataSets> {
+  async loadMetaByUlid (options: IMetaDataByUlidOptions): Promise<TMetaDataSets> {
     try {
+      const {
+        ulid,
+        userAddress = this.clientAddress,
+        linkKey,
+      } = options
       const hexAddress = await merklePath(`s/ulid/${ulid}`)
       const lookup = {
         address: hexAddress,
-        ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
+        ownerAddress: await hashAndHexOwner(hexAddress, userAddress),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      return await this.loadMeta(file, ulid)
+      return await this.loadMeta({ file, linkKey, ulid })
     } catch (err) {
       throw warnError('filetreeReader loadMetaByUlid()', err)
     }
@@ -647,19 +774,42 @@ export class FiletreeReader implements IFiletreeReader {
     ownerAddress: string,
   ): Promise<TMetaDataSets> {
     try {
-      const lookup = await this.pathToLookup(path, ownerAddress)
+      const lookup = await this.pathToLookup({ owner: ownerAddress, path })
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-
       const pathSet = path.split('/')
       const legacyPath: [string, string] = [
         pathSet.slice(0, -1).join('/'),
         pathSet.slice(-1)[0],
       ]
-
       const id = this.ulidLookup(path, ownerAddress)
-      return await this.loadMeta(file, id, legacyPath)
+      return await this.loadMeta({ file, ulid: id, legacyPath })
     } catch (err) {
       throw warnError('filetreeReader loadMetaByExternalPath()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {string} ownerAddress
+   * @param {string} [linkKey]
+   * @returns {Promise<TMetaDataSets>}
+   */
+  async loadMetaByExternalUlid (
+    ulid: string,
+    ownerAddress: string,
+    linkKey?: string,
+  ): Promise<TMetaDataSets> {
+    try {
+      const hexAddress = await merklePath(`s/ulid/${ulid}`)
+      const lookup = {
+        address: hexAddress,
+        ownerAddress: await hashAndHexOwner(hexAddress, ownerAddress),
+      }
+      const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
+      return await this.loadMeta({ file, ulid, linkKey })
+    } catch (err) {
+      throw warnError('filetreeReader loadMetaByExternalUlid()', err)
     }
   }
 
@@ -676,7 +826,7 @@ export class FiletreeReader implements IFiletreeReader {
     fileMeta: IFileMeta,
   ): Promise<IFileMetaHandler> {
     try {
-      const lookup = await this.pathToLookup(path)
+      const lookup = await this.pathToLookup({ path })
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
       const access = await this.checkViewAuthorization(file, false)
@@ -707,7 +857,7 @@ export class FiletreeReader implements IFiletreeReader {
       if ('path' in options) {
         curr = options.path
         ulid = this.ulidLookup(options.path)
-        lookup = await this.pathToLookup(options.path)
+        lookup = await this.pathToLookup({ path: options.path })
       } else {
         const hexAddress = await merklePath(`s/ulid/${options.ulid}`)
         curr = options.ulid
@@ -803,7 +953,7 @@ export class FiletreeReader implements IFiletreeReader {
     ownerAddress: string,
   ): Promise<IAesBundle> {
     try {
-      const lookup = await this.pathToLookup(path, ownerAddress)
+      const lookup = await this.pathToLookup({ owner: ownerAddress, path })
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const aes = await this.extractViewAccess(file)
       return aes[0]
@@ -816,11 +966,13 @@ export class FiletreeReader implements IFiletreeReader {
    * Look up AES keys for Filetree item by ulid.
    * @param {string} ulid - Ulid of resource.
    * @param {string} ownerAddress - Owner of resource.
+   * @param {string} [linkKey] - Key to unlock link shared data.
    * @returns {Promise<IAesBundle>}
    */
   async loadKeysByUlid (
     ulid: string,
     ownerAddress: string,
+    linkKey?: string,
   ): Promise<IAesBundle> {
     try {
       const hexAddress = await merklePath(`s/ulid/${ulid}`)
@@ -829,10 +981,41 @@ export class FiletreeReader implements IFiletreeReader {
         ownerAddress: await hashAndHexOwner(hexAddress, ownerAddress),
       }
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      const aes = await this.extractViewAccess(file)
+      const aes = await this.extractViewAccess(file, linkKey)
       return aes[0]
     } catch (err) {
       throw warnError('filetreeReader loadKeysByUlid()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} ulid
+   * @param {string} ownerAddress
+   * @returns {Promise<boolean>}
+   */
+  async livenessCheck (ulid: string, ownerAddress: string): Promise<boolean> {
+    try {
+      const hexAddress = await merklePath(`s/ulid/${ulid}`)
+      const lookup = {
+        address: hexAddress,
+        ownerAddress: await hashAndHexOwner(hexAddress, ownerAddress),
+      }
+      const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
+      let ready
+      try {
+        ready = await this.loadMeta({ file, ulid: '-1' })
+      } catch {
+        ready = {}
+      }
+      const accepted = ['file', 'folder']
+      if (ready.metaDataType && accepted.includes(ready.metaDataType)) {
+        return true
+      } else {
+        return false
+      }
+    } catch (err) {
+      throw warnError('filetreeReader livenessCheck()', err)
     }
   }
 
@@ -938,6 +1121,73 @@ export class FiletreeReader implements IFiletreeReader {
 
   /**
    *
+   * @param {IEncodeExistingRefOptions} options
+   * @returns {Promise<DMsgFileTreePostFile>}
+   */
+  async encodeExistingRef (options: IEncodeExistingRefOptions): Promise<DMsgFileTreePostFile> {
+    try {
+      const {
+        location: [hashParent, hashChild],
+        ref,
+        ulid,
+        viewers,
+        ownerAddress = this.clientAddress,
+      } = options
+      const hexAddress = await merklePathPlusIndex(`s/ulid/${ulid}`, ref)
+      const lookup = {
+        address: hexAddress,
+        ownerAddress: await hashAndHexOwner(hexAddress, ownerAddress),
+      }
+      const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
+      let { contents, trackingNumber } = file
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
+      let ready
+      if (access) {
+        if (isCleartext) {
+          ready = {
+            contents,
+            viewers: await this.createViewAccess({ trackingNumber, viewers, index: ref, ulid }),
+            editors: await this.createEditAccess(trackingNumber),
+            trackingNumber,
+          }
+        } else if (contents.length > 0) {
+          const aes = await this.extractViewAccess(file)
+          if (aes[1]) {
+            throw new Error('Requires rekey')
+          }
+          ready = {
+            contents,
+            viewers: await this.createViewAccess({
+              trackingNumber,
+              viewers,
+              aes: aes[0],
+              index: ref,
+              ulid,
+            }),
+            editors: await this.createEditAccess(trackingNumber),
+            trackingNumber,
+          }
+        } else {
+          throw new Error(`Empty contents`)
+        }
+        return {
+          creator: this.clientAddress,
+          account: await hashAndHex(ownerAddress),
+          hashParent,
+          hashChild,
+          ...ready,
+        }
+      } else {
+        throw new Error('Not Authorized')
+      }
+    } catch (err) {
+      throw warnError('filetreeReader encodeExistingRef()', err)
+    }
+  }
+
+  /**
+   *
    * @param {string} receiverAddress
    * @param {IAesBundle} aes
    * @returns {Promise<string>}
@@ -989,17 +1239,67 @@ export class FiletreeReader implements IFiletreeReader {
   /**
    *
    * @param {string} path
-   * @param {string} [owner]
+   * @returns {Promise<string[]>}
+   * @protected
+   */
+  protected async loadSharerRefs (path: string): Promise<string[]> {
+    try {
+      if (!this.sharerRefs[path]) {
+        this.sharerRefs[path] = {}
+      }
+      const meta = await this.loadMetaByPath(path)
+      const ulid = this.ulidLookup(path)
+      if ('sharerCount' in meta) {
+        const count = hexToInt(meta.sharerCount || '')
+        for (let i = 0; i < count; i++) {
+          const loopMeta = await this.loadSharerRefMeta(ulid, i)
+          if (loopMeta.type !== 'null') {
+            this.sharerRefs[path][loopMeta.sharer] = i
+          }
+        }
+      }
+      return Object.keys(this.sharerRefs[path])
+    } catch (err) {
+      throw warnError('filetreeReader loadSharerRefs()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} sharer
+   * @returns {Promise<void>}
+   * @protected
+   */
+  protected async sharingToLookup (sharer: string): Promise<void> {
+    const pool = this.yellowpages[this.clientAddress]
+    const path = `Shared/${sharer}`
+    if (!pool[path]) {
+      await this.pathToLookup({ owner: this.clientAddress, path: 'Shared' })
+    }
+    await this.pathToLookupPostProcess(
+      path,
+      this.clientAddress,
+      pool[path],
+    )
+  }
+
+  /**
+   *
+   * @param {IPathToLookupOptions} options
    * @returns {Promise<DQueryFileTreeFile>}
    * @protected
    */
   protected async pathToLookup (
-    path: string,
-    owner?: string,
+    options: IPathToLookupOptions,
   ): Promise<DQueryFileTreeFile> {
     try {
+      const {
+        linkKey,
+        owner,
+        path,
+      } = options
       const ownerAddress = owner || this.clientAddress
-      let pool = this.yellowpages[ownerAddress]
+      let pool = this.yellowpages[ownerAddress] || {}
       if (path in pool) {
         return pool[path]
       } else {
@@ -1012,7 +1312,6 @@ export class FiletreeReader implements IFiletreeReader {
             if (pool[path]) {
               return pool[path]
             } else {
-              // console.log(path)
               const hexRootAddress = await merklePath(`s/ulid/${path}`)
               const rootLookup = {
                 address: hexRootAddress,
@@ -1023,17 +1322,27 @@ export class FiletreeReader implements IFiletreeReader {
               }
               const { file } =
                 await this.jackalSigner.queries.fileTree.file(rootLookup)
-              const lookup = (await this.decryptAndParseContents(
-                file,
-                path,
-              )) as IRootLookupMetaData
-              // console.log(lookup)
+              let lookup
+              if (file.contents.includes('metaDataType')) {
+                lookup = safeParseFileTree(file.contents)
+              } else {
+                lookup = await this.decryptAndParseContents(
+                  file,
+                  path,
+                  linkKey,
+                )
+              }
               if (!(ownerAddress in this.ulidLeaves)) {
                 this.ulidLeaves[ownerAddress] = {}
               }
-              this.ulidLeaves[ownerAddress][path] = lookup.ulid
+              if ('ulid' in lookup) {
+                this.ulidLeaves[ownerAddress][path] = lookup.ulid
+              } else {
+                this.ulidLeaves[ownerAddress][path] = path
+              }
               if (!(ownerAddress in this.yellowpages)) {
                 this.yellowpages[ownerAddress] = {}
+                pool = this.yellowpages[ownerAddress]
               }
               await this.setYellowpages(
                 path,
@@ -1044,6 +1353,7 @@ export class FiletreeReader implements IFiletreeReader {
                 path,
                 ownerAddress,
                 pool[path],
+                linkKey,
               )
               return pool[path]
             }
@@ -1052,11 +1362,12 @@ export class FiletreeReader implements IFiletreeReader {
               return pool[path]
             } else {
               const parentPath = path.split('/').slice(0, -1).join('/')
-              await this.pathToLookup(parentPath, ownerAddress)
+              await this.pathToLookup({ linkKey, owner: ownerAddress, path: parentPath })
               await this.pathToLookupPostProcess(
                 path,
                 ownerAddress,
                 pool[path],
+                linkKey,
               )
               return pool[path]
             }
@@ -1069,9 +1380,104 @@ export class FiletreeReader implements IFiletreeReader {
 
   /**
    *
+   * @param {string} ulid
+   * @param {number} [index]
+   * @returns {Promise<void>}
+   */
+  protected async loadSharedWith (ulid: string, index?: number): Promise<void> {
+    try {
+      let reference
+      if (typeof index !== 'undefined') {
+        reference = `${ulid}/${intToHex(index)}`
+        this.viewerShares[reference] = []
+        return
+      } else {
+        reference = ulid
+      }
+      let file
+      try {
+        let hexAddress
+        if (typeof index !== 'undefined') {
+          hexAddress = await merklePathPlusIndex(`s/ulid/${ulid}`, index)
+        } else {
+          hexAddress = await merklePath(`s/ulid/${ulid}`)
+        }
+        const lookup = {
+          address: hexAddress,
+          ownerAddress: await hashAndHexOwner(
+            hexAddress,
+            this.clientAddress,
+          ),
+        }
+        const result = await this.jackalSigner.queries.fileTree.file(lookup)
+        file = result.file
+      } catch {
+        console.warn(`loadSharedWith(): ${reference} Not yet shared`)
+        this.viewerShares[reference] = []
+        return
+      }
+      const { contents } = file
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
+      if (access) {
+        let parsed
+        if (!isCleartext) {
+          parsed = await this.decryptAndParseContents(file, '-1')
+        } else {
+          parsed = JSON.parse(contents) as TMetaDataSets
+        }
+        if ('sharerCount' in parsed) {
+          const count = hexToInt(parsed.sharerCount || '')
+          for (let i = 0; i < count; i++) {
+            let file
+            try {
+              const hexSubAddress = await merklePath(`s/ulid/${ulid}/s-${intToHex(i)}`)
+              const subLookup = {
+                address: hexSubAddress,
+                ownerAddress: await hashAndHexOwner(hexSubAddress, this.clientAddress),
+              }
+              const sub = await this.jackalSigner.queries.fileTree.file(subLookup)
+              file = sub.file
+            } catch {
+              console.warn(`No match for ${reference} - ${i} of count ${parsed.sharerCount}`)
+              continue
+            }
+            const { contents } = file
+            const isCleartext = contents.includes('metaDataType')
+            const access = await this.checkViewAuthorization(file, isCleartext)
+            if (access) {
+              let parsed
+              if (!isCleartext) {
+                parsed = await this.decryptAndParseContents(file, '-1')
+              } else {
+                parsed = JSON.parse(contents) as TMetaDataSets
+              }
+              parsed = parsed as ISharerRefMetaData
+              if (reference in this.viewerShares) {
+                this.viewerShares[reference].push(parsed.sharer)
+              } else {
+                this.viewerShares[reference] = []
+                this.viewerShares[reference].push(parsed.sharer)
+              }
+            } else {
+              throw new Error('Ref Not Authorized')
+            }
+          }
+        }
+      } else {
+        throw new Error('Not Authorized')
+      }
+    } catch (err) {
+      throw warnError('filetreeReader loadSharedWith()', err)
+    }
+  }
+
+  /**
+   *
    * @param {string} path
    * @param {string} ownerAddress
    * @param {DQueryFileTreeFile} lookup
+   * @param {string} [linkKey]
    * @returns {Promise<void>}
    * @protected
    */
@@ -1079,17 +1485,18 @@ export class FiletreeReader implements IFiletreeReader {
     path: string,
     ownerAddress: string,
     lookup: DQueryFileTreeFile,
+    linkKey?: string,
   ): Promise<void> {
     try {
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
       const isCleartext = contents.includes('metaDataType')
-      const access = await this.checkViewAuthorization(file, isCleartext)
+      const access = await this.checkViewAuthorization(file, isCleartext, linkKey)
       if (access) {
         const id = this.ulidLookup(path, ownerAddress)
         let parsed
         if (!isCleartext) {
-          parsed = await this.decryptAndParseContents(file, id)
+          parsed = await this.decryptAndParseContents(file, id, linkKey)
         } else {
           parsed = JSON.parse(contents) as TMetaDataSets
         }
@@ -1100,18 +1507,18 @@ export class FiletreeReader implements IFiletreeReader {
           }
           if (!path.startsWith('Shared')) {
             this.startDirectoryLeaf(path, id, ownerAddress)
+          } else {
+            this.sharingLeaves[path] = []
           }
           const post = []
           for (let i = 0; i < count; i++) {
-            post.push(this.singleLoadMeta(path, ownerAddress, i))
+            post.push(this.singleLoadMeta(path, ownerAddress, i, linkKey))
           }
           const final = await Promise.allSettled(post)
           console.dir(final)
         } else {
           // do nothing
         }
-      } else {
-        throw new Error('Not Authorized')
       }
     } catch (err) {
       throw warnError('filetreeReader pathToLookupPostProcess()', err)
@@ -1123,20 +1530,23 @@ export class FiletreeReader implements IFiletreeReader {
    * @param {string} path
    * @param {string} ownerAddress
    * @param {number} index
+   * @param {string} [linkKey]
    * @returns {Promise<void>}
    * @protected
    */
-  protected async singleLoadMeta (path: string, ownerAddress: string, index: number): Promise<void> {
+  protected async singleLoadMeta (path: string, ownerAddress: string, index: number, linkKey?: string): Promise<void> {
     try {
-      const ulidPool = this.ulidLeaves[this.clientAddress]
-      const refMeta = await this.loadRefMeta(
-        this.ulidLeaves[ownerAddress][path],
-        index,
-      )
+      const ulidPool = this.ulidLeaves[ownerAddress]
+      const refMeta = await this.loadRefMeta({
+        ulid: ulidPool[path],
+        ref: index,
+        linkKey,
+        ownerAddress,
+      })
       if (refMeta.metaDataType === 'nullref') {
         return
       }
-      const meta = await this.loadMetaByUlid(refMeta.pointsTo)
+      const meta = await this.loadMetaByUlid({ ulid: refMeta.pointsTo, userAddress: ownerAddress, linkKey })
       if (path.startsWith('Shared')) {
         if (meta.metaDataType === 'folder') {
           const loopPath = `${path}/${meta.whoAmI}`
@@ -1146,23 +1556,24 @@ export class FiletreeReader implements IFiletreeReader {
             ownerAddress,
             refMeta.pointsTo,
           )
-          this.sharingLeaves.sharers.push(meta.whoAmI)
-          if (!this.sharingLeaves[meta.whoAmI]) {
-            this.sharingLeaves[meta.whoAmI] = []
+          this.sharers[meta.whoAmI] = meta
+          if (!this.sharingLeaves[loopPath]) {
+            this.sharingLeaves[loopPath] = []
           }
         } else if (meta.metaDataType === 'share') {
           const loopPath = `${path}/${meta.name}`
           ulidPool[loopPath] = refMeta.pointsTo
-          const parent = path.split('/').slice(-1)[0]
           await this.setYellowpages(
             loopPath,
             ownerAddress,
             refMeta.pointsTo,
           )
-          if (!this.sharingLeaves[parent]) {
-            this.sharingLeaves[parent] = [meta.name]
+          if (!this.sharingLeaves[path]) {
+            this.sharingLeaves[path] = [meta]
           } else {
-            this.sharingLeaves[parent].push(meta.name)
+            const compat = this.sharingLeaves[path] as IShareMetaData[]
+            compat.push(meta)
+            this.sharingLeaves[path] = compat
           }
         }
       } else {
@@ -1208,6 +1619,12 @@ export class FiletreeReader implements IFiletreeReader {
   protected startDirectoryLeaf (path: string, ulid: string, ownerAddress?: string): void {
     const owner = ownerAddress || this.clientAddress
     const shell = this.basicFolderShell()
+    if (!this.directoryLeaves[owner]) {
+      this.directoryLeaves[owner] = {}
+    }
+    if (!this.directoriesByUlid[owner]) {
+      this.directoriesByUlid[owner] = {}
+    }
     this.directoryLeaves[owner][path] = shell
     this.directoriesByUlid[owner][ulid] = shell
   }
@@ -1262,34 +1679,30 @@ export class FiletreeReader implements IFiletreeReader {
 
   /**
    *
-   * @param {DFile} file
-   * @param {string} ulid
-   * @param {[string, string]} [legacyPath]
+   * @param {ILoadMetaOptions} options
    * @returns {Promise<TMetaDataSets>}
    * @protected
    */
   protected async loadMeta (
-    file: DFile,
-    ulid: string,
-    legacyPath?: [string, string],
+    options: ILoadMetaOptions,
   ): Promise<TMetaDataSets> {
     try {
+      const { file, ulid } = options
       const { contents } = file
       const isCleartext = contents.includes('metaDataType')
-      const access = await this.checkViewAuthorization(file, isCleartext)
-
+      const access = await this.checkViewAuthorization(file, isCleartext, options.linkKey)
       if (access) {
         switch (true) {
           case isCleartext:
             return safeParseFileTree(contents)
           case contents.includes('legacyMerkles'):
-            if (!legacyPath) {
+            if (!options.legacyPath) {
               throw new Error('legacyMerkles requires legacyPath')
             }
             const { legacyMerkles } = safeParseLegacyMerkles(contents)
-            return this.loadLegacyMeta(legacyMerkles, legacyPath)
+            return this.loadLegacyMeta(legacyMerkles, options.legacyPath)
           case contents.length > 0:
-            return await this.decryptAndParseContents(file, ulid)
+            return await this.decryptAndParseContents(file, ulid, options.linkKey)
           default:
             throw new Error(`Empty contents`)
         }
@@ -1312,13 +1725,14 @@ export class FiletreeReader implements IFiletreeReader {
   ): Promise<string> {
     try {
       const {
+        index,
         ulid,
         trackingNumber,
         viewers,
         aes,
       } = options
       let groupViewers
-      let viewAccess = ulid ? await this.viewerLookup(ulid) : {}
+      let viewAccess = ulid ? await this.viewerLookup(ulid, index) : {}
       if ('overwrite' in viewers) {
         groupViewers = [...new Set([...viewers.overwrite, this.clientAddress])]
         viewAccess = {}
@@ -1332,7 +1746,11 @@ export class FiletreeReader implements IFiletreeReader {
       for (let viewer of groupViewers) {
         const entry = await hashAndHexUserAccess('v', trackingNumber, viewer)
         if (aes) {
-          if (viewer === this.clientAddress) {
+          if (!viewer.startsWith('jkl')) {
+            const key = await linkPrivateKey(viewer)
+            const pubKey = key.publicKey.toHex()
+            viewAccess[entry] = await aesToString(pubKey, aes)
+          } else if (viewer === this.clientAddress) {
             const pubKey = this.keyPair.publicKey.toHex()
             viewAccess[entry] = await aesToString(pubKey, aes)
           } else {
@@ -1384,10 +1802,11 @@ export class FiletreeReader implements IFiletreeReader {
    *
    * @param {DFile} data
    * @param {boolean} isPublic
+   * @param {string} [linkKey]
    * @returns {Promise<boolean>}
    * @protected
    */
-  protected async checkViewAuthorization (data: DFile, isPublic: boolean): Promise<boolean> {
+  protected async checkViewAuthorization (data: DFile, isPublic: boolean, linkKey?: string): Promise<boolean> {
     try {
       if (isPublic) {
         return isPublic
@@ -1396,7 +1815,7 @@ export class FiletreeReader implements IFiletreeReader {
         const user = await hashAndHexUserAccess(
           'v',
           data.trackingNumber,
-          this.clientAddress,
+          linkKey || this.clientAddress,
         )
         return user in parsedAccess
       }
@@ -1408,23 +1827,30 @@ export class FiletreeReader implements IFiletreeReader {
   /**
    *
    * @param {DFile} data
+   * @param {string} [linkKey]
    * @returns {Promise<IAesBundle>}
    * @protected
    */
-  protected async extractViewAccess (data: DFile): Promise<TExtractedViewAccess> {
+  protected async extractViewAccess (data: DFile, linkKey?: string): Promise<TExtractedViewAccess> {
     try {
       const parsedAccess = JSON.parse(data.viewingAccess)
       const user = await hashAndHexUserAccess(
         'v',
         data.trackingNumber,
-        this.clientAddress,
+        linkKey || this.clientAddress,
       )
+      let key
+      if (linkKey) {
+        key = await linkPrivateKey(linkKey)
+      } else {
+        key = this.keyPair
+      }
       if (user in parsedAccess) {
         if (parsedAccess[user] === 'public') {
           return [await genAesBundle(), false]
         } else {
           try {
-            const parsed = await stringToAes(this.keyPair, parsedAccess[user])
+            const parsed = await stringToAes(key, parsedAccess[user])
             return [parsed, false]
           } catch {
             try {
@@ -1499,13 +1925,14 @@ export class FiletreeReader implements IFiletreeReader {
    *
    * @param {DFile} data
    * @param {string} id
+   * @param {string} [linkKey]
    * @returns {Promise<TMetaDataSets>}
    * @protected
    */
-  protected async decryptAndParseContents (data: DFile, id: string): Promise<TMetaDataSets> {
+  protected async decryptAndParseContents (data: DFile, id: string, linkKey?: string): Promise<TMetaDataSets> {
     try {
       const safe = prepDecompressionForAmino(data.contents)
-      const aes = await this.extractViewAccess(data)
+      const aes = await this.extractViewAccess(data, linkKey)
       if (id !== '-1' && aes[1]) {
         this.conversionQueue = [...new Set([...this.conversionQueue, id])]
       }

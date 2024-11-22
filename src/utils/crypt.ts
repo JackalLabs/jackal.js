@@ -1,5 +1,4 @@
-import type { PrivateKey } from 'eciesjs'
-import { decrypt, encrypt } from 'eciesjs'
+import { decrypt, encrypt, PrivateKey } from 'eciesjs'
 import { keyAlgo } from '@/utils/globalDefaults'
 import {
   prepDecompressionForAmino,
@@ -10,7 +9,7 @@ import {
   uintArrayToString,
 } from '@/utils/converters'
 import { warnError } from '@/utils/misc'
-import { hexToBuffer } from '@/utils/hash'
+import { hexToBuffer, stringToShaHex } from '@/utils/hash'
 import type { IAesBundle } from '@/interfaces'
 
 /**
@@ -292,4 +291,14 @@ export async function cryptString (
   } catch (err) {
     throw warnError('cryptString()', err)
   }
+}
+
+/**
+ *
+ * @param {string} linkKey
+ * @returns {Promise<PrivateKey>}
+ */
+export async function linkPrivateKey (linkKey: string): Promise<PrivateKey> {
+  const signatureAsHex = await stringToShaHex(linkKey)
+  return PrivateKey.fromHex(signatureAsHex)
 }

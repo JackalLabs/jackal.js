@@ -3,20 +3,31 @@ import {
   IBroadcastOrChainOptions,
   IBuyStorageOptions,
   IChildMetaDataMap,
+  ICloneSharesOptions,
+  ICloneUploadOptions,
   ICreateFolderOptions,
   IDeleteTargetOptions,
+  IDownloadByUlidOptions,
   IDownloadTracker,
   IFileMetaData,
   IFileParticulars,
   IFolderMetaData,
+  IMetaDataByUlidOptions,
   IMoveRenameResourceOptions,
   IProviderIpSet,
   IReadFolderContentOptions,
+  IRemoveShareRecordOptions,
+  IShareLinkOptions,
+  IShareLinks,
+  IShareMetaData,
   IShareOptions,
   IStagedUploadPackage,
   IStorageStatus,
+  IUnshareOptions,
   IWrappedEncodeObject,
+  TLoadThumbnailOptions,
 } from '@/interfaces'
+import type { TMetaDataSets } from '@/types'
 
 export interface IStorageHandler {
   cleanShutdown (): void
@@ -46,6 +57,8 @@ export interface IStorageHandler {
   loadProviderPool (providers?: IProviderIpSet): Promise<void>
 
   initStorage (options?: IBroadcastOrChainOptions): Promise<any>
+
+  checkAndInitSharing (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 
   planStatus (): Promise<IStorageStatus>
 
@@ -77,7 +90,21 @@ export interface IStorageHandler {
 
   queuePublic (toQueue: File | File[], duration?: number): Promise<number>
 
+  cloneShares (options: ICloneSharesOptions): Promise<IWrappedEncodeObject[]>
+
+  cloneUpload (options: ICloneUploadOptions): Promise<IWrappedEncodeObject[]>
+
   processAllQueues (options?: IBroadcastOptions): Promise<void>
+
+  loadThumbnail (options: TLoadThumbnailOptions): Promise<string>
+
+  getMetaDataByUlid (options: IMetaDataByUlidOptions): Promise<TMetaDataSets>
+
+  getFolderDetailsByUlid (options: IMetaDataByUlidOptions): Promise<IChildMetaDataMap>
+
+  findUlid (path: string, address?: string): string
+
+  getFileMetaData (filePath: string, address?: string): Promise<IFileMetaData>
 
   getFileParticulars (filePath: string): Promise<IFileParticulars>
 
@@ -89,15 +116,25 @@ export interface IStorageHandler {
     trackers: IDownloadTracker,
   ): Promise<File>
 
+  downloadByUlid (options: IDownloadByUlidOptions): Promise<File>
+
   deleteTargets (options: IDeleteTargetOptions): Promise<IWrappedEncodeObject[]>
 
-  share (options: IShareOptions): Promise<IWrappedEncodeObject[]>
+  checkSharedTo (path: string): Promise<string[]>
+
+  shareDirect (options: IShareOptions): Promise<IWrappedEncodeObject[]>
+
+  shareLink (options: IShareLinkOptions): Promise<IShareLinks>
+
+  unshare (options: IUnshareOptions): Promise<IWrappedEncodeObject[]>
+
+  removeShareRecord (options: IRemoveShareRecordOptions): Promise<IWrappedEncodeObject[]>
 
   checkNotifications (): Promise<number>
 
   processPendingNotifications (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 
-  readSharing (sharer?: string): string[]
+  readSharing (sharer?: string): Promise<IFolderMetaData[] | IShareMetaData[]>
 
   convert (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 
