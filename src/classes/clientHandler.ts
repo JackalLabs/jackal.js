@@ -292,7 +292,7 @@ export class ClientHandler implements IClientHandler {
       const {
         connIdA = 'connection-18',
         connIdB = 'connection-50',
-        contract = 'archway1z0wngtg6qwweqh3sfcz6l42srkhqly2guxp8enf9y6sny08c4gqq35jdc4',
+        contract = 'archway1meqkgwa8nef3d49wuleu2m092q4mtkespal39vd280yy6nj5lhhqllu4kn',
       } = details
       this.myCosmwasm = await WasmHandler.init(this)
       const ica = await this.myCosmwasm.getICAContractAddress(contract).catch(err => {

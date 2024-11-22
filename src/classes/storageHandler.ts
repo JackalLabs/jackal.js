@@ -11,7 +11,7 @@ import { isItPastDate, shuffleArray, signerNotEnabled, tidyString, warnError } f
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler, ShareMetaHandler } from '@/classes/metaHandlers'
 import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
 import { aesBlobCrypt, genAesBundle, genIv, genKey } from '@/utils/crypt'
-import { hashAndHex, stringToShaHex } from '@/utils/hash'
+import { hashAndHex, hexToBuffer, stringToShaHex } from '@/utils/hash'
 import { EncodingHandler } from '@/classes/encodingHandler'
 import { bech32 } from '@jackallabs/bech32'
 import {
@@ -1255,9 +1255,16 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     }
     try {
       const particulars = await this.getFileParticulars(filePath)
+      if (particulars.providerIps.length === 0) {
+        throw new Error('No providers found')
+      }
       const providerList = shuffleArray(particulars.providerIps)
       for (const _ of providerList) {
-        const provider = providerList[Math.floor(Math.random() * providerList.length)]
+        const provider =
+          providerList[Math.floor(Math.random() * providerList.length)]
+        if (typeof provider === 'undefined') {
+          continue
+        }
         try {
           return await this.downloadStaging({
             particulars,
@@ -2185,10 +2192,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   ): Promise<Promise<IProviderUploadResponse>[]> {
     try {
       const activeUploads: Promise<IProviderUploadResponse>[] = []
-
       const providerTeams = Object.keys(this.providers)
       const copies = Math.min(3, providerTeams.length)
-
       for (let i = 0; i < msgs.length; i++) {
         if (!msgs[i]) {
           warnError('storageHandler batchUploads()', `msg at ${i} is undefined`)
@@ -2197,29 +2202,42 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         const { file, merkle } = msgs[i]
         if (file && merkle) {
           this.uploadsInProgress = true
-
-          const used: number[] = []
-          for (let i = 0; i < copies; i++) {
-            while (true) {
-              const seed = Math.floor(Math.random() * providerTeams.length)
-              if (used.includes(seed)) {
-              } else {
-                used.push(seed)
-                break
-              }
+          const { providerIps } = await this.jackalSigner.queries.storage.findFile({
+            merkle: hexToBuffer(merkle),
+          })
+          if (providerIps.length >= copies) {
+            const fakeResponse: IProviderUploadResponse = {
+              merkle:  hexToBuffer(merkle),
+              owner: this.jklAddress,
+              start: uploadHeight,
             }
-            const [seed] = used.slice(-1)
-            const selected = this.providers[providerTeams[seed]]
-            const one = selected[Math.floor(Math.random() * selected.length)]
-            const uploadUrl = `${one.ip}/upload`
-
-            const uploadPromise = this.uploadFile(
-              uploadUrl,
-              uploadHeight,
-              file,
-              merkle,
-            )
-            activeUploads.push(uploadPromise)
+            const ready: Promise<IProviderUploadResponse> = new Promise((resolve) => {
+              resolve(fakeResponse)
+            })
+            activeUploads.push(ready)
+          } else {
+            const used: number[] = []
+            for (let i = 0; i < copies; i++) {
+              while (true) {
+                const seed = Math.floor(Math.random() * providerTeams.length)
+                if (used.includes(seed)) {
+                } else {
+                  used.push(seed)
+                  break
+                }
+              }
+              const [seed] = used.slice(-1)
+              const selected = this.providers[providerTeams[seed]]
+              const one = selected[Math.floor(Math.random() * selected.length)]
+              const uploadUrl = `${one.ip}/upload`
+              const uploadPromise = this.uploadFile(
+                uploadUrl,
+                uploadHeight,
+                file,
+                merkle,
+              )
+              activeUploads.push(uploadPromise)
+            }
           }
         }
       }
