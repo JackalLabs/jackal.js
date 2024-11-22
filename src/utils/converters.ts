@@ -243,10 +243,14 @@ export async function maybeMakeThumbnail (source: File): Promise<string> {
   }
 }
 
-function extractThumbnailFromVideo (file: File): Promise<string> {
-  try {
-    return new Promise((resolve, reject) => {
-      const video = document.createElement('video')
+/**
+ *
+ * @param {File} file
+ * @returns {Promise<string>}
+ */
+async function extractThumbnailFromVideo (file: File): Promise<string> {
+  const processor: Promise<string> = new Promise((resolve, reject) => {
+    const video = document.createElement('video')
 
       video.src = URL.createObjectURL(file)
       video.muted = true  // Mute the video to prevent sound playing
@@ -291,20 +295,27 @@ function extractThumbnailFromVideo (file: File): Promise<string> {
         }
       }
 
-      video.onerror = reject
-    })
+    video.onerror = reject
+  })
+  try {
+    return await processor
   } catch (err) {
-    throw warnError('extractThumbnailFromVideo()', err)
+    warnError('extractThumbnailFromVideo()', err)
+    return ''
   }
 }
 
-function convertToWebP (file: File): Promise<string> {
-  try {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const img = new Image()
-        img.src = event.target?.result as string
+/**
+ * 
+ * @param {File} file
+ * @returns {Promise<string>}
+ */
+async function convertToWebP (file: File): Promise<string> {
+  const processor: Promise<string> = new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const img = new Image()
+      img.src = event.target?.result as string
 
         img.onload = () => {
           const maxSize = 256
@@ -345,11 +356,14 @@ function convertToWebP (file: File): Promise<string> {
         }
       }
 
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+  try {
+    return await processor
   } catch (err) {
-    throw warnError('convertToWebP()', err)
+    warnError('convertToWebP()', err)
+    return ''
   }
 }
 
