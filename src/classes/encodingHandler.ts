@@ -461,10 +461,17 @@ export class EncodingHandler {
     try {
       const mH = pkg.meta as IFolderMetaHandler
       const meta = mH.export()
-      // console.log('saving:', meta.whoAmI)
-
       const parentAndChild = await merkleParentAndChild(`s/ulid/${mH.getUlid()}`)
-      return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
+      if (pkg.update) {
+        const forFileTree = await this.reader.updateExistingPostFile(
+          mH.getUlid(),
+          parentAndChild,
+          meta,
+        )
+        return this.jackalClient.getTxs().fileTree.msgPostFile(forFileTree)
+      } else {
+        return await this.storageEncodeFileTree(parentAndChild, meta, { aes: pkg.aes })
+      }
     } catch (err) {
       throw warnError('encodingHandler encodeFileTreeFolder()', err)
     }
@@ -700,6 +707,7 @@ export class EncodingHandler {
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
+      pkg.update = true
       const fileTreeFolder = this.encodeFileTreeFolder(pkg)
       return [
         {
@@ -964,6 +972,7 @@ export class EncodingHandler {
     pkg: IFileTreePackage,
   ): Promise<IWrappedEncodeObject[]> {
     try {
+      pkg.update = true
       const fileTreeFile = this.encodeFileTreeFolder(pkg)
       return [
         {

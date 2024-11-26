@@ -942,6 +942,54 @@ export class FiletreeReader implements IFiletreeReader {
     }
   }
 
+  async setContents (ulid: string, meta: TMetaDataSets): Promise<IReconstructedFileTree> {
+    try {
+      let lookup
+      const hexAddress = await merklePath(`s/ulid/${ulid}`)
+      lookup = {
+        address: hexAddress,
+        ownerAddress: await hashAndHexOwner(hexAddress, this.clientAddress),
+      }
+      const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
+      let { contents, viewingAccess, editAccess, trackingNumber } = file
+      const isCleartext = contents.includes('metaDataType')
+      const access = await this.checkViewAuthorization(file, isCleartext)
+      if (access) {
+        if (isCleartext) {
+          return {
+            contents: JSON.stringify(meta),
+            viewers: viewingAccess,
+            editors: editAccess,
+            trackingNumber,
+          }
+        } else if (contents.length > 0) {
+          const aes = await this.extractViewAccess(file)
+          if (aes[1]) {
+            throw new Error('Requires rekey')
+          }
+          const ready = JSON.stringify(meta)
+          contents = await compressEncryptString(
+            ready,
+            aes[0],
+            this.jackalClient.getIsLedger(),
+          )
+          return {
+            contents,
+            viewers: viewingAccess,
+            editors: editAccess,
+            trackingNumber,
+          }
+        } else {
+          throw new Error(`Empty contents for ${ulid}`)
+        }
+      } else {
+        throw new Error('Not Authorized')
+      }
+    } catch (err) {
+      throw warnError('filetreeReader setContents()', err)
+    }
+  }
+
   /**
    * Look up AES keys for Filetree item by path.
    * @param {string} path - Path of resource.
@@ -1116,6 +1164,26 @@ export class FiletreeReader implements IFiletreeReader {
       }
     } catch (err) {
       throw warnError('filetreeReader encodeExistingPostFile()', err)
+    }
+  }
+
+  async updateExistingPostFile (
+    ulid: string,
+    location: TMerkleParentChild,
+    meta: TMetaDataSets,
+  ): Promise<DMsgFileTreePostFile> {
+    try {
+      const [hashParent, hashChild] = location
+      const ready = await this.setContents(ulid, meta)
+      return {
+        creator: this.clientAddress,
+        account: await hashAndHex(this.clientAddress),
+        hashParent,
+        hashChild,
+        ...ready,
+      }
+    } catch (err) {
+      throw warnError('filetreeReader updateExistingPostFile()', err)
     }
   }
 

@@ -102,6 +102,8 @@ export interface IFiletreeReader {
 
   setMetaViewers (options: TSetMetaViewersOptions): Promise<IReconstructedFileTree>
 
+  setContents (ulid: string, meta: TMetaDataSets): Promise<IReconstructedFileTree>
+
   loadKeysByPath (path: string, ownerAddress: string): Promise<IAesBundle>
 
   loadKeysByUlid (ulid: string, ownerAddress: string, linkKey?: string): Promise<IAesBundle>
@@ -120,6 +122,12 @@ export interface IFiletreeReader {
     ulid: string,
     location: TMerkleParentChild,
     viewers: IViewerSetAddRemove,
+  ): Promise<DMsgFileTreePostFile>
+
+  updateExistingPostFile (
+    ulid: string,
+    location: TMerkleParentChild,
+    meta: TMetaDataSets,
   ): Promise<DMsgFileTreePostFile>
 
   encodeExistingRef (options: IEncodeExistingRefOptions): Promise<DMsgFileTreePostFile>
