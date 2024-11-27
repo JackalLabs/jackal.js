@@ -18,6 +18,9 @@ import {
   INullRefMetaData,
   INullSharerRefMetaData,
   IRefMetaData,
+  IRnsMetaData,
+  IRnsMetaFoundationalData,
+  IRnsMetaHandler,
   IShareMetaData,
   IShareMetaDataSource,
   IShareMetaFoundationalData,
@@ -28,8 +31,10 @@ import {
   ISharerRefMetaData,
   TFileMetaDataSource,
   TFolderMetaDataSource,
+  TRnsMetaDataSource,
   TSharerType,
 } from '@/interfaces'
+import { warnError } from '@/utils/misc'
 
 export class NullMetaHandler implements INullMetaHandler {
   protected readonly location: string
@@ -691,6 +696,75 @@ export class SharerMetaHandler implements ISharerMetaHandler {
       type: this.type,
       when: this.when,
       pointsTo: this.ulid,
+    }
+  }
+}
+
+export class RnsMetaHandler implements IRnsMetaHandler {
+  protected readonly avatar: string
+  protected readonly bio: string
+  protected readonly discord: string
+  protected readonly extensions: any
+  protected readonly telegram: string
+  protected readonly thumbnail: string
+  protected readonly twitter: string
+  protected readonly website: string
+
+  protected constructor (source: IRnsMetaFoundationalData) {
+    this.avatar = source.avatar
+    this.bio = source.bio
+    this.discord = source.discord
+    this.extensions = source.extensions
+    this.telegram = source.telegram
+    this.thumbnail = source.thumbnail
+    this.twitter = source.twitter
+    this.website = source.website
+  }
+
+  /**
+   *
+   * @param {TRnsMetaDataSource} [source]
+   * @returns {Promise<RnsMetaHandler>}
+   */
+  static async create (source: TRnsMetaDataSource = {}) {
+    try {
+      let data
+      if ('clone' in source) {
+        data = JSON.parse(source.clone)
+      } else {
+        data = source
+      }
+      const rdy: IRnsMetaFoundationalData = {
+        avatar: data.avatar || '',
+        bio: data.bio || '',
+        discord: data.discord || '',
+        extensions: data.extensions || '',
+        telegram: data.telegram || '',
+        thumbnail: data.thumbnail || '',
+        twitter: data.twitter || '',
+        website: data.website || '',
+      }
+      return new RnsMetaHandler(rdy)
+    } catch (err) {
+      throw warnError('RnsMetaHandler create()', err)
+    }
+  }
+
+  /**
+   *
+   * @returns {IRnsMetaData}
+   */
+  export (): IRnsMetaData {
+    return {
+      avatar: this.avatar,
+      bio: this.bio,
+      discord: this.discord,
+      extensions: this.extensions,
+      metaDataType: 'rns',
+      telegram: this.telegram,
+      thumbnail: this.thumbnail,
+      twitter: this.twitter,
+      website: this.website,
     }
   }
 }

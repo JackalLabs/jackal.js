@@ -24,7 +24,7 @@ import {
   IUpdateOptions,
   IWrappedEncodeObject,
 } from '@/interfaces'
-import type { TAddressPrefix } from '@/types'
+import { INameWithMeta, TAddressPrefix } from '@/types'
 
 export interface IRnsHandler {
   getBidForSingleName (name: string): Promise<DBid>
@@ -51,6 +51,8 @@ export interface IRnsHandler {
   ): Promise<TQueryListOwnedNamesResponseStrict>
 
   getNameDetails (name: string): Promise<DName>
+
+  getNameMetaDetails (name: string): Promise<INameWithMeta>
 
   getPrimaryName (address?: string): Promise<DName>
 

@@ -25,14 +25,15 @@ import {
   IPageRequest,
   IRegisterOptions,
   IRemoveSubRnsOptions,
-  IRnsData,
   IRnsHandler,
+  IRnsMetaData,
   ISetNewPrimaryOptions,
   ITransferOptions,
   IUpdateOptions,
   IWrappedEncodeObject,
 } from '@/interfaces'
-import type { TAddressPrefix } from '@/types'
+import { INameWithMeta, TAddressPrefix } from '@/types'
+import { RnsMetaHandler } from '@/classes/metaHandlers'
 
 export class RnsHandler implements IRnsHandler {
   protected readonly jackalClient: IClientHandler
@@ -177,6 +178,38 @@ export class RnsHandler implements IRnsHandler {
         .getQueries()
         .rns.name({ name: this.sanitizeRns(name) })
       return result.name
+    } catch (err) {
+      throw warnError('rnsHandler getNameDetails()', err)
+    }
+  }
+
+  /**
+   * Get specifics on target RNS name with parsed meta data.
+   * @param {string} name - RNS name to check.
+   * @returns {Promise<INameWithMeta>}
+   */
+  async getNameMetaDetails (name: string): Promise<INameWithMeta> {
+    try {
+      const result = await this.jackalClient
+        .getQueries()
+        .rns.name({ name: this.sanitizeRns(name) })
+      const subdomains = []
+      for (let one of result.name.subdomains) {
+        const meta = await RnsMetaHandler.create({ clone: one.data })
+        const loop: INameWithMeta = {
+          ...result.name,
+          data: meta.export(),
+          subdomains: [],
+        }
+        subdomains.push(loop)
+      }
+      const meta = await RnsMetaHandler.create({ clone: result.name.data })
+      const final: INameWithMeta = {
+        ...result.name,
+        data: meta.export(),
+        subdomains,
+      }
+      return final
     } catch (err) {
       throw warnError('rnsHandler getNameDetails()', err)
     }
@@ -417,8 +450,9 @@ export class RnsHandler implements IRnsHandler {
       throw new Error(signerNotEnabled('RnsHandler', 'register'))
     }
     try {
+      const meta = await RnsMetaHandler.create(options.data)
       const msgs: IWrappedEncodeObject[] = [{
-        encodedObject: this.makeRegisterMsg(options.rns, !!options.setAsPrimary, options.yearsToRegister, options.data),
+        encodedObject: this.makeRegisterMsg(options.rns, !!options.setAsPrimary, options.yearsToRegister, meta.export()),
         modifier: 0,
       }]
       if (options?.chain) {
@@ -444,8 +478,9 @@ export class RnsHandler implements IRnsHandler {
       throw new Error(signerNotEnabled('RnsHandler', 'update'))
     }
     try {
+      const meta = await RnsMetaHandler.create(options.data)
       const msgs: IWrappedEncodeObject[] = [{
-        encodedObject: this.makeUpdateMsg(options.rns, options.data),
+        encodedObject: this.makeUpdateMsg(options.rns, meta.export()),
         modifier: 0,
       }]
       if (options?.chain) {
@@ -498,8 +533,9 @@ export class RnsHandler implements IRnsHandler {
       throw new Error(signerNotEnabled('RnsHandler', 'addSubRns'))
     }
     try {
+      const meta = await RnsMetaHandler.create(options.data)
       const msgs: IWrappedEncodeObject[] = [{
-        encodedObject: this.makeAddRecordMsg(options.rns, options.linkedWallet, options.subRns, options.data),
+        encodedObject: this.makeAddRecordMsg(options.rns, options.linkedWallet, options.subRns, meta.export()),
         modifier: 0,
       }]
       if (options?.chain) {
@@ -690,7 +726,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS address to register.
    * @param {boolean} primary - If RNS should be set as primary.
    * @param {number} yearsToRegister - Duration to register for in years.
-   * @param {IRnsData} [data] - Optional object to include in data field.
+   * @param {IRnsMetaData} data - Metadata object to include in data field.
    * @returns {DEncodeObject}
    * @protected
    */
@@ -698,28 +734,32 @@ export class RnsHandler implements IRnsHandler {
     rns: string,
     primary: boolean,
     yearsToRegister: number,
-    data?: IRnsData,
+    data: IRnsMetaData,
   ): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeRegisterMsg'))
     }
-    return this.signingClient.txLibrary.rns.msgRegisterName({
-      creator: this.jackalClient.getJackalAddress(),
-      name: this.sanitizeRns(rns),
-      years: Number(yearsToRegister) || 1,
-      data: this.standardizeDataContents(data),
-      setPrimary: primary,
-    })
+    try {
+      return this.signingClient.txLibrary.rns.msgRegisterName({
+        creator: this.jackalClient.getJackalAddress(),
+        name: this.sanitizeRns(rns),
+        years: Number(yearsToRegister) || 1,
+        data: this.standardizeDataContents(data),
+        setPrimary: primary,
+      })
+    } catch (err) {
+      throw warnError('rnsHandler makeRegisterMsg()', err)
+    }
   }
 
   /**
    * Create Msg to update RNS metadata.
    * @param {string} rns - RNS address to update.
-   * @param {IRnsData} [data] - Optional object to replace existing contents of data field.
+   * @param {IRnsMetaData} data - Optional object to replace existing contents of data field.
    * @returns {DEncodeObject}
    * @protected
    */
-  protected makeUpdateMsg (rns: string, data?: IRnsData): DEncodeObject {
+  protected makeUpdateMsg (rns: string, data: IRnsMetaData): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeUpdateMsg'))
     }
@@ -753,7 +793,7 @@ export class RnsHandler implements IRnsHandler {
    * @param {string} rns - RNS to transfer.
    * @param {string} linkedWallet - Jackal address to link new sub RNS to.
    * @param {string} subRns - Sub RNS to create.
-   * @param {IRnsData} [data] - Optional object to include in sub RNS data field.
+   * @param {IRnsMetaData} data - Optional object to include in sub RNS data field.
    * @returns {DEncodeObject}
    * @protected
    */
@@ -761,7 +801,7 @@ export class RnsHandler implements IRnsHandler {
     rns: string,
     linkedWallet: string,
     subRns: string,
-    data?: IRnsData,
+    data: IRnsMetaData,
   ): DEncodeObject {
     if (!this.signingClient) {
       throw new Error(signerNotEnabled('RnsHandler', 'makeAddRecordMsg'))
@@ -818,23 +858,22 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
-   * Enforces data field is valid JSON with fallback of '{}'. Used by:
+   * Enforces data field is valid JSON. Used by:
    * - makeRegisterMsg()
    * - makeUpdateMsg()
    * - makeAddRecordMsg()
-   * @param {IRnsData} [data]
+   * @param {IRnsMetaData} data
    * @returns {string}
    * @protected
    */
-  protected standardizeDataContents (data: IRnsData = {}): string {
+  protected standardizeDataContents (data: IRnsMetaData): string {
     try {
       return JSON.stringify(data)
     } catch (err) {
       console.error('standardizeDataContents() failed')
       console.log('data')
       console.log(data)
-      console.error(err)
-      return '{}'
+      throw err
     }
   }
 }

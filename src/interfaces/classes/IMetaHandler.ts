@@ -5,6 +5,7 @@ import {
   INullRefMetaData,
   INullSharerRefMetaData,
   IRefMetaData,
+  IRnsMetaData,
   IShareMetaData,
   ISharerRefMetaData,
 } from '@/interfaces'
@@ -89,4 +90,8 @@ export interface ISharerMetaHandler extends IRefMetaHandler {
   getLocation (): string
 
   exportSharerRef (): ISharerRefMetaData
+}
+
+export interface IRnsMetaHandler {
+  export (): IRnsMetaData
 }

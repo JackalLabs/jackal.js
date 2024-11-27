@@ -1,14 +1,14 @@
-import { IBroadcastOptions, IRnsData } from '@/interfaces'
+import { IBroadcastOptions, INoCloneRnsMetaDataSource } from '@/interfaces'
 
 /**
  *
  * @interface IUpdateOptions
  * @property {string} rns - RNS address to update.
- * @property {IRnsData} [data] - Optional object to replace existing contents of data field.
+ * @property {INoCloneRnsMetaDataSource} [data] - Optional object to replace existing contents of data field.
  */
 export interface IUpdateOptions {
   rns: string
-  data?: IRnsData
+  data?: INoCloneRnsMetaDataSource
   chain?: true
   broadcastOptions?: IBroadcastOptions
 }

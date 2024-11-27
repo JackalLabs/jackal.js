@@ -196,3 +196,35 @@ export interface ISharerMetaFoundationalData {
   refIndex: number
   ulid: string
 }
+
+export interface ICloneRnsMetaDataSource {
+  clone: string
+}
+
+export interface INoCloneRnsMetaDataSource {
+  avatar?: string
+  bio?: string
+  discord?: string
+  extensions?: any
+  telegram?: string
+  thumbnail?: string
+  twitter?: string
+  website?: string
+}
+
+export type TRnsMetaDataSource = ICloneRnsMetaDataSource | INoCloneRnsMetaDataSource
+
+export interface IRnsMetaFoundationalData {
+  avatar: string
+  bio: string
+  discord: string
+  extensions: any
+  telegram: string
+  thumbnail: string
+  twitter: string
+  website: string
+}
+
+export interface IRnsMetaData extends IRnsMetaFoundationalData {
+  metaDataType: 'rns'
+}

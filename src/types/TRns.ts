@@ -1,3 +1,6 @@
+import type { DName } from '@jackallabs/jackal.js-protos'
+import { IRnsMetaData } from '@/interfaces'
+
 export type TAddressPrefix =
   | 'jkl'
   | 'akash'
@@ -19,3 +22,8 @@ export type TAddressPrefix =
   | 'qwoyn'
   | 'stars'
   | 'stride'
+
+export interface INameWithMeta extends Omit<Omit<DName, 'subdomains'>, 'data'> {
+  data: IRnsMetaData
+  subdomains: INameWithMeta[]
+}
