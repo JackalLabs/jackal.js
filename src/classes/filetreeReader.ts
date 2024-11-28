@@ -693,7 +693,7 @@ export class FiletreeReader implements IFiletreeReader {
       const meta = await this.loadMeta({ file, ulid: '-1' })
       return (meta.metaDataType === 'sharerref') ? meta as ISharerRefMetaData : meta as INullSharerRefMetaData
     } catch (err) {
-      throw warnError('filetreeReader loadRefMeta()', err)
+      throw warnError('filetreeReader loadSharerRefMeta()', err)
     }
   }
 
@@ -1320,9 +1320,13 @@ export class FiletreeReader implements IFiletreeReader {
       if ('sharerCount' in meta) {
         const count = hexToInt(meta.sharerCount || '')
         for (let i = 0; i < count; i++) {
-          const loopMeta = await this.loadSharerRefMeta(ulid, i)
-          if (loopMeta.type !== 'null') {
-            this.sharerRefs[path][loopMeta.sharer] = i
+          try {
+            const loopMeta = await this.loadSharerRefMeta(ulid, i)
+            if (loopMeta.type !== 'null') {
+              this.sharerRefs[path][loopMeta.sharer] = i
+            }
+          } catch {
+            console.warn('Bad Sharer Ref')
           }
         }
       }
