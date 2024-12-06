@@ -2304,7 +2304,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         return name
       } else {
         if (this.rns) {
-          return await this.rns.rnsToAddress(name)
+          return await this.rns.possibleRnsToJklAddress(name)
         } else {
           throw new Error('Invalid name')
         }

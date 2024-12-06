@@ -56,6 +56,8 @@ export interface IRnsHandler {
 
   getPrimaryName (address?: string): Promise<DName>
 
+  possibleRnsToJklAddress (name: string): Promise<string>
+
   rnsToAddress (name: string, prefix?: TAddressPrefix): Promise<string>
 
   bid (options: IBidOptions): Promise<IWrappedEncodeObject[]>

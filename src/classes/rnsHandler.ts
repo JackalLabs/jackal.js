@@ -233,6 +233,23 @@ export class RnsHandler implements IRnsHandler {
   }
 
   /**
+   *
+   * @param {string} name
+   * @returns {Promise<string>}
+   */
+  async possibleRnsToJklAddress (name: string): Promise<string> {
+    try {
+      if (bech32.checkIfValid(name)) {
+        return name
+      } else {
+        return await this.rnsToAddress(name)
+      }
+    } catch (err) {
+      throw warnError('rnsHandler possibleRnsToJklAddress()', err)
+    }
+  }
+
+  /**
    * Convert RNS address to wallet address.
    * @param {string} name - RNS name to convert.
    * @param {TAddressPrefix} prefix - Optional wallet prefix, defaults to jkl.
