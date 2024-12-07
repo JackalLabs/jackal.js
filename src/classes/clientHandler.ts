@@ -276,7 +276,8 @@ export class ClientHandler implements IClientHandler {
    */
   async createStorageHandler (): Promise<IStorageHandler> {
     try {
-      return await StorageHandler.init(this)
+      const rns = await this.createRnsHandler()
+      return await StorageHandler.init(this, { rns })
     } catch (err) {
       throw warnError('clientHandler createStorageHandler()', err)
     }

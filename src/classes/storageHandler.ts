@@ -2300,11 +2300,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    */
   protected async possibleRnsToAddress (name: string): Promise<string> {
     try {
-      if (bech32.checkIfValid(name)) {
-        return name
+      if (this.rns) {
+        return await this.rns.possibleRnsToJklAddress(name)
       } else {
-        if (this.rns) {
-          return await this.rns.possibleRnsToJklAddress(name)
+        if (bech32.checkIfValid(name)) {
+          return name
         } else {
           throw new Error('Invalid name')
         }
