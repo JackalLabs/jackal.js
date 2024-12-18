@@ -58,7 +58,7 @@ export function finalizeGas (
       amount: [
         { denom: 'ujkl', amount: Math.ceil(totalGas * 0.002).toString() },
       ],
-      gas: totalGas.toString(),
+      gas: Math.ceil(totalGas).toString(),
     },
     msgs,
   }
