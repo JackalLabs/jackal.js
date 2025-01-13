@@ -14,7 +14,11 @@ const OneSecondMs = 1000
  * @private
  */
 export function safeCompressData (input: string): string {
-  return `jklpc1${Plzsu.compress(input)}`
+  if (!!window) {
+    return `jklpc3|${input}`
+  } else {
+    return `jklpc1${Plzsu.compress(input)}`
+  }
 }
 
 /**
@@ -24,10 +28,13 @@ export function safeCompressData (input: string): string {
  * @private
  */
 export function safeDecompressData (input: string): string {
-  if (!input.startsWith('jklpc1')) {
+  if (input.startsWith('jklpc3|')) {
+    return input.substring(7)
+  } else if (input.startsWith('jklpc1')) {
+    return Plzsu.decompress(input.substring(6))
+  } else {
     throw new Error('Invalid Decompression String')
   }
-  return Plzsu.decompress(input.substring(6))
 }
 
 /**

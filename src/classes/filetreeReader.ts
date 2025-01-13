@@ -901,7 +901,7 @@ export class FiletreeReader implements IFiletreeReader {
           if (ulid in this.sharerCounts) {
             const safeContents = prepDecompressionForAmino(contents)
             let decrypted = await cryptString(safeContents, aes[0], 'decrypt')
-            if (decrypted.startsWith('jklpc1')) {
+            if (decrypted.startsWith('jklpc')) {
               decrypted = safeDecompressData(decrypted)
             }
             const working = safeParseFileTree(decrypted)
@@ -2009,7 +2009,7 @@ export class FiletreeReader implements IFiletreeReader {
         this.conversionQueue = [...new Set([...this.conversionQueue, id])]
       }
       let decrypted = await cryptString(safe, aes[0], 'decrypt')
-      if (decrypted.startsWith('jklpc1')) {
+      if (decrypted.startsWith('jklpc')) {
         decrypted = safeDecompressData(decrypted)
       }
       return safeParseFileTree(decrypted)

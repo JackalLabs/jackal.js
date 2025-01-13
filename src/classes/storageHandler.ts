@@ -2275,7 +2275,13 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       fileFormData.set('start', startBlock.toString())
 
       console.log('startBlock:', startBlock.toString())
-      return await fetch(url, { method: 'POST', body: fileFormData }).then(
+      return await fetch(url, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        method: 'POST',
+        body: fileFormData,
+      }).then(
         async (resp): Promise<IProviderUploadResponse> => {
           if (typeof resp === 'undefined' || resp === null) {
             throw new Error(`Status Message: Empty Response`)
@@ -2567,7 +2573,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         description: '',
         file: toProcess,
         fileMeta,
-        location: this.readCurrentLocation(),
+        location: this.readCurrentUlid(),
       })
       return { file: toProcess, meta: baseMeta, duration }
     } catch (err) {
