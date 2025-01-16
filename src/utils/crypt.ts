@@ -4,7 +4,7 @@ import {
   prepDecompressionForAmino,
   safeCompressData,
   safeDecompressData,
-  sanitizeCompressionForAmino,
+  sanitizeCompressionForAmino, stringToUint16Array,
   stringToUint8Array,
   uintArrayToString,
 } from '@/utils/converters'
@@ -280,9 +280,9 @@ export async function cryptString (
   isLedger?: boolean,
 ): Promise<string> {
   try {
-    const uint16 = stringToUint8Array(input)
+    const uint16 = stringToUint16Array(input)
     const result = await aesCrypt(uint16.buffer, aes, mode)
-    const processed = uintArrayToString(new Uint8Array(result))
+    const processed = uintArrayToString(new Uint16Array(result))
     if (mode === 'encrypt' && isLedger) {
       return sanitizeCompressionForAmino(processed)
     } else {
