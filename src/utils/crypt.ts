@@ -4,8 +4,8 @@ import {
   prepDecompressionForAmino,
   safeCompressData,
   safeDecompressData,
-  sanitizeCompressionForAmino, stringToUint16Array,
-  stringToUint8Array,
+  sanitizeCompressionForAmino,
+  stringToUint16Array,
   uintArrayToString,
 } from '@/utils/converters'
 import { warnError } from '@/utils/misc'
