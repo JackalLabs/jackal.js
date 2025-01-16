@@ -106,7 +106,11 @@ export function extractFileMetaData (input: File): IFileMeta {
 export function uintArrayToString (
   buf: Uint8Array | Uint16Array | Uint32Array,
 ): string {
-  return String.fromCharCode.apply(null, [...buf])
+  // if (!window) {
+    // return new TextDecoder().decode(buf)
+  // } else {
+    return String.fromCharCode.apply(null, [...buf])
+  // }
 }
 
 /**
@@ -116,11 +120,17 @@ export function uintArrayToString (
  * @private
  */
 export function stringToUint8Array (str: string): Uint8Array {
-  const uintView = new Uint8Array(str.length)
-  for (let i = 0; i < str.length; i++) {
-    uintView[i] = str.charCodeAt(i)
+  if (!window) {
+    return new TextEncoder().encode(str)
+  } else {
+    const uintView = new Uint8Array(str.length)
+    for (let i = 0; i < str.length; i++) {
+      uintView[i] = str.charCodeAt(i)
+    }
+    return uintView
   }
-  return uintView
+
+
 }
 
 /**
