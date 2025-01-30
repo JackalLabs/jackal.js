@@ -11,6 +11,7 @@ import {
 import { warnError } from '@/utils/misc'
 import { hexToBuffer, stringToShaHex } from '@/utils/hash'
 import type { IAesBundle } from '@/interfaces'
+// import * as nodeCrypto from 'node:crypto'
 
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
@@ -125,14 +126,31 @@ export async function aesCrypt (
       return new ArrayBuffer(0)
     } else if (mode?.toLowerCase() === 'encrypt') {
       try {
-        return await crypto.subtle.encrypt(algo, aes.key, data)
+        if (typeof window !== 'undefined') {
+          return await crypto.subtle.encrypt(algo, aes.key, data)
+        } else {
+          return await crypto.subtle.encrypt(algo, aes.key, data)
+          // const key = await exportJackalKey(aes.key)
+          // const cipher = nodeCrypto.createCipheriv('aes-256-gcm', key, aes.iv)
+          //
+          // const buf = new Uint16Array(data)
+          // let encrypted = cipher.update(buf)
+          // cipher.final('utf-16le')
+          //
+          // return encrypted
+        }
       } catch (err) {
         console.warn('encrypt')
         throw err
       }
     } else {
       try {
-        return await crypto.subtle.decrypt(algo, aes.key, data)
+        if (typeof window !== 'undefined') {
+          return await crypto.subtle.decrypt(algo, aes.key, data)
+        } else {
+          return await crypto.subtle.decrypt(algo, aes.key, data)
+          // return await webcrypto.subtle.decrypt(algo, aes.key, data)
+        }
       } catch (err) {
         console.warn('decrypt')
         throw err

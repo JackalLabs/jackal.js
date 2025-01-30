@@ -7,10 +7,12 @@ import { typescriptPaths } from "rollup-plugin-typescript-paths"
 import tsconfigPaths from 'vite-tsconfig-paths'
 import dts from 'vite-plugin-dts'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { nodeExternals } from 'rollup-plugin-node-externals'
 
 export default defineConfig({
   base: './',
   plugins: [
+    nodeExternals(),
     tsconfigPaths(),
     dts({
       afterBuild: () => {
@@ -20,7 +22,6 @@ export default defineConfig({
       rollupTypes: true,
       logLevel: 'error'
     }),
-    nodePolyfills({ include: ['buffer', 'crypto', 'util'] })
   ],
   resolve: {
     preserveSymlinks: true,
@@ -41,23 +42,32 @@ export default defineConfig({
     extensions: ['.ts']
   },
   build: {
-    manifest: true,
     minify: false,
     reportCompressedSize: true,
-    lib: {
-      entry: resolve(__dirname, "src/index.ts"),
-      fileName: (format) => `index.${format}.js`,
-      formats: ['cjs', 'es'],
-      name: 'Jackal.js'
-    },
+
     rollupOptions: {
+      input: resolve(__dirname, "src/index.ts"),
+      preserveEntrySignatures: 'allow-extension',
+      output: [
+        {
+          dir: './dist',
+          entryFileNames: 'index.[format].js',
+          format: 'cjs',
+          name: 'Jackal.js',
+          plugins: []
+        },
+        {
+          dir: './dist',
+          entryFileNames: 'index.[format].js',
+          format: 'es',
+          name: 'Jackal.js',
+          plugins: [
+            nodePolyfills({ include: ['buffer', 'crypto', 'util'] })
+          ]
+        },
+      ],
       external: [
-        /* Jackal.js-protos */
         /@cosmjs.*/,
-        /cosmjs-types*/,
-        'grpc-web',
-        'protobufjs',
-        'ts-proto',
         /* Jackal.js */
         '@jackallabs/browserify-aes',
         'browserify-aes',

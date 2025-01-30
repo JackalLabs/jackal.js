@@ -238,10 +238,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           }
           break
         case 'mnemonic':
-          if (!window.mnemonicWallet && !global.mnemonicWallet) {
+          if (!global.mnemonicWallet) {
             throw new Error('Missing mnemonic wallet')
           } else {
-            const seedWallet = window.mnemonicWallet || global.mnemonicWallet
+            const seedWallet = global.mnemonicWallet
             signed = await seedWallet.signArbitrary(
               signatureSeed,
             )

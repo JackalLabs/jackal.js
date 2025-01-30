@@ -106,7 +106,13 @@ export function extractFileMetaData (input: File): IFileMeta {
 export function uintArrayToString (
   buf: Uint8Array | Uint16Array | Uint32Array,
 ): string {
-  return String.fromCharCode.apply(null, [...buf])
+  return String.fromCharCode(...buf)
+  // const uint8arr = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
+  // if(typeof window !== 'undefined') {
+  //   return String.fromCharCode(...buf)
+  // } else {
+  //   return Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength).toString('utf16le')
+  // }
 }
 
 /**
