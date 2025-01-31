@@ -1,4 +1,5 @@
-import { bech32 } from '@jackallabs/bech32'
+import pkg from '@jackallabs/bech32'
+const {bech32} = pkg;
 import { signerNotEnabled, warnError } from '@/utils/misc'
 import type {
   DBid,

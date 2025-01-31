@@ -13,10 +13,13 @@ import {
   DMsgStorageDeleteFile,
   DMsgStoragePostFile,
   DUnifiedFile,
-  reencodeEncodedObject,
   THostSigningClient,
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
+
+import pkg from '@jackallabs/jackal.js-protos';
+const { reencodeEncodedObject } = pkg;
+
 import {
   IClientHandler,
   IClonePackage,

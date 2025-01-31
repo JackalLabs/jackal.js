@@ -1,8 +1,4 @@
 import {
-  connectHostQueryClient,
-  connectHostSigningClient,
-  connectJackalQueryClient,
-  connectJackalSigningClient,
   DCoin,
   IIbcEngageBundle,
   ITxLibrary,
@@ -14,6 +10,10 @@ import {
   TQueryExtensions,
   TxEvent,
 } from '@jackallabs/jackal.js-protos'
+
+import pkg from '@jackallabs/jackal.js-protos';
+const {  connectJackalQueryClient, connectHostQueryClient, connectJackalSigningClient, connectHostSigningClient } = pkg;
+
 import { jackalTestnetChainConfig, jackalTestnetChainId, jackalTestnetRpc, sockets } from '@/utils/globalDefaults'
 import { makeConnectionBundles, setDelay, signerNotEnabled, warnError } from '@/utils/misc'
 import { MnemonicWallet, OracleHandler, RnsHandler, StorageHandler, WasmHandler } from '@/classes'

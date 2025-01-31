@@ -13,7 +13,8 @@ import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
 import { aesBlobCrypt, genAesBundle, genIv, genKey } from '@/utils/crypt'
 import { hashAndHex, hexToBuffer, stringToShaHex } from '@/utils/hash'
 import { EncodingHandler } from '@/classes/encodingHandler'
-import { bech32 } from '@jackallabs/bech32'
+import pkg from '@jackallabs/bech32'
+const {bech32} = pkg;
 import {
   IAesBundle,
   IBroadcastOptions,

@@ -1,8 +1,9 @@
-import { DEncodeObject, findQueryKey, IIbcEngageBundle, TxEvent } from '@jackallabs/jackal.js-protos'
+import { DEncodeObject, IIbcEngageBundle, TxEvent } from '@jackallabs/jackal.js-protos'
 import { secondToMS } from '@/utils/converters'
 import { sockets } from '@/utils/globalDefaults'
 import { TSockets, TSocketSet, TTidyStringModes } from '@/types'
-
+import pkg from '@jackallabs/jackal.js-protos';
+const { findQueryKey } = pkg;
 /**
  * Notify that function is deprecated and should no longer be used.
  * @param {string} thing - Name of deprecated item. Example: "[ParentContext] functionName()".

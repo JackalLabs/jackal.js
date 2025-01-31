@@ -1,4 +1,5 @@
-import { Merkletree } from '@jackallabs/dogwood-tree'
+import pkg from '@jackallabs/dogwood-tree';
+const { Merkletree } = pkg;
 import { ulid } from 'ulid'
 import { chunkSize } from '@/utils/globalDefaults'
 import { hexToInt, intToHex, uintArrayToString } from '@/utils/converters'
