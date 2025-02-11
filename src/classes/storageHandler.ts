@@ -2276,9 +2276,6 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
       console.log('startBlock:', startBlock.toString())
       return await fetch(url, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
         method: 'POST',
         body: fileFormData,
       }).then(
@@ -2287,6 +2284,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             throw new Error(`Status Message: Empty Response`)
           }
           if (resp.status !== 200) {
+            if (resp.status === 400) {
+              const parsed = await resp.json()
+              console.warn('400 error:', parsed.error)
+            }
             throw new Error(`Status Message: ${resp.statusText}`)
           } else {
             return resp.json()
