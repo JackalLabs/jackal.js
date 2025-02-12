@@ -25,7 +25,6 @@ export type TMetaHandler =
 export type TSockets =
   | 'jackal'
   | 'jackaltest'
-  | 'jackalv4'
   | 'jackallocal'
   | 'archway'
   | 'archwaytest'
