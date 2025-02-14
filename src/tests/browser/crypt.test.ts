@@ -1,12 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import {
-  exportJackalKey,
-  importJackalKey,
-  genKey,
-  genIv,
-  genAesBundle,
-  aesCrypt
-} from '@/utils/crypt'
+import { aesCrypt, exportJackalKey, genAesBundle, genIv, genKey, importJackalKey } from '@/utils/crypt'
 
 describe('Key & AES Functions', () => {
   test('genKey should generate a valid CryptoKey', async () => {

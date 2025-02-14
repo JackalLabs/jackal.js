@@ -1,21 +1,17 @@
 import { describe, expect, test } from 'vitest'
 import {
+  blockCountUntilTimestamp,
+  hexToInt,
+  intToHex,
   safeCompressData,
   safeDecompressData,
+  secondToMS,
+  stringToUint16Array,
+  stringToUint8Array,
+  timestampToBlockHeight,
+  uintArrayToString,
   unsafeCompressData,
   unsafeDecompressData,
-  sanitizeCompressionForAmino,
-  prepDecompressionForAmino,
-  extractFileMetaData,
-  uintArrayToString,
-  stringToUint8Array,
-  stringToUint16Array,
-  intToHex,
-  hexToInt, 
-  secondToMS,
-  blockCountUntilTimestamp,
-  timestampToBlockHeight,
-  blockToDateFixed
 } from '@/utils/converters'
 
 describe('Compression Functions', () => {

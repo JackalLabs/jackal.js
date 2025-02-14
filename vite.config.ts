@@ -1,9 +1,9 @@
-import { defineConfig } from "vite"
+import { defineConfig } from 'vite'
 
-import typescript from "@rollup/plugin-typescript"
-import { resolve } from "path"
-import { copyFileSync } from "fs"
-import { typescriptPaths } from "rollup-plugin-typescript-paths"
+import typescript from '@rollup/plugin-typescript'
+import { resolve } from 'path'
+import { copyFileSync } from 'fs'
+import { typescriptPaths } from 'rollup-plugin-typescript-paths'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import dts from 'vite-plugin-dts'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
@@ -14,41 +14,41 @@ export default defineConfig({
     tsconfigPaths(),
     dts({
       afterBuild: () => {
-        copyFileSync("dist/index.d.ts", "dist/index.d.mts")
+        copyFileSync('dist/index.d.ts', 'dist/index.d.mts')
       },
-      include: ["src"],
+      include: ['src'],
       rollupTypes: true,
-      logLevel: 'error'
+      logLevel: 'error',
     }),
-    nodePolyfills({ include: ['buffer', 'crypto', 'util'] })
+    nodePolyfills({ include: ['buffer', 'crypto', 'util'] }),
   ],
   resolve: {
     preserveSymlinks: true,
     alias: [
       {
-        find: "@",
-        replacement: resolve(__dirname, "./src"),
+        find: '@',
+        replacement: resolve(__dirname, './src'),
       },
       {
-        find: "function-bind",
-        replacement: resolve(__dirname, "./node_modules", "function-bind", "implementation.js"),
+        find: 'function-bind',
+        replacement: resolve(__dirname, './node_modules', 'function-bind', 'implementation.js'),
       },
       {
-        find: "symbol-observable/ponyfill",
-        replacement: resolve(__dirname, "./node_modules", "symbol-observable", "ponyfill.js"),
+        find: 'symbol-observable/ponyfill',
+        replacement: resolve(__dirname, './node_modules', 'symbol-observable', 'ponyfill.js'),
       },
     ],
-    extensions: ['.ts']
+    extensions: ['.ts'],
   },
   build: {
     manifest: true,
     minify: false,
     reportCompressedSize: true,
     lib: {
-      entry: resolve(__dirname, "src/index.ts"),
+      entry: resolve(__dirname, 'src/index.ts'),
       fileName: (format) => `index.${format}.js`,
       formats: ['cjs', 'es'],
-      name: 'Jackal.js'
+      name: 'Jackal.js',
     },
     rollupOptions: {
       external: [
@@ -75,9 +75,4 @@ export default defineConfig({
       ],
     },
   },
-  test: {
-    globals: true,
-    environment: "node", // Change to "jsdom" if testing browser-based logic
-    include: ["src/**/*.test.ts"], // Look for tests in the 'tests' directory
-  }
 })
