@@ -75,4 +75,9 @@ export default defineConfig({
       ],
     },
   },
+  test: {
+    globals: true,
+    environment: "node", // Change to "jsdom" if testing browser-based logic
+    include: ["src/**/*.test.ts"], // Look for tests in the 'tests' directory
+  }
 })
