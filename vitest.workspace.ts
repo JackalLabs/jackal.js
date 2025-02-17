@@ -12,7 +12,7 @@ export default defineWorkspace([
         },
       ],
       include: [
-        'src/tests/unit/**/*.{test,spec}.ts',
+        'src/tests/**/*.{test,spec}.ts',
       ],
       name: 'unit',
       environment: 'node',
@@ -28,7 +28,7 @@ export default defineWorkspace([
         },
       ],
       include: [
-        'src/tests/browser/**/*.{test,spec}.ts',
+        'src/tests/**/*.{test,spec}.ts',
       ],
       name: 'browser',
       browser: {
