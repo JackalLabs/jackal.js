@@ -1,0 +1,28 @@
+{
+    "MOCK_JKL_RPC": "https://testnet-rpc.jackalprotocol.com",
+    "MOCK_HOST_RPC": "https://some-host-rpc.com",
+    "MOCK_JKL_ADDRESS": "jkl1exampleaddress",
+    "MOCK_HOST_ADDRESS": "host1exampleaddress",
+    "MOCK_MNEMONIC": "replace this with a real mnemonic for testing",
+    "MOCK_CONTRACT_ADDRESS": "jkl1contractaddress",
+    "MOCK_CONNECTION_ID_A": "connection-18",
+    "MOCK_CONNECTION_ID_B": "connection-50",
+    "MOCK_CHAIN_ID": "jackal-testnet",
+    "MOCK_HOST_CHAIN_ID": "host-testnet",
+    "MOCK_SELECTED_WALLET": "keplr",
+    "MOCK_PROOF_WINDOW": 7200,
+    "MOCK_BALANCE_AMOUNT": "1000000",
+    "MOCK_BALANCE_DENOM": "ujkl",
+    "MOCK_ORACLE_FEED_NAME": "test-oracle",
+    "MOCK_ORACLE_FEED_VALUE": "42",
+    "MOCK_PRIMARY_RNS_NAME": "primary.jkl",
+    "MOCK_TEST_TX_HASH": "mockhash",
+    "MOCK_IBC_TX_HASH": "ibchash",
+    "MOCK_BLOCK_HEIGHT": 123456,
+    "MOCK_GAS_AMOUNT": "5000",
+    "MOCK_GAS_DENOM": "ujkl",
+    "MOCK_GAS_LIMIT": "200000",
+    "MOCK_GAS_MULTIPLIER": "1.2",
+    "MOCK_TX_HASH": "mock-tx-hash"
+  }
+  
