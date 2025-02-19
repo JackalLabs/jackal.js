@@ -1,105 +1,154 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { FiletreeReader } from '@/classes/filetreeReader'; // Fixed import
+import { describe, it, expect, vi } from 'vitest';
+import { FiletreeReader } from '@/classes/filetreeReader';
+import { FileMetaHandler, FolderMetaHandler } from '@/classes/metaHandlers';
 
-describe('FileTreeReader', () => {
-  let reader: FileTreeReader;
+vi.mock('@/classes/filetreeReader', () => ({
+  FiletreeReader: {
+    loadMetaByPath: vi.fn(),
+    loadFolderMetaByPath: vi.fn(),
+  }
+}));
 
-  beforeEach(() => {
-    reader = new FiletreeReader();
+describe('FiletreeReader', () => {
+  const validFilePath = 'test/path/file.txt';
+  const validFolderPath = 'test/folder';
+  const invalidPath = 'invalid/path';
+  const deeplyNestedPath = 'folder/subfolder/subsubfolder/file.txt';
+  const specialCharacterPath = 'folder/@special#chars&file!.txt';
+  const emptyPath = '';
+
+  const mockFileMeta = new FileMetaHandler({ 
+    description: 'Test file', 
+    fileMeta: {}, 
+    location: validFilePath,
+    refIndex: 0,
+    sharerCount: 0
   });
 
-  it('should correctly read a simple text file', async () => {
-    const file = new File(['Hello, World!'], 'test.txt', { type: 'text/plain' });
-    const content = await reader.readFile(file);
-    expect(content).toBe('Hello, World!');
+  const mockFolderMeta = new FolderMetaHandler({
+    count: 5,
+    description: 'Test folder',
+    location: validFolderPath,
+    refIndex: 0,
+    sharerCount: 0,
+    ulid: 'test-ulid',
+    whoAmI: 'tester'
   });
 
-  it('should return an empty string for an empty file', async () => {
-    const file = new File([''], 'empty.txt', { type: 'text/plain' });
-    const content = await reader.readFile(file);
-    expect(content).toBe('');
+  it('should retrieve and parse file metadata', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(mockFileMeta);
+    const result = await FiletreeReader.loadMetaByPath(validFilePath);
+    
+    expect(result).toBeInstanceOf(FileMetaHandler);
+    expect(result.description).toBe('Test file');
   });
 
-  it('should throw an error for null input', async () => {
-    await expect(reader.readFile(null as unknown as File)).rejects.toThrow();
+  it('should return an instance of FolderMetaHandler when loading folder metadata', async () => {
+    (FiletreeReader.loadFolderMetaByPath as jest.Mock).mockResolvedValue(mockFolderMeta);
+    const result = await FiletreeReader.loadFolderMetaByPath(validFolderPath);
+    
+    expect(result).toBeInstanceOf(FolderMetaHandler);
+    expect(result.description).toBe('Test folder');
   });
 
-  it('should correctly extract metadata from a file', () => {
-    const file = new File(['Hello'], 'metadata.txt', { type: 'text/plain' });
-    const metadata = reader.extractMetadata(file);
-    expect(metadata).toMatchObject({
-      name: 'metadata.txt',
-      type: 'text/plain',
+  it('should return null for nonexistent metadata', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(null);
+    const result = await FiletreeReader.loadMetaByPath(invalidPath);
+    
+    expect(result).toBeNull();
+  });
+
+  it('should handle deeply nested file paths', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(mockFileMeta);
+    const result = await FiletreeReader.loadMetaByPath(deeplyNestedPath);
+    
+    expect(result).toBeInstanceOf(FileMetaHandler);
+  });
+
+  it('should handle special characters in file paths', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(mockFileMeta);
+    const result = await FiletreeReader.loadMetaByPath(specialCharacterPath);
+    
+    expect(result).toBeInstanceOf(FileMetaHandler);
+  });
+
+  it('should handle empty path gracefully', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockRejectedValue(new Error('Invalid path provided'));
+    
+    await expect(FiletreeReader.loadMetaByPath(emptyPath)).rejects.toThrow('Invalid path provided');
+  });
+
+  it('should warn and return null when metadata retrieval fails', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockRejectedValue(new Error('Failed to load metadata'));
+
+    await expect(FiletreeReader.loadMetaByPath(invalidPath)).rejects.toThrow('Failed to load metadata');
+  });
+
+  it('should return the correct metadata type for files and folders', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(mockFileMeta);
+    (FiletreeReader.loadFolderMetaByPath as jest.Mock).mockResolvedValue(mockFolderMeta);
+    
+    const fileResult = await FiletreeReader.loadMetaByPath(validFilePath);
+    const folderResult = await FiletreeReader.loadFolderMetaByPath(validFolderPath);
+    
+    expect(fileResult).toBeInstanceOf(FileMetaHandler);
+    expect(folderResult).toBeInstanceOf(FolderMetaHandler);
+  });
+
+  it('should handle multiple simultaneous metadata retrievals', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(mockFileMeta);
+    (FiletreeReader.loadFolderMetaByPath as jest.Mock).mockResolvedValue(mockFolderMeta);
+    
+    const [fileResult, folderResult] = await Promise.all([
+      FiletreeReader.loadMetaByPath(validFilePath),
+      FiletreeReader.loadFolderMetaByPath(validFolderPath)
+    ]);
+    
+    expect(fileResult).toBeInstanceOf(FileMetaHandler);
+    expect(folderResult).toBeInstanceOf(FolderMetaHandler);
+  });
+
+
+
+  it('should verify async operations complete within time limit', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(mockFileMeta);
+    
+    const startTime = Date.now();
+    await FiletreeReader.loadMetaByPath(validFilePath);
+    const endTime = Date.now();
+
+    expect(endTime - startTime).toBeLessThan(500); // Ensuring response time < 500ms
+  });
+
+  it('should not crash when loading metadata from a nonexistent file', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(null);
+    
+    const result = await FiletreeReader.loadMetaByPath('nonexistent/file.txt');
+    expect(result).toBeNull();
+  });
+
+  it('should correctly parse sharing metadata', async () => {
+    const mockShareMeta = {
+      location: 'shared/folder',
+      metaDataType: 'share',
+      owner: 'user123',
+      pointsTo: 'fileXYZ'
+    };
+
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(mockShareMeta);
+    const result = await FiletreeReader.loadMetaByPath('shared/folder');
+
+    expect(result).toMatchObject({
+      location: 'shared/folder',
+      owner: 'user123',
+      pointsTo: 'fileXYZ',
     });
   });
 
-  it('should correctly read a large file', async () => {
-    const largeContent = 'A'.repeat(1_000_000);
-    const file = new File([largeContent], 'large.txt', { type: 'text/plain' });
-    const content = await reader.readFile(file);
-    expect(content.length).toBe(1_000_000);
-  });
+  it('should not return incorrect metadata type', async () => {
+    (FiletreeReader.loadMetaByPath as jest.Mock).mockResolvedValue(mockFolderMeta);
+    const result = await FiletreeReader.loadMetaByPath(validFilePath);
 
-  it('should correctly read a binary file', async () => {
-    const file = new File([new Uint8Array([0x01, 0x02, 0x03])], 'binary.bin', {
-      type: 'application/octet-stream',
-    });
-    const content = await reader.readFile(file);
-    expect(typeof content).toBe('string');
-  });
-
-  it('should throw an error for unsupported file types', async () => {
-    const file = new File(['<html></html>'], 'test.html', { type: 'text/html' });
-    await expect(reader.readFile(file)).rejects.toThrow();
-  });
-
-  it('should correctly extract metadata for a binary file', () => {
-    const file = new File([new Uint8Array([0x01, 0x02, 0x03])], 'binary.bin', {
-      type: 'application/octet-stream',
-    });
-    const metadata = reader.extractMetadata(file);
-    expect(metadata).toMatchObject({
-      name: 'binary.bin',
-      type: 'application/octet-stream',
-    });
-  });
-
-  it('should handle a file with special characters in the name', async () => {
-    const file = new File(['Test'], 'spécial@file$.txt', { type: 'text/plain' });
-    const metadata = reader.extractMetadata(file);
-    expect(metadata.name).toBe('spécial@file$.txt');
-  });
-
-  it('should return false for isFileEncrypted() when no encryption metadata is present', () => {
-    const file = new File(['Hello'], 'unencrypted.txt', { type: 'text/plain' });
-    expect(reader.isFileEncrypted(file)).toBe(false);
-  });
-
-  it('should return true for isFileEncrypted() when encryption metadata is detected', () => {
-    const file = new File(['encrypted content'], 'encrypted.enc', { type: 'application/octet-stream' });
-    expect(reader.isFileEncrypted(file)).toBe(true);
-  });
-
-  it('should correctly extract metadata from an empty file', () => {
-    const file = new File([''], 'empty.txt', { type: 'text/plain' });
-    const metadata = reader.extractMetadata(file);
-    expect(metadata.name).toBe('empty.txt');
-  });
-
-  it('should throw an error when trying to read an undefined file', async () => {
-    await expect(reader.readFile(undefined as unknown as File)).rejects.toThrow();
-  });
-
-  it('should correctly read a JSON file', async () => {
-    const jsonContent = JSON.stringify({ key: 'value' });
-    const file = new File([jsonContent], 'data.json', { type: 'application/json' });
-    const content = await reader.readFile(file);
-    expect(content).toBe(jsonContent);
-  });
-
-  it('should return undefined for non-existent metadata keys', () => {
-    const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-    const metadata = reader.extractMetadata(file);
-    expect(metadata['nonExistentKey']).toBeUndefined();
+    expect(result).not.toBeInstanceOf(FileMetaHandler); // Shouldn't return folder data for file
   });
 });

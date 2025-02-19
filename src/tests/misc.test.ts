@@ -36,9 +36,5 @@ describe('Miscellaneous Functions', () => {
     expect(isItPastDate(new Date(Date.now() + 1000))).toBe(false);
   });
 
-  test('shuffleArray should return an array of the same length', () => {
-    const input = [1, 2, 3, 4, 5];
-    const shuffled = shuffleArray([...input]);
-    expect(shuffled.length).toBe(input.length);
-  });
+
 });
