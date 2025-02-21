@@ -11,7 +11,7 @@ import {
 import { warnError } from '@/utils/misc'
 import { hexToBuffer, stringToShaHex } from '@/utils/hash'
 import type { IAesBundle } from '@/interfaces'
-// import * as nodeCrypto from 'node:crypto'
+import * as nodeCrypto from 'node:crypto'
 
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
@@ -129,15 +129,14 @@ export async function aesCrypt (
         if (typeof window !== 'undefined') {
           return await crypto.subtle.encrypt(algo, aes.key, data)
         } else {
+          // return await nodeCrypto.subtle.encrypt(algo, aes.key, data)
           return await crypto.subtle.encrypt(algo, aes.key, data)
           // const key = await exportJackalKey(aes.key)
           // const cipher = nodeCrypto.createCipheriv('aes-256-gcm', key, aes.iv)
+          // cipher.setAutoPadding(false)
           //
           // const buf = new Uint16Array(data)
-          // let encrypted = cipher.update(buf)
-          // cipher.final('utf-16le')
-          //
-          // return encrypted
+          // return Buffer.concat([cipher.update(buf), cipher.final()])
         }
       } catch (err) {
         console.warn('encrypt')
@@ -148,8 +147,8 @@ export async function aesCrypt (
         if (typeof window !== 'undefined') {
           return await crypto.subtle.decrypt(algo, aes.key, data)
         } else {
-          return await crypto.subtle.decrypt(algo, aes.key, data)
-          // return await webcrypto.subtle.decrypt(algo, aes.key, data)
+          return await nodeCrypto.subtle.decrypt(algo, aes.key, data)
+          // return await crypto.subtle.decrypt(algo, aes.key, data)
         }
       } catch (err) {
         console.warn('decrypt')
@@ -192,7 +191,7 @@ export function eciesDecryptWithPrivateKey (
 ): Uint8Array {
   const ready =
     toDecrypt instanceof Uint8Array ? toDecrypt : hexToBuffer(toDecrypt)
-  return new Uint8Array(decrypt(key.toHex(), ready))
+  return decrypt(key.toHex(), ready)
 }
 
 /**

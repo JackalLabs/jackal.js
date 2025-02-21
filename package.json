@@ -9,7 +9,7 @@
   "exports": {
     ".": {
       "import": {
-        "default": "./dist/index.es.js",
+        "default": "./dist/index.esm.js",
         "types": "./dist/index.d.mts"
       },
       "require": {
@@ -20,7 +20,7 @@
   },
   "type": "module",
   "types": "./dist/index.d.ts",
-  "module": "./dist/index.es.js",
+  "module": "./dist/index.esm.js",
   "files": [
     "dist"
   ],

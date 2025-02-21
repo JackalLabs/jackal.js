@@ -51,15 +51,15 @@ export default defineConfig({
       output: [
         {
           dir: './dist',
-          entryFileNames: 'index.[format].js',
+          entryFileNames: 'index.cjs.js',
           format: 'cjs',
           name: 'Jackal.js',
           plugins: []
         },
         {
           dir: './dist',
-          entryFileNames: 'index.[format].js',
-          format: 'es',
+          entryFileNames: 'index.esm.js',
+          format: 'esm',
           name: 'Jackal.js',
           plugins: [
             nodePolyfills({ include: ['buffer', 'crypto', 'util'] })
