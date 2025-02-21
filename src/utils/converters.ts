@@ -14,7 +14,7 @@ const OneSecondMs = 1000
  * @private
  */
 export function safeCompressData (input: string): string {
-  if (!!window) {
+  if (false) {
     return `jklpc3|${input}`
   } else {
     return `jklpc1${Plzsu.compress(input)}`

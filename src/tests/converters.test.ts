@@ -19,12 +19,15 @@ import {
 } from '@/utils/converters'
 
 describe('Compression Functions', () => {
+  const testString = 'this is my test string'
+
   test('safeCompressData should prefix string correctly', () => {
-    expect(safeCompressData('test')).toBe('jklpc3|test')
+    expect(safeCompressData(testString)).toBe('jklpc1஀낖ೠҕୠ伫¦ᘕ퀧『샦䀀')
   })
 
   test('safeDecompressData should remove prefix correctly', () => {
-    expect(safeDecompressData('jklpc3|test')).toBe('test')
+    const compressed = safeCompressData(testString)
+    expect(safeDecompressData(compressed)).toBe(testString)
   })
 
   test('safeDecompressData should throw error for invalid input', () => {
@@ -32,26 +35,30 @@ describe('Compression Functions', () => {
   })
 
   test('unsafeCompressData and unsafeDecompressData should be inverses', () => {
-    const input = 'sample text'
-    const compressed = unsafeCompressData(input)
-    expect(unsafeDecompressData(compressed)).toBe(input)
+    const compressed = unsafeCompressData(testString)
+    expect(unsafeDecompressData(compressed)).toBe(testString)
   })
 })
 
 describe('String Conversion Functions', () => {
+  const testStr = 'Hello'
+  const testArr = [72, 101, 108, 108, 111]
+
   test('uintArrayToString should convert array to string', () => {
-    const array = new Uint8Array([65, 66, 67])
-    expect(uintArrayToString(array)).toBe('ABC')
+    const array = new Uint8Array(testArr)
+    expect(uintArrayToString(array)).toBe(testStr)
   })
 
   test('stringToUint8Array should convert string to Uint8Array', () => {
-    const str = 'Hello'
-    expect(Array.from(stringToUint8Array(str))).toEqual([72, 101, 108, 108, 111])
+    const uint = stringToUint8Array(testStr)
+    expect(Array.from(uint)).toEqual(testArr)
+    expect(uint.buffer.byteLength).toBe(5)
   })
 
   test('stringToUint16Array should convert string to Uint16Array', () => {
-    const str = 'Hello'
-    expect(Array.from(stringToUint16Array(str))).toEqual([72, 101, 108, 108, 111])
+    const uint = stringToUint16Array(testStr)
+    expect(Array.from(uint)).toEqual(testArr)
+    expect(uint.buffer.byteLength).toBe(10)
   })
 })
 

@@ -10,9 +10,10 @@ import {
 
 describe('Miscellaneous Functions', () => {
   test('tidyString should correctly remove specified characters', () => {
-    expect(tidyString('---hello---', '-', 'both')).toBe('hello');
-    expect(tidyString('---hello', '-', 'start')).toBe('hello');
-    expect(tidyString('hello---', '-', 'end')).toBe('hello');
+    const testStr = '---hello---'
+    expect(tidyString(testStr, '-', 'both')).toBe('hello');
+    expect(tidyString(testStr, '-', 'start')).toBe('hello---');
+    expect(tidyString(testStr, '-', 'end')).toBe('---hello');
   });
 
   test('setDelay should delay execution', { timeout: 12000 }, async () => {
