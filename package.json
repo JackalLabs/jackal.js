@@ -27,7 +27,10 @@
   "scripts": {
     "build": "tsc && vite build",
     "packit": "npm run build && npm pack --pack-destination packs",
-    "gen-docs": "npx typedoc"
+    "gen-docs": "npx typedoc",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:browser": "vitest --workspace=vitest.workspace.ts"
   },
   "contributors": [
     {
@@ -64,6 +67,7 @@
   "dependencies": {
     "@cosmjs/proto-signing": "^0.32.3",
     "@cosmjs/stargate": "^0.32.3",
+    "@cosmjs/tendermint-rpc": "^0.33.0",
     "@jackallabs/bech32": "^1.2.0",
     "@jackallabs/browserify-aes": "^11.2.0-CCM.1",
     "@jackallabs/dogwood-tree": "^1.0.1",
@@ -85,10 +89,12 @@
     "@types/node": "^22.9.0",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "@typescript-eslint/parser": "^6.10.0",
-    "@vitest/coverage-v8": "0.34.6",
+    "@vitest/browser": "^3.0.5",
     "eslint": "8.53.0",
     "eslint-config-prettier": "9.0.0",
     "rollup-plugin-node-externals": "^8.0.0",
+    "jsdom": "^26.0.0",
+    "playwright": "^1.50.1",
     "rollup-plugin-typescript-paths": "^1.4.0",
     "tslib": "^2.6.2",
     "typedoc": "^0.25.3",
@@ -97,9 +103,6 @@
     "vite-plugin-dts": "^4.0.3",
     "vite-plugin-node-polyfills": "^0.17.0",
     "vite-tsconfig-paths": "^4.2.1",
-    "vitest": "0.34.6"
-  },
-  "overrides": {
-    "browserify-aes": "@jackallabs/browserify-aes@11.2.0-CCM.1"
+    "vitest": "^3.0.5"
   }
 }

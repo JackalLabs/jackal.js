@@ -2354,6 +2354,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   /**
    *
    * @param {string} receiver
+   * @param {string} referrer
    * @param {number} gb
    * @param {number} days
    * @returns {IWrappedEncodeObject}
