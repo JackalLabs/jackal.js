@@ -682,7 +682,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             const childName = bundle.children.files[index].fileMeta.name
             if (childName === meta.fileMeta.name) {
               matchedCount++
-              const { merkleRoot } = bundle.children.files[index]
+              const { merkleHex } = bundle.children.files[index]
+              const merkleRoot = hexToBuffer(merkleHex)
               if (merkleRoot === meta.merkleRoot) {
                 // skip duplicate file
               } else {
@@ -1211,12 +1212,13 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       if (ft.metaDataType !== 'file') {
         throw new Error('Not a file')
       }
+      const merkleRoot = hexToBuffer(ft.merkleHex)
       const { providerIps } = await this.jackalSigner.queries.storage.findFile({
-        merkle: ft.merkleRoot,
+        merkle: merkleRoot,
       })
       return {
         fileMeta: ft.fileMeta,
-        merkle: ft.merkleRoot,
+        merkle: merkleRoot,
         merkleLocation: ft.merkleHex,
         providerIps,
       }
@@ -1300,12 +1302,13 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       if (ft.metaDataType !== 'file') {
         throw new Error('Not a file')
       }
+      const merkleRoot = hexToBuffer(ft.merkleHex)
       const { providerIps } = await this.jackalSigner.queries.storage.findFile({
-        merkle: ft.merkleRoot,
+        merkle: merkleRoot,
       })
       const particulars = {
         fileMeta: ft.fileMeta,
-        merkle: ft.merkleRoot,
+        merkle: merkleRoot,
         merkleLocation: ft.merkleHex,
         providerIps,
       }
@@ -1797,7 +1800,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
                 const pkg = await this.upcycleFile(one[1])
                 const { files } =
                   await this.jackalSigner.queries.storage.allFilesByMerkle({
-                    merkle: one[1].export().merkleRoot,
+                    merkle: one[1].getMerkleRoot(),
                   })
                 const [details] = files
                 const sourceMsgs = this.fileDeleteToMsgs({
@@ -2012,7 +2015,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     try {
       const sourceMeta = source.export()
       const { providerIps } = await this.jackalSigner.queries.storage.findFile({
-        merkle: sourceMeta.merkleRoot,
+        merkle: source.getMerkleRoot(),
       })
       console.log('providerIps:', providerIps)
       let baseFile
@@ -2448,7 +2451,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       if (ft.metaDataType === 'file') {
         const { files } =
           await this.jackalSigner.queries.storage.allFilesByMerkle({
-            merkle: ft.merkleRoot,
+            merkle: hexToBuffer(ft.merkleHex),
           })
         const [details] = files
         try {

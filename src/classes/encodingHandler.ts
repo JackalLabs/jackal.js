@@ -255,7 +255,7 @@ export class EncodingHandler {
   ): DEncodeObject {
     const forStorage: DMsgStoragePostFile = {
       creator: this.jklAddress,
-      merkle: pkg.meta.export().merkleRoot,
+      merkle: pkg.meta.getMerkleRoot(),
       fileSize: pkg.file.size,
       proofInterval: this.proofInterval,
       proofType: 0,
@@ -272,7 +272,7 @@ export class EncodingHandler {
   ): DEncodeObject {
     const forStorage: DMsgStoragePostFile = {
       creator: this.jklAddress,
-      merkle: pkg.meta.export().merkleRoot,
+      merkle: pkg.meta.getMerkleRoot(),
       fileSize: pkg.size,
       proofInterval: this.proofInterval,
       proofType: 0,

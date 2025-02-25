@@ -7,12 +7,10 @@ import { typescriptPaths } from 'rollup-plugin-typescript-paths'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import dts from 'vite-plugin-dts'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
-import { nodeExternals } from 'rollup-plugin-node-externals'
 
 export default defineConfig({
   base: './',
   plugins: [
-    nodeExternals(),
     tsconfigPaths(),
     dts({
       afterBuild: () => {
@@ -44,7 +42,6 @@ export default defineConfig({
   build: {
     minify: false,
     reportCompressedSize: true,
-
     rollupOptions: {
       input: resolve(__dirname, "src/index.ts"),
       preserveEntrySignatures: 'allow-extension',
@@ -62,7 +59,7 @@ export default defineConfig({
           format: 'esm',
           name: 'Jackal.js',
           plugins: [
-            nodePolyfills({ include: ['buffer', 'crypto', 'util'] })
+            nodePolyfills({ include: ['buffer', 'util'] })
           ]
         },
       ],
@@ -76,6 +73,8 @@ export default defineConfig({
         'ripemd160',
         'create-hash',
         'for-each',
+        /* tests */
+        resolve(__dirname, "src/tests/**/*.ts")
       ],
       plugins: [
         typescriptPaths({

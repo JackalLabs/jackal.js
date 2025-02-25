@@ -192,6 +192,9 @@ export function eciesDecryptWithPrivateKey (
   const ready =
     toDecrypt instanceof Uint8Array ? toDecrypt : hexToBuffer(toDecrypt)
   return decrypt(key.toHex(), ready)
+  // const buf = decrypt(key.toHex(), ready)
+  // const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+  // return new Uint8Array(ab)
 }
 
 /**

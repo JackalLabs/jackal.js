@@ -1,7 +1,7 @@
 import { intToHex, stringToUint8Array } from '@/utils/converters'
 import { warnError } from '@/utils/misc'
 import type { TMerkleParentChild } from '@/types'
-import * as nodeCrypto from 'node:crypto'
+// import * as nodeCrypto from 'node:crypto'
 
 /**
  * Hash input using SHA-256, then convert to hex string.

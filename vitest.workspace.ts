@@ -1,5 +1,6 @@
 import { defineWorkspace } from 'vitest/config'
 import { resolve } from 'path'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 export default defineWorkspace([
   {
@@ -19,13 +20,16 @@ export default defineWorkspace([
     },
   },
   {
+    plugins: [
+      nodePolyfills({ include: ['buffer', 'util'] })
+    ],
     test: {
       globals: true,
       alias: [
         {
           find: '@',
           replacement: resolve(__dirname, './src'),
-        },
+        }
       ],
       include: [
         'src/tests/**/*.{test,spec}.ts',

@@ -133,8 +133,8 @@ export interface IFileMetaData extends IBaseMetaData {
   description: string
   fileMeta: IFileMeta
   metaDataType: 'file'
-  merkleMem: string
-  merkleRoot: Uint8Array
+  merkleMem?: string
+  merkleRoot?: Uint8Array
   sharerCount?: string
   thumbnail: string
   ulid: string

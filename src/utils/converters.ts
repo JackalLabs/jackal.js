@@ -389,14 +389,7 @@ async function convertToWebP (file: File): Promise<string> {
  */
 export function safeStringifyFileTree (source: TMetaDataSets): string {
   try {
-    if ('merkleRoot' in source) {
-      return JSON.stringify({
-        ...source,
-        merkleRoot: Array.from(source.merkleRoot),
-      })
-    } else {
-      return JSON.stringify(source)
-    }
+    return JSON.stringify(source)
   } catch (err) {
     throw warnError('safeStringifyFileTree()', err)
   }
@@ -409,7 +402,11 @@ export function safeStringifyFileTree (source: TMetaDataSets): string {
  */
 export function safeParseFileTree (source: string): TMetaDataSets {
   try {
-    const base = JSON.parse(source)
+    let ready = source
+    if (source.startsWith('jklpc')) {
+      ready = safeDecompressData(source)
+    }
+    const base = JSON.parse(ready)
     if ('merkleRoot' in base) {
       if (Array.isArray(base.merkleRoot)) {
         base.merkleRoot = new Uint8Array(base.merkleRoot)

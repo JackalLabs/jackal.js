@@ -63,6 +63,8 @@ export interface IFileMetaHandler extends IRefMetaHandler {
 
   getUlid (): string
 
+  getMerkleRoot (): Uint8Array
+
   setLocation (location: string): void
 
   getLocation (): string

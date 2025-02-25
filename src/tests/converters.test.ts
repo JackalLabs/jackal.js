@@ -4,9 +4,9 @@ import {
   safeDecompressData,
   unsafeCompressData,
   unsafeDecompressData,
-  sanitizeCompressionForAmino,
-  prepDecompressionForAmino,
-  extractFileMetaData,
+  // sanitizeCompressionForAmino,
+  // prepDecompressionForAmino,
+  // extractFileMetaData,
   uintArrayToString,
   stringToUint8Array,
   stringToUint16Array,
@@ -15,7 +15,7 @@ import {
   secondToMS,
   blockCountUntilTimestamp,
   timestampToBlockHeight,
-  blockToDateFixed
+  // blockToDateFixed
 } from '@/utils/converters'
 
 describe('Compression Functions', () => {

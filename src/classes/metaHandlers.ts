@@ -2,7 +2,7 @@ import { Merkletree } from '@jackallabs/dogwood-tree'
 import { ulid } from 'ulid'
 import { chunkSize } from '@/utils/globalDefaults'
 import { hexToInt, intToHex, uintArrayToString } from '@/utils/converters'
-import { bufferToHex } from '@/utils/hash'
+import { bufferToHex, hexToBuffer } from '@/utils/hash'
 import {
   IFileMeta,
   IFileMetaData,
@@ -345,8 +345,11 @@ export class FileMetaHandler implements IFileMetaHandler {
    */
   static async create (source: TFileMetaDataSource) {
     if ('clone' in source) {
+      const asUint = hexToBuffer(source.clone.merkleHex)
       const shortcut: IFileMetaFoundationalData = {
         ...source.clone,
+        merkleRoot: asUint,
+        merkleMem: uintArrayToString(asUint),
         refIndex: source.refIndex || -1,
         sharerCount: hexToInt(source.clone.sharerCount || ''),
       }
@@ -442,6 +445,14 @@ export class FileMetaHandler implements IFileMetaHandler {
 
   /**
    *
+   * @returns {Uint8Array}
+   */
+  getMerkleRoot (): Uint8Array {
+    return this.merkleRoot
+  }
+
+  /**
+   *
    * @param {string} location
    */
   setLocation (location: string): void {
@@ -466,8 +477,6 @@ export class FileMetaHandler implements IFileMetaHandler {
       fileMeta: this.fileMeta,
       location: this.location,
       merkleHex: this.merkleHex,
-      merkleMem: this.merkleMem,
-      merkleRoot: this.merkleRoot,
       metaDataType: 'file',
       sharerCount: intToHex(this.sharerCount),
       thumbnail: this.thumbnail,

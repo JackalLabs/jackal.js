@@ -1570,7 +1570,11 @@ export class FiletreeReader implements IFiletreeReader {
         if (!isCleartext) {
           parsed = await this.decryptAndParseContents(file, id, linkKey)
         } else {
-          parsed = JSON.parse(contents) as TMetaDataSets
+          let ready = contents
+          if (contents.startsWith('jklpc')) {
+            ready = safeDecompressData(contents)
+          }
+          parsed = JSON.parse(ready) as TMetaDataSets
         }
         if (parsed.metaDataType === 'folder') {
           const count = hexToInt(parsed.count)

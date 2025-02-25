@@ -92,7 +92,6 @@
     "@vitest/browser": "^3.0.5",
     "eslint": "8.53.0",
     "eslint-config-prettier": "9.0.0",
-    "rollup-plugin-node-externals": "^8.0.0",
     "jsdom": "^26.0.0",
     "playwright": "^1.50.1",
     "rollup-plugin-typescript-paths": "^1.4.0",
