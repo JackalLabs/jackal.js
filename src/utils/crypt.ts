@@ -11,6 +11,7 @@ import {
 import { warnError } from '@/utils/misc'
 import { hexToBuffer, stringToShaHex } from '@/utils/hash'
 import type { IAesBundle } from '@/interfaces'
+import nodeCrypto from 'node:crypto'
 
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
@@ -116,27 +117,45 @@ export async function aesCrypt (
   aes: IAesBundle,
   mode: 'encrypt' | 'decrypt',
 ): Promise<ArrayBuffer> {
+  const isBrowser = typeof window !== 'undefined'
   try {
     const algo = {
       name: 'AES-GCM',
       iv: aes.iv,
     }
-    if (data.byteLength < 1) {
-      return new ArrayBuffer(0)
-    } else if (mode?.toLowerCase() === 'encrypt') {
-      try {
-        return await crypto.subtle.encrypt(algo, aes.key, data)
-      } catch (err) {
-        console.warn('encrypt')
-        throw err
+    try {
+      if (data.byteLength < 1) {
+        return new ArrayBuffer(0)
+      } else if (isBrowser) {
+        if (mode === 'encrypt') {
+          return await crypto.subtle.encrypt(algo, aes.key, data)
+        } else {
+          return await crypto.subtle.decrypt(algo, aes.key, data)
+        }
+      } else {
+        const rawKey = await nodeCrypto.subtle.exportKey('raw', aes.key)
+        const keyBuffer = Buffer.from(rawKey)
+        const ivBuffer = Buffer.from(aes.iv)
+        if (mode === 'encrypt') {
+          const dataBuffer = Buffer.from(data)
+          const cipher = nodeCrypto.createCipheriv('aes-256-gcm', keyBuffer, ivBuffer)
+          const authTag = cipher.getAuthTag()
+          const result = Buffer.concat([cipher.update(dataBuffer), cipher.final(), authTag])
+          return result.buffer.slice(result.byteOffset, result.byteOffset + result.length)
+        } else {
+          const authTagSize = 16
+          const dataBuffer = Buffer.from(data)
+          const encryptedData = dataBuffer.subarray(0, dataBuffer.length - authTagSize)
+          const authTag = dataBuffer.subarray(dataBuffer.length - authTagSize)
+          const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', keyBuffer, ivBuffer)
+          decipher.setAuthTag(authTag)
+          const decrypted = Buffer.concat([decipher.update(encryptedData), decipher.final()])
+          return decrypted.buffer.slice(decrypted.byteOffset, decrypted.byteOffset + decrypted.length)
+        }
       }
-    } else {
-      try {
-        return await crypto.subtle.decrypt(algo, aes.key, data)
-      } catch (err) {
-        console.warn('decrypt')
-        throw err
-      }
+    } catch (err) {
+      console.warn(mode)
+      throw err
     }
   } catch (err) {
     throw warnError('aesCrypt()', err)
