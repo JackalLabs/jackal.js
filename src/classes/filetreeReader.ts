@@ -1918,6 +1918,7 @@ export class FiletreeReader implements IFiletreeReader {
         key = this.keyPair
       }
       if (user in parsedAccess) {
+        console.log("access", parsedAccess[user])
         if (parsedAccess[user] === 'public') {
           return [await genAesBundle(), false]
         } else {

@@ -253,6 +253,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             'No wallet selected but one is required to init StorageHandler',
           )
       }
+      console.log("signed: ", signed)
+      console.log("sig", signatureAsHex)
       return [PrivateKey.fromHex(signatureAsHex), true]
     } catch (err) {
       throw warnError('storageHandler enableFullSigner()', err)

@@ -11,7 +11,7 @@ import {
 import { warnError } from '@/utils/misc'
 import { hexToBuffer, stringToShaHex } from '@/utils/hash'
 import type { IAesBundle } from '@/interfaces'
-// import * as nodeCrypto from 'node:crypto'
+import * as nodeCrypto from 'node:crypto'
 
 /**
  * Convert CryptoKey to storable format (see importJackalKey()).
@@ -127,33 +127,43 @@ export async function aesCrypt (
     } else if (mode?.toLowerCase() === 'encrypt') {
       try {
         if (typeof window !== 'undefined') {
-          return await crypto.subtle.encrypt(algo, aes.key, data)
+          const b = await crypto.subtle.encrypt(algo, aes.key, data)
+          console.log("bufferconcat:", b)
+
+          return b
         } else {
-          return await crypto.subtle.encrypt(algo, aes.key, data)
+          const d = await nodeCrypto.subtle.encrypt(algo, aes.key, data)
+          const a = await nodeCrypto.subtle.decrypt(algo, aes.key, d)
+          console.log("after:", a)
+          return d
+          // return await crypto.subtle.encrypt(algo, aes.key, data)
           // const key = await exportJackalKey(aes.key)
           // const cipher = nodeCrypto.createCipheriv('aes-256-gcm', key, aes.iv)
+          // cipher.setAutoPadding(false)
           //
           // const buf = new Uint16Array(data)
-          // let encrypted = cipher.update(buf)
-          // cipher.final('utf-16le')
-          //
-          // return encrypted
+          // const b = Buffer.concat([cipher.update(buf),cipher.final()])
+          // console.log("bufferconcat:", b)
+          // return b
         }
       } catch (err) {
         console.warn('encrypt')
-        throw err
+        throw(err)
       }
     } else {
+      console.log("aes:", aes)
+
       try {
         if (typeof window !== 'undefined') {
           return await crypto.subtle.decrypt(algo, aes.key, data)
         } else {
-          return await crypto.subtle.decrypt(algo, aes.key, data)
-          // return await webcrypto.subtle.decrypt(algo, aes.key, data)
+          return await nodeCrypto.subtle.decrypt(algo, aes.key, data)
+          // return await crypto.subtle.decrypt(algo, aes.key, data)
         }
       } catch (err) {
         console.warn('decrypt')
-        throw err
+
+        return data
       }
     }
   } catch (err) {
@@ -192,7 +202,7 @@ export function eciesDecryptWithPrivateKey (
 ): Uint8Array {
   const ready =
     toDecrypt instanceof Uint8Array ? toDecrypt : hexToBuffer(toDecrypt)
-  return new Uint8Array(decrypt(key.toHex(), ready))
+  return decrypt(key.toHex(), ready)
 }
 
 /**

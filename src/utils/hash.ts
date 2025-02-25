@@ -1,6 +1,7 @@
 import { intToHex, stringToUint8Array } from '@/utils/converters'
 import { warnError } from '@/utils/misc'
 import type { TMerkleParentChild } from '@/types'
+// import * as nodeCrypto from 'node:crypto'
 
 /**
  * Hash input using SHA-256, then convert to hex string.
@@ -140,12 +141,24 @@ export async function merkleParentAndIndex (
  * @private
  */
 export async function stringToShaHex (source: string) {
-  const safe = atob(source)
-  const postProcess = await crypto.subtle.digest(
-    'SHA-256',
-    stringToUint8Array(safe),
-  )
-  return bufferToHex(new Uint8Array(postProcess))
+  if (typeof window !== 'undefined') {
+    const safe = atob(source)
+    const postProcess = await crypto.subtle.digest(
+      'SHA-256',
+      stringToUint8Array(safe),
+    )
+    return bufferToHex(new Uint8Array(postProcess))
+  } else {
+    const safe = Buffer.from(source, 'base64')
+
+    const postProcess = await crypto.subtle.digest(
+      'SHA-256',
+      safe,
+    )
+    return bufferToHex(new Uint8Array(postProcess))
+
+    // return nodeCrypto.createHash('sha256').update(safe).digest('hex')
+  }
 }
 
 /**
@@ -167,11 +180,15 @@ export function bufferToHex (buf: Uint8Array): string {
  * @private
  */
 export function hexToBuffer (source: string): Uint8Array {
-  const found: number[] = []
-  for (let i = 0; i < source.length; i += 2) {
-    found.push(hexMap.indexOf(`${source[i]}${source[i + 1]}`))
+  if (typeof window !== 'undefined') {
+    const found: number[] = []
+    for (let i = 0; i < source.length; i += 2) {
+      found.push(hexMap.indexOf(`${source[i]}${source[i + 1]}`))
+    }
+    return new Uint8Array(found)
+  } else {
+    return Buffer.from(source, 'hex')
   }
-  return new Uint8Array(found)
 }
 
 const hexMap: string[] = [

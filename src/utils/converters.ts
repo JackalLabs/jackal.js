@@ -14,7 +14,7 @@ const OneSecondMs = 1000
  * @private
  */
 export function safeCompressData (input: string): string {
-  if (!!window) {
+  if (typeof window === "undefined") {
     return `jklpc3|${input}`
   } else {
     return `jklpc1${Plzsu.compress(input)}`
@@ -106,13 +106,19 @@ export function extractFileMetaData (input: File): IFileMeta {
 export function uintArrayToString (
   buf: Uint8Array | Uint16Array | Uint32Array,
 ): string {
-  return String.fromCharCode(...buf)
-  // const uint8arr = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
-  // if(typeof window !== 'undefined') {
-  //   return String.fromCharCode(...buf)
-  // } else {
-  //   return Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength).toString('utf16le')
-  // }
+  console.log("bytesperelelement", buf.BYTES_PER_ELEMENT)
+  if (typeof window !== 'undefined') {
+    return String.fromCharCode(...buf)
+  } else {
+    if (buf.BYTES_PER_ELEMENT === 1) {
+      return Buffer.from(buf).toString()
+    } else {
+      console.log("byteLength", buf.byteLength)
+      const s = Buffer.from(buf.buffer).toString('utf-16le')
+      console.log("slength", s.length)
+      return s
+    }
+  }
 }
 
 /**
@@ -136,9 +142,10 @@ export function stringToUint8Array (str: string): Uint8Array {
  * @private
  */
 export function stringToUint16Array (str: string): Uint16Array {
+  console.log("length", str, str.length)
   const uintView = new Uint16Array(str.length)
   for (let i = 0; i < str.length; i++) {
-    uintView[i] = str.charCodeAt(i)
+    uintView[i] = str.codePointAt(i)?? 0
   }
   return uintView
 }
