@@ -238,11 +238,17 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           }
           break
         case 'mnemonic':
-          if (!window.mnemonicWallet && !global.mnemonicWallet) {
+          let wallet
+          if (typeof window !== 'undefined') {
+            wallet = window.mnemonicWallet
+          } else {
+            wallet = global.mnemonicWallet
+          }
+
+          if (!wallet) {
             throw new Error('Missing mnemonic wallet')
           } else {
-            const seedWallet = window.mnemonicWallet || global.mnemonicWallet
-            signed = await seedWallet.signArbitrary(
+            signed = await wallet.signArbitrary(
               signatureSeed,
             )
             signatureAsHex = await stringToShaHex(signed.signature)
