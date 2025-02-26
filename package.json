@@ -96,8 +96,5 @@
     "vite-plugin-node-polyfills": "^0.17.0",
     "vite-tsconfig-paths": "^4.2.1",
     "vitest": "0.34.6"
-  },
-  "overrides": {
-    "browserify-aes": "@jackallabs/browserify-aes@11.2.0-CCM.1"
   }
 }

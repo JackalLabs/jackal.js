@@ -37,6 +37,10 @@ export default defineConfig({
         find: "symbol-observable/ponyfill",
         replacement: resolve(__dirname, "./node_modules", "symbol-observable", "ponyfill.js"),
       },
+      {
+        find: "browserify-aes",
+        replacement: resolve(__dirname, "./node_modules", "@jackallabs", "browserify-aes", "index.js"),
+      },
     ],
     extensions: ['.ts']
   },
@@ -59,10 +63,6 @@ export default defineConfig({
         'protobufjs',
         'ts-proto',
         /* Jackal.js */
-        '@jackallabs/browserify-aes',
-        'browserify-aes',
-        'browserify-des',
-        'browserify-sign',
         'ripemd160',
         'create-hash',
         'for-each',

@@ -133,14 +133,12 @@ export async function aesCrypt (
           return await crypto.subtle.decrypt(algo, aes.key, data)
         }
       } else {
-        /* @ts-ignore */
-        const rawKey = await crypto.subtle.exportKey('raw', aes.key)
+        const rawKey = await nodeCrypto.webcrypto.subtle.exportKey('raw', aes.key)
         const keyBuffer = Buffer.from(rawKey)
         const ivBuffer = Buffer.from(aes.iv)
         if (mode === 'encrypt') {
           const dataBuffer = Buffer.from(data)
-          /* @ts-ignore */
-          const cipher = crypto.createCipheriv('aes-256-gcm', keyBuffer, ivBuffer.toString('hex'))
+          const cipher = nodeCrypto.createCipheriv('aes-256-gcm', keyBuffer, ivBuffer)
           const authTag = cipher.getAuthTag()
           const result = Buffer.concat([cipher.update(dataBuffer), cipher.final(), authTag])
           return result.buffer.slice(result.byteOffset, result.byteOffset + result.length)
@@ -149,8 +147,7 @@ export async function aesCrypt (
           const dataBuffer = Buffer.from(data)
           const encryptedData = dataBuffer.subarray(0, dataBuffer.length - authTagSize)
           const authTag = dataBuffer.subarray(dataBuffer.length - authTagSize)
-          /* @ts-ignore */
-          const decipher = crypto.createDecipheriv('aes-256-gcm', keyBuffer, ivBuffer.toString('hex'))
+          const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', keyBuffer, ivBuffer)
           decipher.setAuthTag(authTag)
           const decrypted = Buffer.concat([decipher.update(encryptedData), decipher.final()])
           return decrypted.buffer.slice(decrypted.byteOffset, decrypted.byteOffset + decrypted.length)
