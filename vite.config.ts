@@ -38,11 +38,11 @@ export default defineConfig({
         replacement: resolve(__dirname, "./node_modules", "symbol-observable", "ponyfill.js"),
       },
       {
-        find: "browserify-aes",
-        replacement: resolve(__dirname, "./node_modules", "@jackallabs", "browserify-aes", "index.js"),
+        find: 'browserify-aes',
+        replacement: resolve(__dirname, "./node_modules", "@jackallabs", "browserify-aes"),
       },
     ],
-    extensions: ['.ts']
+    extensions: ['.ts', '.js']
   },
   build: {
     manifest: true,
