@@ -63,7 +63,7 @@ export function genKey (): Promise<CryptoKey> {
  * @private
  */
 export function genIv (): Uint8Array {
-  return crypto.getRandomValues(new Uint8Array(16))
+  return crypto.getRandomValues(new Uint8Array(12))
 }
 
 /**
@@ -117,6 +117,7 @@ export async function aesCrypt (
   aes: IAesBundle,
   mode: 'encrypt' | 'decrypt',
 ): Promise<ArrayBuffer> {
+  console.log("IV: ", aes.iv)
   const isBrowser = typeof window !== 'undefined'
   try {
     const algo = {
@@ -144,11 +145,14 @@ export async function aesCrypt (
           const authTag = cipher.getAuthTag()
           console.log("tag", authTag)
           const result = Buffer.concat([updated, fin, authTag])
-          // const res=  result.buffer.slice(result.byteOffset, result.byteOffset + result.length)
+          const res=  result.buffer.slice(result.byteOffset, result.byteOffset + result.length)
           console.log('Data length:', dataBuffer.length);
-          console.log('Encrypted data length:', result.byteLength);
+          console.log('updated length:', updated.byteLength);
+          console.log('final length:', fin.byteLength);
           console.log('Auth tag length:', authTag.length);
-          return result.buffer
+          console.log('Encrypted data length:', result.byteLength);
+          console.log('Encrypted buffer length:', res.byteLength);
+          return res
         } else {
           const authTagSize = 16
           const encryptedData = Buffer.from(data.slice(0, data.byteLength - authTagSize))
@@ -161,9 +165,13 @@ export async function aesCrypt (
           const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', keyBuffer, ivBuffer)
           decipher.setAuthTag(authTag)
           const updated = decipher.update(encryptedData);
-          console.log(updated.toString())
+          console.log(updated.byteLength, updated.toString())
           const decrypted = Buffer.concat([updated, decipher.final()])
+          // const decrypted = updated
+          console.log(decrypted.toString())
           return decrypted.buffer.slice(decrypted.byteOffset, decrypted.byteOffset + decrypted.length)
+
+
         }
       }
     } catch (err) {
@@ -313,9 +321,12 @@ export async function cryptString (
 ): Promise<string> {
   console.log("LEDGER: ", isLedger)
   try {
+    console.log("INCOMING SIZE: ", input.length)
     const uint16 = stringToUint16Array(input)
     const result = await aesCrypt(uint16.buffer, aes, mode)
+    console.log("result type: ", typeof result)
     const processed = uintArrayToString(new Uint16Array(result))
+    console.log("PROCESSED SIZE: ", processed.length)
     if (mode === 'encrypt' && isLedger) {
       return sanitizeCompressionForAmino(processed)
     } else {

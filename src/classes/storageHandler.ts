@@ -1088,15 +1088,17 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         msgs.push(...readyMsgs)
       }
       this.stagedUploads = {}
-      const postBroadcast =
-        await this.jackalClient.broadcastAndMonitorMsgs(msgs, options)
+      const postBroadcast = []
+      for (const one of msgs) {
+        postBroadcast.push(await this.jackalClient.broadcastAndMonitorMsgs(one, options))
+      }
 
-      if (!postBroadcast.error) {
-        if (!postBroadcast.txEvents.length) {
+      if (!postBroadcast[0].error) {
+        if (!postBroadcast[0].txEvents.length) {
           throw Error('tx has no events')
         }
         let remaining = [...msgs]
-        const uploadHeight = postBroadcast.txEvents[0].height
+        const uploadHeight = postBroadcast[0].txEvents[0].height
         while (remaining.length > 0) {
           const activeUploads = await this.batchUploads(remaining, uploadHeight)
           const results = await Promise.allSettled(activeUploads)

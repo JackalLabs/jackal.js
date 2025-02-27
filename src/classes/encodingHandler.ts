@@ -815,6 +815,7 @@ export class EncodingHandler {
       const storageFile = this.encodeStoragePostFile(pkg, blockHeight)
       const fileTreeFile = this.encodeFileTreeFile(pkg)
       const ref = this.encodeFileTreeRef(pkg)
+      const ft = await fileTreeFile
       return [
         {
           encodedObject: storageFile,
@@ -823,7 +824,7 @@ export class EncodingHandler {
           merkle: pkg.meta.export().merkleHex,
         },
         {
-          encodedObject: await fileTreeFile,
+          encodedObject: ft,
           modifier: 0,
         },
         {

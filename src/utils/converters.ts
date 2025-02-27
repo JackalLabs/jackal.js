@@ -106,7 +106,8 @@ export function extractFileMetaData (input: File): IFileMeta {
 export function uintArrayToString (
   buf: Uint8Array | Uint16Array | Uint32Array,
 ): string {
-  return String.fromCharCode.apply(null, [...buf])
+  console.log("before codepoint", buf.byteLength, typeof buf)
+  return String.fromCodePoint(...buf)
 }
 
 /**

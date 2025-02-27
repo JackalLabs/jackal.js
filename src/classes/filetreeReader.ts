@@ -974,6 +974,7 @@ export class FiletreeReader implements IFiletreeReader {
             aes[0],
             this.jackalClient.getIsLedger(),
           )
+          console.log("FR: content", contents.length, contents)
           return {
             contents,
             viewers: viewingAccess,
@@ -1119,6 +1120,7 @@ export class FiletreeReader implements IFiletreeReader {
           aes,
           this.jackalClient.getIsLedger(),
         )
+        console.log("FR file: contents length", forFileTree.contents.length)
         forFileTree.viewers = await this.createViewAccess({
           trackingNumber,
           viewers: { overwrite: additionalViewers },
@@ -2004,7 +2006,7 @@ export class FiletreeReader implements IFiletreeReader {
    */
   protected async decryptAndParseContents (data: DFile, id: string, linkKey?: string): Promise<TMetaDataSets> {
     try {
-      console.log("dpc contents length:", data.contents.length)
+      console.log("dpc contents:", data.contents.length, data.contents)
       const safe = prepDecompressionForAmino(data.contents)
       const aes = await this.extractViewAccess(data, linkKey)
       if (id !== '-1' && aes[1]) {
