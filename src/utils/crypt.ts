@@ -139,17 +139,30 @@ export async function aesCrypt (
         if (mode === 'encrypt') {
           const dataBuffer = Buffer.from(data)
           const cipher = nodeCrypto.createCipheriv('aes-256-gcm', keyBuffer, ivBuffer)
+          const updated = cipher.update(dataBuffer)
+          const fin = cipher.final()
           const authTag = cipher.getAuthTag()
-          const result = Buffer.concat([cipher.update(dataBuffer), cipher.final(), authTag])
-          return result.buffer.slice(result.byteOffset, result.byteOffset + result.length)
+          console.log("tag", authTag)
+          const result = Buffer.concat([updated, fin, authTag])
+          // const res=  result.buffer.slice(result.byteOffset, result.byteOffset + result.length)
+          console.log('Data length:', dataBuffer.length);
+          console.log('Encrypted data length:', result.byteLength);
+          console.log('Auth tag length:', authTag.length);
+          return result.buffer
         } else {
           const authTagSize = 16
-          const dataBuffer = Buffer.from(data)
-          const encryptedData = dataBuffer.subarray(0, dataBuffer.length - authTagSize)
-          const authTag = dataBuffer.subarray(dataBuffer.length - authTagSize)
+          const encryptedData = Buffer.from(data.slice(0, data.byteLength - authTagSize))
+          const authTag = Buffer.from(data.slice(data.byteLength - authTagSize))
+          console.log("AUTHTAG: ",authTag )
+          console.log('Data length:', data.byteLength);
+          console.log('Encrypted data length:', encryptedData.length);
+          console.log('Auth tag length:', authTag.length);
+
           const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', keyBuffer, ivBuffer)
           decipher.setAuthTag(authTag)
-          const decrypted = Buffer.concat([decipher.update(encryptedData), decipher.final()])
+          const updated = decipher.update(encryptedData);
+          console.log(updated.toString())
+          const decrypted = Buffer.concat([updated, decipher.final()])
           return decrypted.buffer.slice(decrypted.byteOffset, decrypted.byteOffset + decrypted.length)
         }
       }

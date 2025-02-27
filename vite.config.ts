@@ -67,9 +67,17 @@ export default defineConfig({
             nodePolyfills({ include: ['buffer', 'util'] })
           ]
         },
+        {
+          globals: {
+            'node:crypto': 'crypto',
+            'crypto': 'crypto'
+          }
+        }
       ],
       external: [
         /* Jackal.js-protos */
+        'node:crypto',
+        'crypto',
         /@cosmjs.*/,
         /cosmjs-types*/,
         'grpc-web',
