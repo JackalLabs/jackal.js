@@ -311,6 +311,7 @@ export async function cryptString (
   mode: 'encrypt' | 'decrypt',
   isLedger?: boolean,
 ): Promise<string> {
+  console.log("LEDGER: ", isLedger)
   try {
     const uint16 = stringToUint16Array(input)
     const result = await aesCrypt(uint16.buffer, aes, mode)

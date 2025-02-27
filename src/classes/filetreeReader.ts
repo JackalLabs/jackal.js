@@ -953,6 +953,7 @@ export class FiletreeReader implements IFiletreeReader {
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       let { contents, viewingAccess, editAccess, trackingNumber } = file
       const isCleartext = contents.includes('metaDataType')
+      console.log("contents.length: ", contents.length)
       const access = await this.checkViewAuthorization(file, isCleartext)
       if (access) {
         if (isCleartext) {
@@ -2003,6 +2004,7 @@ export class FiletreeReader implements IFiletreeReader {
    */
   protected async decryptAndParseContents (data: DFile, id: string, linkKey?: string): Promise<TMetaDataSets> {
     try {
+      console.log("dpc contents length:", data.contents.length)
       const safe = prepDecompressionForAmino(data.contents)
       const aes = await this.extractViewAccess(data, linkKey)
       if (id !== '-1' && aes[1]) {
