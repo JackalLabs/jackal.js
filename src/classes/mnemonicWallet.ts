@@ -64,7 +64,7 @@ export class MnemonicWallet implements IMnemonicWallet {
    */
   async signArbitrary (message: string): Promise<StdSignature> {
     let data
-    if (window) {
+    if (typeof window !== 'undefined') {
       data = btoa(message)
     } else {
       data = Buffer.from(message).toString('base64')
