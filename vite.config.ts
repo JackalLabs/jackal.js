@@ -2,7 +2,6 @@ import { defineConfig } from "vite"
 
 import typescript from "@rollup/plugin-typescript"
 import { resolve } from "path"
-import { copyFileSync } from "fs"
 import { typescriptPaths } from "rollup-plugin-typescript-paths"
 import tsconfigPaths from 'vite-tsconfig-paths'
 import dts from 'vite-plugin-dts'
@@ -13,14 +12,10 @@ export default defineConfig({
   plugins: [
     tsconfigPaths(),
     dts({
-      afterBuild: () => {
-        copyFileSync("dist/index.d.ts", "dist/index.d.mts")
-      },
       include: ["src"],
       rollupTypes: true,
       logLevel: 'error'
     }),
-    nodePolyfills({ include: ['buffer', 'crypto', 'util'] })
   ],
   resolve: {
     preserveSymlinks: true,
@@ -37,6 +32,10 @@ export default defineConfig({
         find: "symbol-observable/ponyfill",
         replacement: resolve(__dirname, "./node_modules", "symbol-observable", "ponyfill.js"),
       },
+      {
+        find: 'browserify-aes',
+        replacement: resolve(__dirname, "./node_modules", "@jackallabs", "browserify-aes"),
+      },
     ],
     extensions: ['.ts']
   },
@@ -44,25 +43,34 @@ export default defineConfig({
     manifest: true,
     minify: false,
     reportCompressedSize: true,
-    lib: {
-      entry: resolve(__dirname, "src/index.ts"),
-      fileName: (format) => `index.${format}.js`,
-      formats: ['cjs', 'es'],
-      name: 'Jackal.js'
-    },
     rollupOptions: {
+      input: resolve(__dirname, "src/index.ts"),
+      preserveEntrySignatures: 'allow-extension',
+      output: [
+        {
+          dir: './dist',
+          entryFileNames: 'index.cjs.js',
+          format: 'cjs',
+          name: 'Jackal.js',
+          plugins: []
+        },
+        {
+          dir: './dist',
+          entryFileNames: 'index.esm.js',
+          format: 'esm',
+          name: 'Jackal.js',
+          plugins: [
+            nodePolyfills({ include: ['buffer', 'util'] })
+          ]
+        }
+      ],
       external: [
         /* Jackal.js-protos */
         /@cosmjs.*/,
         /cosmjs-types*/,
         'grpc-web',
-        'protobufjs',
         'ts-proto',
         /* Jackal.js */
-        '@jackallabs/browserify-aes',
-        'browserify-aes',
-        'browserify-des',
-        'browserify-sign',
         'ripemd160',
         'create-hash',
         'for-each',

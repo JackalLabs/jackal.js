@@ -14,10 +14,10 @@
 
     /* Bundler mode */
     "outDir": "dist",
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-    "moduleResolution": "node",
+    "sourceMap": false,
+    "declaration": false,
+    "declarationMap": false,
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -43,6 +43,7 @@
     "src/**/*.d.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "tests/**/*.ts"
   ]
 }
