@@ -14,11 +14,11 @@ const OneSecondMs = 1000
  * @private
  */
 export function safeCompressData (input: string): string {
-  if (typeof window === 'undefined') {
-    return `jklpc3|${input}`
-  } else {
+  // if (typeof window === 'undefined') {
+  //   return `jklpc3|${input}`
+  // } else {
     return `jklpc1${Plzsu.compress(input)}`
-  }
+  // }
 }
 
 /**

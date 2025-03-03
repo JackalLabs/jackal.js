@@ -123,6 +123,7 @@ export async function aesCrypt (
     const algo = {
       name: 'AES-GCM',
       iv: aes.iv,
+      tagLength: 128,
     }
     try {
       if (data.byteLength < 1) {
@@ -134,6 +135,12 @@ export async function aesCrypt (
           return await crypto.subtle.decrypt(algo, aes.key, data)
         }
       } else {
+        if (mode === 'encrypt') {
+          return await nodeCrypto.webcrypto.subtle.encrypt(algo, aes.key, data)
+        } else {
+          return await nodeCrypto.webcrypto.subtle.decrypt(algo, aes.key, data)
+        }
+
         const rawKey = await nodeCrypto.webcrypto.subtle.exportKey('raw', aes.key)
         const keyBuffer = Buffer.from(rawKey)
         const ivBuffer = Buffer.from(aes.iv)
