@@ -1317,7 +1317,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       }
       const providerList = shuffleArray(particulars.providerIps)
       for (const _ of providerList) {
-        const provider = providerList[Math.floor(Math.random() * providerList.length)]
+        const provider = providerList[Math.floor(Math.random() * providerList.length)] as string
         try {
           return await this.downloadStaging({
             particulars,

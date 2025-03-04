@@ -66,10 +66,10 @@
   "dependencies": {
     "@cosmjs/proto-signing": "^0.32.3",
     "@cosmjs/stargate": "^0.32.3",
-    "@jackallabs/bech32": "^1.2.0",
+    "@jackallabs/bech32": "^1.2.1",
     "@jackallabs/browserify-aes": "^11.2.0-CCM.1",
-    "@jackallabs/dogwood-tree": "^1.0.1",
-    "@jackallabs/jackal.js-protos": "2.3.2",
+    "@jackallabs/dogwood-tree": "^1.1.0",
+    "@jackallabs/jackal.js-protos": "2.4.0",
     "@karnthis/plzsu": "^1.0.0",
     "@keplr-wallet/types": "^0.12.44",
     "browserify-des": "^1.0.2",
