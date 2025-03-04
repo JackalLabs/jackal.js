@@ -118,7 +118,7 @@ export function isItPastDate (target: Date): boolean {
  */
 export function shuffleArray<T> (source: T[]): T[] {
   const final: T[] = []
-  for (let i = source.length; i > -1; --i) {
+  for (let i = source.length; i > 0; --i) {
     final.push(source[Math.floor(Math.random() * i)])
   }
   return final

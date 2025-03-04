@@ -35,7 +35,7 @@ USING MODIFIERS
  * @returns {number} - Adjusted number of gas units collection is expected to require.
  */
 export function estimateGas (msgArray: IWrappedEncodeObject[]): number {
-  return calculateGas(msgArray, 0)[0]
+  return calculateGas(msgArray, 1)[0]
 }
 
 /**
