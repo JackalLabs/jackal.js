@@ -89,7 +89,7 @@ describe('FileTreeReader', () => {
   it('pathToLookup should return a FileTree file', async () => {
     const file = await reader.testPathToLookup({ path: 'Home' })
 
-    expect(file).toBe({
+    expect(file).toStrictEqual({
         "address": "cf7e85bd33b684f0b8f72d6a7f91f8f4da681d7e925d115588516fd4d992ad58",
         "ownerAddress": "abc409b6e2d1590b123508451d9c0283577a5bfeac08bc4702df69ca3413f8e9",
       })

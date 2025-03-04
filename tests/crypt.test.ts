@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   aesCrypt,
   compressEncryptString,
-  cryptString, eciesEncryptWithPubKey,
+  cryptString, eciesDecryptWithPrivateKey, eciesEncryptWithPubKey,
   exportJackalKey,
   genAesBundle,
   genIv,
@@ -13,6 +13,12 @@ import { safeDecompressData, stringToUint16Array, uintArrayToString } from '@/ut
 import { PrivateKey } from 'eciesjs'
 
 const testString = 'this is my test string'
+const keyAsUint = new Uint8Array([199, 19, 54, 241, 42, 20, 91, 99, 198, 141, 22, 202, 195, 71, 51, 216, 204, 26, 180, 230, 58, 223, 167, 143, 126, 28, 3, 102, 2, 57, 224, 178])
+const staticAes = {
+  iv: new Uint8Array([10, 182, 241, 205, 156, 79, 7, 97, 252, 75, 154, 115, 250, 178, 126, 166]),
+  key: await importJackalKey(keyAsUint),
+}
+let defaultKeyPair = PrivateKey.fromHex('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
 
 describe('Key & AES Functions', () => {
   test('genKey should generate a valid CryptoKey', async () => {
@@ -34,11 +40,6 @@ describe('Key & AES Functions', () => {
   })
 
   test('eciesEncryptWithPubKey ', async () => {
-    let defaultKeyPair = PrivateKey.fromHex('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
-    const staticAes = {
-      iv: new Uint8Array([10, 182, 241, 205, 156, 79, 7, 97, 252, 75, 154, 115, 250, 178, 126, 166]),
-      key: await importJackalKey(new Uint8Array([199, 19, 54, 241, 42, 20, 91, 99, 198, 141, 22, 202, 195, 71, 51, 216, 204, 26, 180, 230, 58, 223, 167, 143, 126, 28, 3, 102, 2, 57, 224, 178])),
-    }
     const randomAes = await genAesBundle()
 
     const randomIvAsHex = eciesEncryptWithPubKey(defaultKeyPair.publicKey.toHex(), randomAes.iv)
@@ -48,20 +49,21 @@ describe('Key & AES Functions', () => {
     expect(randomIvAsHex).toBeDefined()
     expect(randomKeyAsHex).toBeDefined()
 
-    const staticIvAsHex = eciesEncryptWithPubKey(defaultKeyPair.publicKey.toHex(), staticAes.iv)
-    const staticKey = await exportJackalKey(staticAes.key)
-    const staticKeyAsHex = eciesEncryptWithPubKey(defaultKeyPair.publicKey.toHex(), staticKey)
-
-    expect(staticIvAsHex).toBe('0441cc87600f47dc8962e9f9f653a6d1c956f36c6243026e1a9951a74af7e0f24d4b8bc5966437c7a237a1ed407b40edf277efdebf4991524eab879e328ad7cbb7785ed3ad27f60ba6f873da06160c312a9d3182654ddfde81224b94ff2b06c6cc92538f39475f60987d8bb134b82a5dc3')
-    expect(staticKeyAsHex).toBe('040756a44fb9cb93497f6e3390402cf3bef303c8d3829ff7c9d147e11fa3f3d6f2db84530616cf2ae7a250a0948a27776f3a1e125a69fccbfc72966606dac6d4c848452697af7bd97983f658a1e3d8e43631acfc8db4e7b309877e52a17220608e07f8ca5f7c5fbc16ff39605a05193a88')
+    // const staticIvAsHex = eciesEncryptWithPubKey(defaultKeyPair.publicKey.toHex(), staticAes.iv)
+    // const staticKey = await exportJackalKey(staticAes.key)
+    // const staticKeyAsHex = eciesEncryptWithPubKey(defaultKeyPair.publicKey.toHex(), staticKey)
+    //
+    // expect(staticIvAsHex).toBe('0441cc87600f47dc8962e9f9f653a6d1c956f36c6243026e1a9951a74af7e0f24d4b8bc5966437c7a237a1ed407b40edf277efdebf4991524eab879e328ad7cbb7785ed3ad27f60ba6f873da06160c312a9d3182654ddfde81224b94ff2b06c6cc92538f39475f60987d8bb134b82a5dc3')
+    // expect(staticKeyAsHex).toBe('040756a44fb9cb93497f6e3390402cf3bef303c8d3829ff7c9d147e11fa3f3d6f2db84530616cf2ae7a250a0948a27776f3a1e125a69fccbfc72966606dac6d4c848452697af7bd97983f658a1e3d8e43631acfc8db4e7b309877e52a17220608e07f8ca5f7c5fbc16ff39605a05193a88')
   })
 
   test('eciesDecryptWithPrivateKey ', async () => {
-    const key = await genKey()
-    const exported = await exportJackalKey(key)
-    const imported = await importJackalKey(exported)
-    // expect(exported).toBe(0)
-    expect(imported).toBeDefined()
+    const staticIvFromHex = eciesDecryptWithPrivateKey(defaultKeyPair, '0441cc87600f47dc8962e9f9f653a6d1c956f36c6243026e1a9951a74af7e0f24d4b8bc5966437c7a237a1ed407b40edf277efdebf4991524eab879e328ad7cbb7785ed3ad27f60ba6f873da06160c312a9d3182654ddfde81224b94ff2b06c6cc92538f39475f60987d8bb134b82a5dc3')
+    expect(staticIvFromHex).toStrictEqual(staticAes.iv)
+    const staticKeyFromHex = eciesDecryptWithPrivateKey(defaultKeyPair, '0417e22c547cc51d4b87b8b0cd8e6e98a263a58dc1c97f3e0a61283375a4747a8a9a5e6f00fa7aa08cdd4c8aa40c4391f012f3d03be2e88b8c755c79f581e0550d3737ec10e75f53d0c0d2c9c159a7110935efe203b7c85e5cb4b4a6b7794be274b62e8b09cd4a8b88ea67846eadc5a2c4883874b814b263aa586dbd1ff24439f7')
+    expect(staticKeyFromHex).toStrictEqual(keyAsUint)
+    const key = await importJackalKey(staticKeyFromHex)
+    expect(key).toStrictEqual(staticAes.key)
   })
 })
 
@@ -104,10 +106,6 @@ describe('AES Encryption & Decryption', () => {
   })
 
   test('compressEncryptString should work the same in browser and node', async () => {
-    const aes = {
-      iv: new Uint8Array([10, 182, 241, 205, 156, 79, 7, 97, 252, 75, 154, 115, 250, 178, 126, 166]),
-      key: await importJackalKey(new Uint8Array([199, 19, 54, 241, 42, 20, 91, 99, 198, 141, 22, 202, 195, 71, 51, 216, 204, 26, 180, 230, 58, 223, 167, 143, 126, 28, 3, 102, 2, 57, 224, 178])),
-    }
     const meta = {
       'count': '0',
       'description': '',
@@ -119,10 +117,10 @@ describe('AES Encryption & Decryption', () => {
     }
     const rdy = JSON.stringify(meta)
 
-    const encrypted = await compressEncryptString(rdy, aes, false)
+    const encrypted = await compressEncryptString(rdy, staticAes, false)
     expect(encrypted).toBe('ꄺ쟲ᄉˉ퇿볚⊘x挔䜖뒚胵ɘࡘ䔟录큹襰죣⾁鉊겍ᾀ梥ﴑ犱杒ᗷ⨱㙿콟ᅞ鶇❘ུ䔥暉㗧즸籆㥐ꐚퟨ淪㑬ㇳ跔䩏㵫㇀黰ຎ缇韲쨂Ȫ揁㠭魐쪺ꥣ')
 
-    const decrypted = await cryptString(encrypted, aes, 'decrypt')
+    const decrypted = await cryptString(encrypted, staticAes, 'decrypt')
     const decompressed = safeDecompressData(decrypted)
     expect(decompressed).toBe(rdy)
   })
