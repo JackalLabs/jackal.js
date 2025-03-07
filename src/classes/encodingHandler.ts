@@ -227,6 +227,8 @@ export class EncodingHandler {
     }
   }
 
+
+
   /* end cosmwasm */
   /**
    *

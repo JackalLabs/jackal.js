@@ -1,6 +1,25 @@
 import type { IChainConfig, ISocketConfig } from '@/interfaces'
 import type { TSockets } from '@/types'
 
+
+import { http, createConfig, injected } from '@wagmi/core'
+import { mainnet, sepolia, baseSepolia, base, optimism, optimismSepolia, polygon, polygonAmoy } from '@wagmi/core/chains'
+
+export const evmConfig = createConfig({
+  chains: [mainnet, sepolia, baseSepolia, base, optimism, optimismSepolia, polygon, polygonAmoy],
+  connectors: [injected()],
+  transports: {
+    [mainnet.id]: http(),
+    [sepolia.id]: http(),
+    [base.id]: http(),
+    [baseSepolia.id]: http(),
+    [optimism.id]: http(),
+    [optimismSepolia.id]: http(),
+    [polygon.id]: http(),
+    [polygonAmoy.id]: http(),
+  },
+})
+
 export const sharedPath = 'dashboard_sharedfiles'
 
 export const signatureSeed: string =

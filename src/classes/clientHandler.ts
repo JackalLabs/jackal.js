@@ -34,6 +34,8 @@ import {
 } from '@/interfaces'
 import { TSockets, TSocketSet } from '@/types'
 import { DeliverTxResponse, StdFee } from '@cosmjs/stargate'
+import { IEvmHandler } from '@/interfaces/classes/IEvmHandler'
+import { EvmHandler } from '@/classes/evmHandler'
 
 export class ClientHandler implements IClientHandler {
   protected readonly jklQuery: TJackalQueryClient
@@ -51,8 +53,10 @@ export class ClientHandler implements IClientHandler {
   protected readonly gasMultiplier: number
 
   protected myCosmwasm: IWasmHandler | null
+  protected myEVM: IEvmHandler | null
   protected myContractAddress: string | null
   protected myIcaAddress: string | null
+  protected myEVMAddress: string | null
 
   protected constructor (
     jklQuery: TJackalQueryClient,
@@ -84,8 +88,10 @@ export class ClientHandler implements IClientHandler {
     this.gasMultiplier = gasMultiplier
 
     this.myCosmwasm = null
+    this.myEVM = null
     this.myContractAddress = null
     this.myIcaAddress = null
+    this.myEVMAddress = null
   }
 
   /**
@@ -340,6 +346,37 @@ export class ClientHandler implements IClientHandler {
   }
 
   /**
+   * Create EVM Handler session, defaults to Base.
+   * @param {IEvmHandler} [details]
+   * @returns {Promise<IStorageHandler>}
+   */
+  async createEVMStorageHandler (details: IWasmDetails = {}): Promise<IStorageHandler> {
+    try {
+      const {
+        contract = '0x5d26f092717A538B446A301C2121D6C68157467C',
+      } = details
+      this.myEVM = await EvmHandler.init(this)
+      const ica = await this.myEVM.getEVMJackalAddress(contract).catch(err => {
+        console.warn('can\'t get evm address', err)
+      })
+      console.log('EVM address: ', ica)
+
+      this.myEVMAddress = await this.myEVM.getEVMJackalAddress(
+        contract,
+      )
+
+      this.myIcaAddress = this.myEVMAddress
+
+      return await StorageHandler.init(this, {
+        accountAddress: this.myEVMAddress,
+      })
+    } catch (err) {
+      console.warn(err)
+      throw warnError('clientHandler createArchwayStorageHandler()', err)
+    }
+  }
+
+  /**
    *
    * @returns {Promise<IRnsHandler>}
    */
@@ -384,7 +421,7 @@ export class ClientHandler implements IClientHandler {
    * @returns {boolean}
    */
   getIsLedger (): boolean {
-    return this.details.isNanoLedger
+    return this.details.isNanoLedger || (!!this.myEVM)
   }
 
   /**
@@ -645,52 +682,67 @@ export class ClientHandler implements IClientHandler {
           queryOverride,
         )
       console.log('connectionBundles:', connectionBundles)
-
-      if (this.myContractAddress && this.myCosmwasm) {
-        chosenSigner = this.hostSigner
-        msgs = this.myCosmwasm.wrapEncodeObjectsForBroadcast(
-          this.myContractAddress,
+      chosenSigner.monitor(connectionBundles)
+      let broadcastResult: Promise<DeliverTxResponse>
+      if (this.myEVM) {
+        broadcastResult = this.myEVM.signAndBroadcast(
           msgs,
         )
+
+      } else {
+
+        if (this.myContractAddress && this.myCosmwasm) {
+          chosenSigner = this.hostSigner
+          msgs = this.myCosmwasm.wrapEncodeObjectsForBroadcast(
+            this.myContractAddress,
+            msgs,
+          )
+        }
+
+        broadcastResult = chosenSigner.selfSignAndBroadcast(msgs, {
+          fee,
+          memo,
+          timeoutHeight: broadcastTimeoutHeight,
+        })
+
       }
-      chosenSigner.monitor(connectionBundles)
-      const broadcastResult = chosenSigner.selfSignAndBroadcast(msgs, {
-        fee,
-        memo,
-        timeoutHeight: broadcastTimeoutHeight,
-      })
+        return new Promise((resolve, reject) => {
+          ;(async () => {
+            let eventsAreFinished = false
+            let rejected = false
+            const broadcastTimeout = setTimeout(async () => {
+              rejected = true
+              reject({
+                error: true,
+                errorText: 'Event Timeout',
+                txResponse: await broadcastResult,
+                txEvents: events,
+              })
+            }, monitorTimeout * 1000)
 
-      return new Promise((resolve, reject) => {
-        ;(async () => {
-          let eventsAreFinished = false
-          let rejected = false
-          const broadcastTimeout = setTimeout(async () => {
-            rejected = true
-            reject({
-              error: true,
-              errorText: 'Event Timeout',
-              txResponse: await broadcastResult,
-              txEvents: events,
-            })
-          }, monitorTimeout * 1000)
+            while (!eventsAreFinished && !rejected) {
+              // console.log('waiting')
+              await setDelay(0.5)
+              eventsAreFinished = events.length >= 1
+            }
+            if (eventsAreFinished) {
+              clearTimeout(broadcastTimeout)
+              // console.log('resolving')
+              resolve({
+                error: false,
+                errorText: '',
+                txResponse: await broadcastResult,
+                txEvents: events,
+              })
+            }
+          })()
+        })
 
-          while (!eventsAreFinished && !rejected) {
-            // console.log('waiting')
-            await setDelay(0.5)
-            eventsAreFinished = events.length >= 1
-          }
-          if (eventsAreFinished) {
-            clearTimeout(broadcastTimeout)
-            // console.log('resolving')
-            resolve({
-              error: false,
-              errorText: '',
-              txResponse: await broadcastResult,
-              txEvents: events,
-            })
-          }
-        })()
-      })
+
+
+
+
+
     } catch (err) {
       throw warnError('clientHandler broadcastAndMonitorMsgs()', err)
     }

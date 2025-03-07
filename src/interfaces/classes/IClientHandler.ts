@@ -22,6 +22,8 @@ export interface IClientHandler {
 
   createWasmStorageHandler (details?: IWasmDetails): Promise<IStorageHandler>
 
+  createEVMStorageHandler (details?: IWasmDetails): Promise<IStorageHandler>
+
   createRnsHandler (): Promise<IRnsHandler>
 
   createOracleHandler (): Promise<IOracleHandler>

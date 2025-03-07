@@ -556,6 +556,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
    * @returns {Promise<IStorageStatus>}
    */
   async planStatus (): Promise<IStorageStatus> {
+    console.log("plan status for: ", this.jklAddress)
     try {
       const { storagePaymentInfo } =
         await this.jackalSigner.queries.storage.storagePaymentInfo({
