@@ -222,6 +222,47 @@ export class ClientHandler implements IClientHandler {
             }
           }
           break
+        case 'leap':
+          if (!window.leap) {
+            throw new Error('Leap Wallet selected but unavailable')
+          } else {
+            await window.leap.experimentalSuggestChain(chainConfig)
+            await window.leap.enable([chainId])
+            const signer = (await window.leap.getOfflineSignerAuto(
+              chainId,
+              {},
+            )) as TMergedSigner
+            if ('signAmino' in signer) {
+              jklSigner = await connectJackalSigningClient(endpoint, signer, {})
+              jklAddress = (await signer.getAccounts())[0].address
+              details = await window.leap.getKey(chainId)
+
+              if (host) {
+                await window.leap.experimentalSuggestChain(host.chainConfig)
+                await window.leap.enable([host.chainId])
+                const tmpSigner = (await window.leap.getOfflineSignerAuto(
+                  host.chainId,
+                  {},
+                )) as TMergedSigner
+                if ('signAmino' in tmpSigner) {
+                  hostSigner = await connectHostSigningClient(
+                    host.endpoint,
+                    tmpSigner,
+                    {},
+                  )
+                  hostAddress = (await tmpSigner.getAccounts())[0].address
+                } else {
+                  throw new Error('Leap Wallet amino failure')
+                }
+              } else {
+                hostSigner = jklSigner
+                hostAddress = jklAddress
+              }
+            } else {
+              throw new Error('Leap Wallet amino failure')
+            }
+          }
+          break
         default:
           console.warn(
             'No wallet provider selected. Continuing in query-only mode.',
@@ -421,7 +462,7 @@ export class ClientHandler implements IClientHandler {
    * @returns {boolean}
    */
   getIsLedger (): boolean {
-    return this.details.isNanoLedger || (!!this.myEVM)
+    return this.details.isNanoLedger
   }
 
   /**

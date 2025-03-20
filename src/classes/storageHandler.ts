@@ -196,6 +196,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             throw new Error('Keplr Wallet selected but unavailable')
           }
           break
+
         case 'leap':
           if (!window.leap) {
             throw new Error('Leap Wallet selected but unavailable')

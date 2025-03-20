@@ -582,10 +582,11 @@ export class FiletreeReader implements IFiletreeReader {
    */
   async loadFolderMetaHandler (path: string): Promise<IFolderMetaHandler> {
     try {
+      console.log("path:", path)
       const lookup = await this.pathToLookup({ path })
-      // console.log("lookup:", lookup)
+      console.log("lookup:", lookup)
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
-      // console.log("File: ", file)
+      console.log("File: ", file)
       const { contents } = file
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext)
@@ -1371,6 +1372,7 @@ export class FiletreeReader implements IFiletreeReader {
         path,
       } = options
       const ownerAddress = owner || this.clientAddress
+      console.log("owner", ownerAddress)
       let pool = this.yellowpages[ownerAddress] || {}
       if (path in pool) {
         return pool[path]
@@ -1394,8 +1396,10 @@ export class FiletreeReader implements IFiletreeReader {
               }
               const { file } =
                 await this.jackalSigner.queries.fileTree.file(rootLookup)
+              console.log("file", file)
               let lookup
               if (file.contents.includes('metaDataType')) {
+                console.log("getting lookup", file.contents)
                 lookup = safeParseFileTree(file.contents)
               } else {
                 lookup = await this.decryptAndParseContents(
@@ -1559,6 +1563,7 @@ export class FiletreeReader implements IFiletreeReader {
     lookup: DQueryFileTreeFile,
     linkKey?: string,
   ): Promise<void> {
+    console.log("postporcess path", path)
     try {
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
@@ -1803,6 +1808,7 @@ export class FiletreeReader implements IFiletreeReader {
         viewers,
         aes,
       } = options
+      console.log("view owner", this.clientAddress)
       let groupViewers
       let viewAccess = ulid ? await this.viewerLookup(ulid, index) : {}
       if ('overwrite' in viewers) {
