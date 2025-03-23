@@ -1416,11 +1416,6 @@ export class FiletreeReader implements IFiletreeReader {
                 this.yellowpages[ownerAddress] = {}
                 pool = this.yellowpages[ownerAddress]
               }
-              await this.setYellowpages(
-                path,
-                ownerAddress,
-                this.ulidLeaves[ownerAddress][path],
-              )
               await this.pathToLookupPostProcess(
                 path,
                 ownerAddress,
@@ -1573,6 +1568,11 @@ export class FiletreeReader implements IFiletreeReader {
           parsed = JSON.parse(contents) as TMetaDataSets
         }
         if (parsed.metaDataType === 'folder') {
+          await this.setYellowpages(
+            path,
+            ownerAddress,
+            id,
+          )
           const count = hexToInt(parsed.count)
           if (ownerAddress === this.clientAddress) {
             this.refCountSet(path, count)
