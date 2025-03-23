@@ -1555,12 +1555,17 @@ export class FiletreeReader implements IFiletreeReader {
     linkKey?: string,
   ): Promise<void> {
     try {
+      const id = this.ulidLookup(path, ownerAddress)
+      await this.setYellowpages(
+        path,
+        ownerAddress,
+        id,
+      )
       const { file } = await this.jackalSigner.queries.fileTree.file(lookup)
       const { contents } = file
       const isCleartext = contents.includes('metaDataType')
       const access = await this.checkViewAuthorization(file, isCleartext, linkKey)
       if (access) {
-        const id = this.ulidLookup(path, ownerAddress)
         let parsed
         if (!isCleartext) {
           parsed = await this.decryptAndParseContents(file, id, linkKey)
@@ -1568,11 +1573,6 @@ export class FiletreeReader implements IFiletreeReader {
           parsed = JSON.parse(contents) as TMetaDataSets
         }
         if (parsed.metaDataType === 'folder') {
-          await this.setYellowpages(
-            path,
-            ownerAddress,
-            id,
-          )
           const count = hexToInt(parsed.count)
           if (ownerAddress === this.clientAddress) {
             this.refCountSet(path, count)
