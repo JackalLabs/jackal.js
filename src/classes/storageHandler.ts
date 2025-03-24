@@ -25,7 +25,7 @@ import {
   ICloneSharesOptions,
   ICloneUploadOptions,
   IConversionFolderBundle,
-  ICreateFolderOptions,
+  ICreateFolderOptions, ICustomRootOptions,
   IDeleteTargetOptions,
   IDownloadByUlidOptions,
   IDownloadTracker,
@@ -511,6 +511,31 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       } catch (err) {
         throw warnError('storageHandler initStorage()', err)
       }
+    }
+  }
+
+  /**
+   *
+   * @param {ICustomRootOptions} options
+   * @returns {Promise<IWrappedEncodeObject[]>}
+   */
+  async initCustomRoot (options: ICustomRootOptions): Promise<IWrappedEncodeObject[]> {
+    if (await this.checkLocked({ signer: true })) {
+      throw new Error('Locked.')
+    }
+    try {
+      const msgs = await this.makeCreateBaseFolderMsgs(options.name)
+      if (options?.chain) {
+        return msgs
+      } else {
+        const postBroadcast =
+          await this.jackalClient.broadcastAndMonitorMsgs(msgs, options?.broadcastOptions)
+        console.log('initCustomRoot:', postBroadcast)
+        await this.loadDirectory()
+        return []
+      }
+    } catch (err) {
+      throw warnError('storageHandler initCustomRoot()', err)
     }
   }
 

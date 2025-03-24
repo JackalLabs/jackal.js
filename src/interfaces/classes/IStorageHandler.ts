@@ -5,7 +5,7 @@ import {
   IChildMetaDataMap,
   ICloneSharesOptions,
   ICloneUploadOptions,
-  ICreateFolderOptions,
+  ICreateFolderOptions, ICustomRootOptions,
   IDeleteTargetOptions,
   IDownloadByUlidOptions,
   IDownloadTracker,
@@ -56,7 +56,9 @@ export interface IStorageHandler {
 
   loadProviderPool (providers?: IProviderIpSet): Promise<void>
 
-  initStorage (options?: IBroadcastOrChainOptions): Promise<any>
+  initStorage (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
+
+  initCustomRoot (options: ICustomRootOptions): Promise<IWrappedEncodeObject[]>
 
   checkAndInitSharing (options?: IBroadcastOrChainOptions): Promise<IWrappedEncodeObject[]>
 
