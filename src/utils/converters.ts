@@ -93,7 +93,8 @@ export function prepDecompressionForAmino (input: string): string {
  * @private
  */
 export function extractFileMetaData (input: File): IFileMeta {
-  const { lastModified, name, size, type } = input
+  const { name, size, type } = input
+  const lastModified = Date.now()
   return { lastModified, name, size, type }
 }
 

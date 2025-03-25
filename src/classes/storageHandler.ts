@@ -7,7 +7,7 @@ import type {
 } from '@jackallabs/jackal.js-protos'
 import { PrivateKey } from 'eciesjs'
 import { extractFileMetaData, hexToInt, maybeMakeThumbnail } from '@/utils/converters'
-import { isItPastDate, shuffleArray, signerNotEnabled, tidyString, warnError } from '@/utils/misc'
+import { isItPastDate, shuffleArray, shuffleProviders, signerNotEnabled, tidyString, warnError } from '@/utils/misc'
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler, ShareMetaHandler } from '@/classes/metaHandlers'
 import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
 import { aesBlobCrypt, genAesBundle, genIv, genKey } from '@/utils/crypt'
@@ -40,7 +40,7 @@ import {
   IMoveRenameTarget,
   INotificationRecord,
   IProviderIpSet,
-  IProviderPool,
+  IProviderPool, IProviderTraits,
   IProviderUploadResponse,
   IReadFolderContentOptions,
   IRemoveShareRecordOptions,
@@ -1091,6 +1091,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(msgs, options)
 
+      this.uploadsInProgress = true
       if (!postBroadcast.error) {
         if (!postBroadcast.txEvents.length) {
           throw Error('tx has no events')
@@ -1098,16 +1099,38 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         let remaining = [...msgs]
         const uploadHeight = postBroadcast.txEvents[0].height
         while (remaining.length > 0) {
-          const activeUploads = await this.batchUploads(remaining, uploadHeight)
-          const results = await Promise.allSettled(activeUploads)
+          const msg = remaining[0]
+          const providerTeams = Object.keys(this.providers)
+          const provs: IProviderTraits[] = []
+          for (const providerTeam of providerTeams) {
+            const provider = this.providers[providerTeam]
+            for (const iProviderTrait of provider) {
+              provs.push(iProviderTrait)
 
-          const loop: IWrappedEncodeObject[] = []
-          for (let i = 0; i < results.length; i++) {
-            if (results[i].status === 'rejected') {
-              loop.push(remaining[i])
             }
           }
-          remaining = [...loop]
+          const { file, merkle } = msg
+          if (!(file && merkle)) {
+            remaining.shift()
+            continue
+          }
+
+          const shuffled = shuffleProviders(provs)
+          let done = false
+          for (const prov of shuffled) {
+            const uploadUrl = `${prov.ip}/upload`
+            try {
+              await this.uploadFile(uploadUrl, uploadHeight, file, merkle)
+              remaining.shift()
+              done = true
+              break
+            } catch (err: any) {
+              console.log(`failed to upload file to ${prov.ip}, skipping it...`, err)
+            }
+          }
+          if (!done) {
+            console.log(`failed to upload file`)
+          }
         }
       }
       this.uploadsInProgress = false
@@ -1117,6 +1140,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       throw warnError('storageHandler processAllQueues()', err)
     }
   }
+
 
   /**
    *
@@ -2290,11 +2314,8 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
             throw new Error(`Status Message: Empty Response`)
           }
           if (resp.status !== 200) {
-            if (resp.status === 400) {
-              const parsed = await resp.json()
-              console.warn('400 error:', parsed.error)
-            }
-            throw new Error(`Status Message: ${resp.statusText}`)
+            const parsed = await resp.json()
+            throw new Error(`Status Message: ${resp.status} ${resp.statusText} ${parsed.error}`)
           } else {
             return resp.json()
           }
