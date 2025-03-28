@@ -1093,6 +1093,11 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(msgs, options)
 
+
+      if (options?.callback) {
+        options.callback()
+      }
+
       this.uploadsInProgress = true
       if (!postBroadcast.error) {
         if (!postBroadcast.txEvents.length) {

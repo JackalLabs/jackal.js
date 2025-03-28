@@ -7,4 +7,5 @@ export interface IBroadcastOptions {
   monitorTimeout?: number
   socketOverrides?: TSocketSet
   queryOverride?: string
+  callback?: () => void
 }
