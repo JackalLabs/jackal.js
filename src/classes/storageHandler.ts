@@ -7,7 +7,7 @@ import type {
 } from '@jackallabs/jackal.js-protos'
 import { PrivateKey } from 'eciesjs'
 import { extractFileMetaData, hexToInt, maybeMakeThumbnail } from '@/utils/converters'
-import { isItPastDate, shuffleArray, signerNotEnabled, tidyString, warnError } from '@/utils/misc'
+import { isItPastDate, shuffleArray, shuffleProviders, signerNotEnabled, tidyString, warnError } from '@/utils/misc'
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler, ShareMetaHandler } from '@/classes/metaHandlers'
 import { encryptionChunkSize, signatureSeed } from '@/utils/globalDefaults'
 import { aesBlobCrypt, genAesBundle, genIv, genKey } from '@/utils/crypt'
@@ -41,7 +41,9 @@ import {
   INotificationRecord,
   IProviderIpSet,
   IProviderPool,
+  IProviderTraits,
   IProviderUploadResponse,
+  IProviderUploadV2Response,
   IReadFolderContentOptions,
   IRemoveShareRecordOptions,
   IRnsHandler,
@@ -1116,6 +1118,12 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(msgs, options)
 
+
+      if (options?.callback) {
+        options.callback()
+      }
+
+      this.uploadsInProgress = true
       if (!postBroadcast.error) {
         if (!postBroadcast.txEvents.length) {
           throw Error('tx has no events')
@@ -1123,16 +1131,107 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         let remaining = [...msgs]
         const uploadHeight = postBroadcast.txEvents[0].height
         while (remaining.length > 0) {
-          const activeUploads = await this.batchUploads(remaining, uploadHeight)
-          const results = await Promise.allSettled(activeUploads)
+          const msg = remaining[0]
+          const providerTeams = Object.keys(this.providers)
+          const provs: IProviderTraits[] = []
+          for (const providerTeam of providerTeams) {
+            const provider = this.providers[providerTeam]
+            for (const iProviderTrait of provider) {
+              provs.push(iProviderTrait)
 
-          const loop: IWrappedEncodeObject[] = []
-          for (let i = 0; i < results.length; i++) {
-            if (results[i].status === 'rejected') {
-              loop.push(remaining[i])
             }
           }
-          remaining = [...loop]
+          const { file, merkle } = msg
+          if (!(file && merkle)) {
+            remaining.shift()
+            continue
+          }
+
+          const shuffled = shuffleProviders(provs)
+          let done = false
+          for (const prov of shuffled) {
+            try {
+              const uploadUrl = `${prov.ip}/v2/upload`
+              const uploadJob = await this.uploadFile(
+                uploadUrl,
+                uploadHeight,
+                file,
+                merkle,
+              )
+
+              if (!('job_id' in uploadJob)) {
+                throw new Error('could not get job from upload')
+              }
+
+              const pollUrl = `${prov.ip}/v2/status/${uploadJob.job_id}`
+
+              const pollForCompletion = () => {
+                return new Promise<IProviderUploadResponse>((resolve, reject) => {
+                  let counter = 0
+
+                  const checkStatus = async () => {
+                    if (counter > 30) {
+                      reject(new Error('Polling timeout after 30 attempts'))
+                      return
+                    }
+
+                    try {
+                      console.log("polling ", pollUrl)
+                      const res = await fetch(pollUrl)
+                      const r = await res.json()
+                      console.log("progress: ", r.progress, r)
+                      if (r.progress > 99) {
+                        const i: IProviderUploadResponse = {
+                          cid: r.cid,
+                          merkle: r.merkle,
+                          start: r.start,
+                          owner: r.owner,
+                        }
+
+                        resolve(i)
+                        return
+                      }
+
+                      counter++
+                      setTimeout(checkStatus, 30000) // Changed to 30 seconds
+                    } catch (error) {
+                      reject(error)
+                    }
+                  }
+
+                  checkStatus()
+                })
+              }
+
+              await pollForCompletion()
+              remaining.shift()
+              done = true
+              break
+
+            } catch (error) {
+              try {
+                const uploadUrl = `${prov.ip}/upload`
+                const uploadPromise = this.uploadFile(
+                  uploadUrl,
+                  uploadHeight,
+                  file,
+                  merkle,
+                )
+                const up = uploadPromise as Promise<IProviderUploadResponse>
+                await up
+                remaining.shift()
+                done = true
+                break
+              } catch (error) {
+                throw error
+              }
+
+            }
+
+          }
+          if (!done) {
+            console.log(`failed to upload file`)
+          }
         }
       }
       this.uploadsInProgress = false
@@ -2241,6 +2340,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
               merkle: hexToBuffer(merkle),
               owner: this.jklAddress,
               start: uploadHeight,
+              cid: '',
             }
             const ready: Promise<IProviderUploadResponse> = new Promise((resolve) => {
               resolve(fakeResponse)
@@ -2260,14 +2360,72 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
               const [seed] = used.slice(-1)
               const selected = this.providers[providerTeams[seed]]
               const one = selected[Math.floor(Math.random() * selected.length)]
-              const uploadUrl = `${one.ip}/upload`
-              const uploadPromise = this.uploadFile(
-                uploadUrl,
-                uploadHeight,
-                file,
-                merkle,
-              )
-              activeUploads.push(uploadPromise)
+              try {
+                const uploadUrl = `${one.ip}/v2/upload`
+                const uploadJob = await this.uploadFile(
+                  uploadUrl,
+                  uploadHeight,
+                  file,
+                  merkle,
+                )
+
+                if (!('job_id' in uploadJob)) {
+                  throw new Error('could not get job from upload')
+                }
+
+                const pollUrl = `${one.ip}/v2/status/${uploadJob.job_id}`
+
+                const pollForCompletion = () => {
+                  return new Promise<IProviderUploadResponse>((resolve, reject) => {
+                    let counter = 0
+
+                    const checkStatus = async () => {
+                      if (counter > 30) {
+                        reject(new Error('Polling timeout after 30 attempts'))
+                        return
+                      }
+
+                      try {
+                        const res = await fetch(pollUrl)
+                        const r = await res.json()
+
+                        if (r.progress > 99) {
+                          const i: IProviderUploadResponse = {
+                            cid: r.cid,
+                            merkle: r.merkle,
+                            start: r.start,
+                            owner: r.owner,
+                          }
+
+                          resolve(i)
+                          return
+                        }
+
+                        counter++
+                        setTimeout(checkStatus, 30000) // Changed to 30 seconds
+                      } catch (error) {
+                        reject(error)
+                      }
+                    }
+
+                    checkStatus()
+                  })
+                }
+
+                activeUploads.push(pollForCompletion())
+
+              } catch (error) {
+                const uploadUrl = `${one.ip}/upload`
+                const uploadPromise = this.uploadFile(
+                  uploadUrl,
+                  uploadHeight,
+                  file,
+                  merkle,
+                )
+                const up = uploadPromise as Promise<IProviderUploadResponse>
+                activeUploads.push(up)
+              }
+
             }
           }
         }
@@ -2292,7 +2450,7 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     startBlock: number,
     file: File,
     merkle: string,
-  ): Promise<IProviderUploadResponse> {
+  ): Promise<IProviderUploadResponse | IProviderUploadV2Response> {
     if (
       await this.checkLocked({ noConvert: true, exists: true, signer: true })
     ) {
@@ -2305,23 +2463,27 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       fileFormData.set('sender', this.jklAddress)
       fileFormData.set('start', startBlock.toString())
 
-      console.log('startBlock:', startBlock.toString())
+      console.log('startBlock:', startBlock.toString(), url)
       return await fetch(url, {
         method: 'POST',
         body: fileFormData,
       }).then(
-        async (resp): Promise<IProviderUploadResponse> => {
+        async (resp): Promise<IProviderUploadResponse | IProviderUploadV2Response> => {
           if (typeof resp === 'undefined' || resp === null) {
             throw new Error(`Status Message: Empty Response`)
           }
-          if (resp.status !== 200) {
-            if (resp.status === 400) {
-              const parsed = await resp.json()
-              console.warn('400 error:', parsed.error)
-            }
-            throw new Error(`Status Message: ${resp.statusText}`)
-          } else {
+          if (resp.status === 202) {
             return resp.json()
+          } else if (resp.status === 200) {
+            return resp.json()
+          } else {
+            try {
+              const parsed = await resp.json()
+              throw new Error(`Status Message: ${resp.status} ${resp.statusText} ${parsed.error}`)
+            } catch (error) {
+              const parsed = await resp.text()
+              throw new Error(`Status Message: ${resp.status} ${parsed}`)
+            }
           }
         },
       )

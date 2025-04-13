@@ -666,12 +666,17 @@ export class ClientHandler implements IClientHandler {
           let rejected = false
           const broadcastTimeout = setTimeout(async () => {
             rejected = true
-            reject({
-              error: true,
-              errorText: 'Event Timeout',
-              txResponse: await broadcastResult,
-              txEvents: events,
-            })
+            try {
+              reject({
+                error: true,
+                errorText: 'Event Timeout',
+                txResponse: await broadcastResult,
+                txEvents: events,
+              })
+            } catch (error) {
+              console.error(error)
+            }
+
           }, monitorTimeout * 1000)
 
           while (!eventsAreFinished && !rejected) {
@@ -682,12 +687,17 @@ export class ClientHandler implements IClientHandler {
           if (eventsAreFinished) {
             clearTimeout(broadcastTimeout)
             // console.log('resolving')
-            resolve({
-              error: false,
-              errorText: '',
-              txResponse: await broadcastResult,
-              txEvents: events,
-            })
+            try {
+              resolve({
+                error: false,
+                errorText: '',
+                txResponse: await broadcastResult,
+                txEvents: events,
+              })
+            } catch (error) {
+              console.error(error)
+            }
+
           }
         })()
       })
