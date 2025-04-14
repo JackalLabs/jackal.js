@@ -673,20 +673,18 @@ export class ClientHandler implements IClientHandler {
                 txResponse: await broadcastResult,
                 txEvents: events,
               })
-            } catch (error) {
-              console.error(error)
+            } catch (err) {
+              console.error(err)
             }
 
           }, monitorTimeout * 1000)
 
           while (!eventsAreFinished && !rejected) {
-            // console.log('waiting')
             await setDelay(0.5)
             eventsAreFinished = events.length >= 1
           }
           if (eventsAreFinished) {
             clearTimeout(broadcastTimeout)
-            // console.log('resolving')
             try {
               resolve({
                 error: false,
@@ -694,10 +692,9 @@ export class ClientHandler implements IClientHandler {
                 txResponse: await broadcastResult,
                 txEvents: events,
               })
-            } catch (error) {
-              console.error(error)
+            } catch (err) {
+              console.error(err)
             }
-
           }
         })()
       })

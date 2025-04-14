@@ -2,7 +2,11 @@ export interface IProviderUploadResponse {
   merkle: ArrayBuffer
   owner: string
   start: number
-  cid: string
+  cid?: string
+}
+
+export interface IProviderUploadV2Response {
+  job_id: string
 }
 
 export interface IProviderStatusResponse {
@@ -13,6 +17,4 @@ export interface IProviderStatusResponse {
   progress: number
 }
 
-export interface IProviderUploadV2Response {
-  job_id: string
-}
+export type TMergedProviderResponse = IProviderUploadResponse | IProviderUploadV2Response

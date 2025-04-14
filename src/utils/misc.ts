@@ -2,7 +2,6 @@ import { DEncodeObject, findQueryKey, IIbcEngageBundle, TxEvent } from '@jackall
 import { secondToMS } from '@/utils/converters'
 import { sockets } from '@/utils/globalDefaults'
 import { TSockets, TSocketSet, TTidyStringModes } from '@/types'
-import { IProviderTraits } from '@/interfaces'
 
 /**
  * Notify that function is deprecated and should no longer be used.
@@ -28,12 +27,6 @@ export function deprecated (
     alert(notice)
   }
 }
-
-export function shuffleProviders(array: IProviderTraits[]) {
-  return array.map((a) => ({ sort: Math.random(), value: a }))
-    .sort((a, b) => a.sort - b.sort)
-    .map((a) => a.value);
-};
 
 /**
  * Generic warning handler.
