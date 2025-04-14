@@ -25,7 +25,7 @@ export class UploadHandler {
     this.runQueue = true
     this.completed = {}
 
-    this.startQueue()
+    this.hostQueue()
   }
 
   async upload (details: IUploadDetails, existing: number, copies = 2): Promise<IProviderUploadResponse> {
@@ -48,6 +48,10 @@ export class UploadHandler {
     }
   }
 
+  startQueue () {
+    this.runQueue = true
+  }
+
   stopQueue () {
     this.runQueue = false
   }
@@ -57,7 +61,7 @@ export class UploadHandler {
     while (providerOrder.length > 0) {
       try {
         const ip = providerOrder.shift() as string
-        if (ip in this.completed[details.merkle]) {
+        if (ip in (this.completed[details.merkle] || [])) {
           continue
         }
         const v2Url = `${ip}/v2/upload`
@@ -94,9 +98,9 @@ export class UploadHandler {
     }
   }
 
-  private async startQueue () {
-    while (this.runQueue) {
-      if (this.queue.length > 0) {
+  private async hostQueue () {
+    while (true) {
+      if (this.runQueue && this.queue.length > 0) {
         const details = this.queue.shift() as IUploadDetails
         await this.attempt(details)
       }
