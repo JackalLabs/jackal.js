@@ -25,7 +25,8 @@ import {
   ICloneSharesOptions,
   ICloneUploadOptions,
   IConversionFolderBundle,
-  ICreateFolderOptions, ICustomRootOptions,
+  ICreateFolderOptions,
+  ICustomRootOptions,
   IDeleteTargetOptions,
   IDownloadByUlidOptions,
   IDownloadTracker,
@@ -66,6 +67,7 @@ import {
 } from '@/interfaces'
 import type { TFullSignerState, TMetaDataSets, TMetaHandler } from '@/types'
 import { ulid } from 'ulid'
+import { UploadHandler } from '@/classes/uploadHandler'
 
 export class StorageHandler extends EncodingHandler implements IStorageHandler {
   protected readonly rns: IRnsHandler | null
@@ -1116,24 +1118,23 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       const postBroadcast =
         await this.jackalClient.broadcastAndMonitorMsgs(msgs, options)
 
+      if (options?.callback) {
+        try {
+          options.callback()
+        } catch (err) {
+          console.error(err)
+          throw new Error('Callback Failed')
+        }
+      }
+
+      this.uploadsInProgress = true
       if (!postBroadcast.error) {
         if (!postBroadcast.txEvents.length) {
           throw Error('tx has no events')
         }
-        let remaining = [...msgs]
         const uploadHeight = postBroadcast.txEvents[0].height
-        while (remaining.length > 0) {
-          const activeUploads = await this.batchUploads(remaining, uploadHeight)
-          const results = await Promise.allSettled(activeUploads)
-
-          const loop: IWrappedEncodeObject[] = []
-          for (let i = 0; i < results.length; i++) {
-            if (results[i].status === 'rejected') {
-              loop.push(remaining[i])
-            }
-          }
-          remaining = [...loop]
-        }
+        const activeUploads = await this.batchUploads(msgs, uploadHeight)
+        await Promise.allSettled(activeUploads)
       }
       this.uploadsInProgress = false
       await this.loadDirectory()
@@ -2223,110 +2224,27 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
   ): Promise<Promise<IProviderUploadResponse>[]> {
     try {
       const activeUploads: Promise<IProviderUploadResponse>[] = []
-      const providerTeams = Object.keys(this.providers)
-      const copies = Math.min(3, providerTeams.length)
+      const uploader = new UploadHandler(this.providers, this.hostAddress)
+      this.uploadsInProgress = true
       for (let i = 0; i < msgs.length; i++) {
         if (!msgs[i]) {
           warnError('storageHandler batchUploads()', `msg at ${i} is undefined`)
           continue
         }
         const { file, merkle } = msgs[i]
-        if (file && merkle) {
-          this.uploadsInProgress = true
-          const { providerIps } = await this.jackalSigner.queries.storage.findFile({
-            merkle: hexToBuffer(merkle),
-          })
-          if (providerIps.length >= copies) {
-            const fakeResponse: IProviderUploadResponse = {
-              merkle: hexToBuffer(merkle),
-              owner: this.jklAddress,
-              start: uploadHeight,
-            }
-            const ready: Promise<IProviderUploadResponse> = new Promise((resolve) => {
-              resolve(fakeResponse)
-            })
-            activeUploads.push(ready)
-          } else {
-            const used: number[] = []
-            for (let i = 0; i < copies; i++) {
-              while (true) {
-                const seed = Math.floor(Math.random() * providerTeams.length)
-                if (used.includes(seed)) {
-                } else {
-                  used.push(seed)
-                  break
-                }
-              }
-              const [seed] = used.slice(-1)
-              const selected = this.providers[providerTeams[seed]]
-              const one = selected[Math.floor(Math.random() * selected.length)]
-              const uploadUrl = `${one.ip}/upload`
-              const uploadPromise = this.uploadFile(
-                uploadUrl,
-                uploadHeight,
-                file,
-                merkle,
-              )
-              activeUploads.push(uploadPromise)
-            }
-          }
+        if (!(file && merkle)) {
+          continue
         }
+        const { providerIps } = await this.jackalSigner.queries.storage.findFile({
+          merkle: hexToBuffer(merkle),
+        })
+        const started = uploader.upload({ file, merkle, uploadHeight }, providerIps.length)
+        activeUploads.push(started)
+
       }
       return activeUploads
     } catch (err) {
       throw warnError('storageHandler batchUploads()', err)
-    }
-  }
-
-  /**
-   *
-   * @param {string} url
-   * @param {number} startBlock
-   * @param {File} file
-   * @param {string} merkle
-   * @returns {Promise<IProviderUploadResponse>}
-   * @protected
-   */
-  protected async uploadFile (
-    url: string,
-    startBlock: number,
-    file: File,
-    merkle: string,
-  ): Promise<IProviderUploadResponse> {
-    if (
-      await this.checkLocked({ noConvert: true, exists: true, signer: true })
-    ) {
-      throw new Error('Locked.')
-    }
-    try {
-      const fileFormData = new FormData()
-      fileFormData.set('file', file)
-      fileFormData.set('merkle', merkle)
-      fileFormData.set('sender', this.jklAddress)
-      fileFormData.set('start', startBlock.toString())
-
-      console.log('startBlock:', startBlock.toString())
-      return await fetch(url, {
-        method: 'POST',
-        body: fileFormData,
-      }).then(
-        async (resp): Promise<IProviderUploadResponse> => {
-          if (typeof resp === 'undefined' || resp === null) {
-            throw new Error(`Status Message: Empty Response`)
-          }
-          if (resp.status !== 200) {
-            if (resp.status === 400) {
-              const parsed = await resp.json()
-              console.warn('400 error:', parsed.error)
-            }
-            throw new Error(`Status Message: ${resp.statusText}`)
-          } else {
-            return resp.json()
-          }
-        },
-      )
-    } catch (err) {
-      throw warnError('storageHandler uploadFile()', err)
     }
   }
 

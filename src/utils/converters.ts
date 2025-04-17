@@ -93,7 +93,7 @@ export function prepDecompressionForAmino (input: string): string {
  * @private
  */
 export function extractFileMetaData (input: File): IFileMeta {
-  const { lastModified, name, size, type } = input
+  const { name, size, type, lastModified = Date.now() } = input
   return { lastModified, name, size, type }
 }
 
@@ -229,6 +229,10 @@ export function blockToDateFixed (options: IBlockTimeOptions): Date {
  * @private
  */
 export async function maybeMakeThumbnail (source: File): Promise<string> {
+  if (source.size > 1024 * 1024 * 1024) {
+    return ''
+  }
+
   try {
     console.log('Making thumbnail for type....', source.name, source.type)
     if (
