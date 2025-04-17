@@ -7,8 +7,9 @@ import {
 } from '@/interfaces'
 import { setDelay, shuffleArray, warnError } from '@/utils/misc'
 import { hexToBuffer } from '@/utils/hash'
+import { IUploadHandler } from '@/interfaces/classes'
 
-export class UploadHandler {
+export class UploadHandler implements IUploadHandler {
   providers: IProviderPool
   readyProviders: string[]
   jklAddress: string
@@ -28,6 +29,13 @@ export class UploadHandler {
     this.hostQueue()
   }
 
+  /**
+   *
+   * @param {IUploadDetails} details
+   * @param {number} existing
+   * @param {number} copies
+   * @returns {Promise<IProviderUploadResponse>}
+   */
   async upload (details: IUploadDetails, existing: number, copies = 2): Promise<IProviderUploadResponse> {
     try {
       if (existing >= this.readyProviders.length) {
@@ -56,6 +64,12 @@ export class UploadHandler {
     this.runQueue = false
   }
 
+  /**
+   *
+   * @param {IUploadDetails} details
+   * @returns {Promise<IProviderUploadResponse>}
+   * @private
+   */
   private async attempt (details: IUploadDetails): Promise<IProviderUploadResponse> {
     const providerOrder = shuffleArray(this.readyProviders)
     while (providerOrder.length > 0) {
@@ -108,6 +122,12 @@ export class UploadHandler {
     }
   }
 
+  /**
+   *
+   * @param {string} pollUrl
+   * @returns {Promise<IProviderUploadResponse>}
+   * @private
+   */
   private pollForCompletion (pollUrl: string): Promise<IProviderUploadResponse> {
     return new Promise(async (resolve, reject) => {
       try {
@@ -143,9 +163,9 @@ export class UploadHandler {
   /**
    *
    * @param {string} url
-   * @param {details} IUploadDetails
+   * @param {IUploadDetails} details
    * @returns {Promise<TMergedProviderResponse>}
-   * @protected
+   * @private
    */
   private async uploadFile (
     url: string,
