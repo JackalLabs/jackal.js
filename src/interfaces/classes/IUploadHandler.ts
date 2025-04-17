@@ -1,7 +1,7 @@
 import { IProviderUploadResponse, IUploadDetails } from '@/interfaces'
 
 export interface IUploadHandler {
-  upload (details: IUploadDetails, existing: number, copies = 2): Promise<IProviderUploadResponse>
+  upload (details: IUploadDetails, existing: number, copies: number): Promise<IProviderUploadResponse>
 
   startQueue (): void
 

@@ -36,7 +36,7 @@ export class UploadHandler implements IUploadHandler {
    * @param {number} copies
    * @returns {Promise<IProviderUploadResponse>}
    */
-  async upload (details: IUploadDetails, existing: number, copies = 2): Promise<IProviderUploadResponse> {
+  async upload (details: IUploadDetails, existing: number, copies: number = 2): Promise<IProviderUploadResponse> {
     try {
       if (existing >= this.readyProviders.length) {
         return {
