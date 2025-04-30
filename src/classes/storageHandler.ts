@@ -723,6 +723,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
                   await this.jackalSigner.queries.storage.allFilesByMerkle({
                     merkle: merkleRoot,
                   })
+                if ((files as DUnifiedFile[]).length === 0) {
+                  continue
+                }
                 const [target] = files.filter(
                   (file: DUnifiedFile) => file.owner === this.jklAddress,
                 )
@@ -1831,6 +1834,9 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
                   await this.jackalSigner.queries.storage.allFilesByMerkle({
                     merkle: one[1].export().merkleRoot,
                   })
+                if ((files as DUnifiedFile[]).length === 0) {
+                  continue
+                }
                 const [details] = files
                 const sourceMsgs = this.fileDeleteToMsgs({
                   creator: this.jklAddress,
@@ -2399,6 +2405,10 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
           await this.jackalSigner.queries.storage.allFilesByMerkle({
             merkle: ft.merkleRoot,
           })
+        if ((files as DUnifiedFile[]).length === 0) {
+          console.warn('looks like we\'re deleting a dead file...')
+          return msgs
+        }
         const [details] = files
         try {
           const deletePkg = {
