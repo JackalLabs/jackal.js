@@ -8,4 +8,5 @@ export interface IBroadcastOptions {
   socketOverrides?: TSocketSet
   queryOverride?: string
   callback?: () => void
+  payer?: string
 }
