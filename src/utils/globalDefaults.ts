@@ -1,4 +1,4 @@
-import type { IChainConfig, ISocketConfig } from '@/interfaces'
+import type { IChainConfig, IPrefixKeys, ISocketConfig } from '@/interfaces'
 import type { TSockets } from '@/types'
 
 export const sharedPath = 'dashboard_sharedfiles'
@@ -9,6 +9,14 @@ export const chunkSize: number = 10240 /* In bytes. Don't ever change this! */
 export const encryptionChunkSize: number =
   32 * Math.pow(1024, 2) /* In bytes. This number can change */
 export const assumedBlockTime: number = 6 /* In seconds. This number can change but shouldn't be */
+
+export const prefixKeys: IPrefixKeys = {
+  MatchAnyCompression: 'jklpc',
+  BasicCompression: 'jklpc1',
+  Base64Encoded: 'jklpc2|',
+  NoCompression: 'jklpc3|',
+  Wallet: 'jkl1'
+}
 
 export const jackalTestnetRpc: string =
   'https://testnet-rpc.jackalprotocol.com/'

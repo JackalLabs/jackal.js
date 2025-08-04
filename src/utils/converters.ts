@@ -1,6 +1,6 @@
 import PLZSU from '@karnthis/plzsu'
 import { warnError } from '@/utils/misc'
-import { assumedBlockTime } from '@/utils/globalDefaults'
+import { assumedBlockTime, prefixKeys } from '@/utils/globalDefaults'
 import { IBlockTimeOptions, IFileContents, IFileMeta } from '@/interfaces'
 import type { TMetaDataSets } from '@/types'
 
@@ -28,9 +28,9 @@ export function safeCompressData (input: string): string {
  * @private
  */
 export function safeDecompressData (input: string): string {
-  if (input.startsWith('jklpc3|')) {
+  if (input.startsWith(prefixKeys.NoCompression)) {
     return input.substring(7)
-  } else if (input.startsWith('jklpc1')) {
+  } else if (input.startsWith(prefixKeys.BasicCompression)) {
     return Plzsu.decompress(input.substring(6))
   } else {
     throw new Error('Invalid Decompression String')
@@ -77,7 +77,7 @@ export function sanitizeCompressionForAmino (input: string): string {
  * @private
  */
 export function prepDecompressionForAmino (input: string): string {
-  if (input.startsWith('jklpc2|')) {
+  if (input.startsWith(prefixKeys.Base64Encoded)) {
     const wasBase64 = atob(input.substring(7))
     const asArray = [...wasBase64].map((str) => str.codePointAt(0) || 0)
     return uintArrayToString(Uint8Array.from(asArray))

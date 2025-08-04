@@ -59,6 +59,7 @@ import {
 } from '@/utils/crypt'
 import { TConversionPair, TExtractedViewAccess, TMerkleParentChild, TMetaDataSets } from '@/types'
 import { FileMetaHandler, FolderMetaHandler, NullMetaHandler } from '@/classes/metaHandlers'
+import { prefixKeys } from '@/utils/globalDefaults'
 
 export class FiletreeReader implements IFiletreeReader {
   protected readonly jackalClient: IClientHandler
@@ -901,7 +902,7 @@ export class FiletreeReader implements IFiletreeReader {
           if (ulid in this.sharerCounts) {
             const safeContents = prepDecompressionForAmino(contents)
             let decrypted = await cryptString(safeContents, aes[0], 'decrypt')
-            if (decrypted.startsWith('jklpc')) {
+            if (decrypted.startsWith(prefixKeys.MatchAnyCompression)) {
               decrypted = safeDecompressData(decrypted)
             }
             const working = safeParseFileTree(decrypted)
@@ -1818,7 +1819,7 @@ export class FiletreeReader implements IFiletreeReader {
       for (let viewer of groupViewers) {
         const entry = await hashAndHexUserAccess('v', trackingNumber, viewer)
         if (aes) {
-          if (!viewer.startsWith('jkl')) {
+          if (!viewer.startsWith(prefixKeys.Wallet)) {
             const key = await linkPrivateKey(viewer)
             const pubKey = key.publicKey.toHex()
             viewAccess[entry] = await aesToString(pubKey, aes)
@@ -2009,7 +2010,7 @@ export class FiletreeReader implements IFiletreeReader {
         this.conversionQueue = [...new Set([...this.conversionQueue, id])]
       }
       let decrypted = await cryptString(safe, aes[0], 'decrypt')
-      if (decrypted.startsWith('jklpc')) {
+      if (decrypted.startsWith(prefixKeys.MatchAnyCompression)) {
         decrypted = safeDecompressData(decrypted)
       }
       return safeParseFileTree(decrypted)
