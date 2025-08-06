@@ -1,4 +1,4 @@
-import { Merkletree } from '@jackallabs/dogwood-tree'
+import { MerkletreeCompact } from '@jackallabs/dogwood-tree'
 import { ulid } from 'ulid'
 import { chunkSize } from '@/utils/globalDefaults'
 import { hexToInt, intToHex, uintArrayToString } from '@/utils/converters'
@@ -372,8 +372,7 @@ export class FileMetaHandler implements IFileMetaHandler {
         rdy.merkleHex = bufferToHex(source.legacyMerkles[0])
         rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
       } else if (source.file) {
-        const seed = await source.file.arrayBuffer()
-        const tree = await Merkletree.grow({ seed, chunkSize, preserve: false })
+        const tree = await MerkletreeCompact.grow({ raw: source.file, chunkSize })
         rdy.merkleRoot = new Uint8Array(tree.getRoot())
         rdy.merkleHex = tree.getRootAsHex()
         rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
