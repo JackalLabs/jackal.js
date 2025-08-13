@@ -258,7 +258,7 @@ export class EncodingHandler {
       merkle: pkg.meta.export().merkleRoot,
       fileSize: pkg.file.size,
       proofInterval: this.proofInterval,
-      proofType: 0,
+      proofType: 0, // 0 for sha3_512, 3 for blake3
       maxProofs: 3,
       expires: this.createExpiresValue(pkg.duration, currentBlock),
       note: JSON.stringify({}),
@@ -275,7 +275,7 @@ export class EncodingHandler {
       merkle: pkg.meta.export().merkleRoot,
       fileSize: pkg.size,
       proofInterval: this.proofInterval,
-      proofType: 0,
+      proofType: 0, // 0 for sha3_512, 3 for blake3
       maxProofs: 3,
       expires: this.createExpiresValue(pkg.duration, currentBlock),
       note: JSON.stringify({}),
