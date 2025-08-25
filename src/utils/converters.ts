@@ -229,28 +229,26 @@ export function blockToDateFixed (options: IBlockTimeOptions): Date {
  * @private
  */
 export async function maybeMakeThumbnail (source: File): Promise<string> {
-  if (source.size > 1024 * 1024 * 1024) {
+  if (source.size >= 2 * 1000 * 1000 * 1000) {
     return ''
   }
 
   try {
     console.log('Making thumbnail for type....', source.name, source.type)
-    if (
-      source.type.startsWith('image')
-    ) {
-      console.log('it is an image!')
-      return await convertToWebP(source)
-    } else if (
-      source.type.startsWith('video')
-    ) {
-      console.log('it is a video!')
-      return await extractThumbnailFromVideo(source)
-    } else {
-      console.log('it is not convertable :(')
-      return ''
+    switch (true) {
+      case source.type.startsWith('image'):
+        console.log('it is an image!')
+        return await convertToWebP(source)
+      case source.type.startsWith('video'):
+        console.log('it is a video!')
+        return await extractThumbnailFromVideo(source)
+      default:
+        console.log('it is not convertable :(')
+        return ''
     }
   } catch (err) {
-    throw warnError('maybeMakeThumbnail()', err)
+    warnError('maybeMakeThumbnail()', err)
+    return ''
   }
 }
 

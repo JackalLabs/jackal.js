@@ -372,7 +372,7 @@ export class FileMetaHandler implements IFileMetaHandler {
         rdy.merkleHex = bufferToHex(source.legacyMerkles[0])
         rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
       } else if (source.file) {
-        const tree = await MerkletreeCompact.grow({ raw: source.file, chunkSize, hashType: 'sha3_512' })
+        const tree = await MerkletreeCompact.grow({ raw: source.file, chunkSize, hashType: 'blake3' })
         rdy.merkleRoot = new Uint8Array(tree.getRoot())
         rdy.merkleHex = tree.getRootAsHex()
         rdy.merkleMem = uintArrayToString(rdy.merkleRoot)
