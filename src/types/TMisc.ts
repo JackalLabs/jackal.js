@@ -8,6 +8,9 @@ import {
   type ISocketConfig,
 } from '@/interfaces'
 
+import { DUnifiedFile, FileProof } from '@jackallabs/jackal.js-protos'
+export type { DUnifiedFile, FileProof }
+
 export type TTidyStringModes = 'start' | 'end' | 'both'
 export type TLoadedFolder = [number, IChildMetaDataMap, boolean]
 

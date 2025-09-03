@@ -29,6 +29,7 @@ import {
   TLoadThumbnailOptions,
 } from '@/interfaces'
 import type { TMetaDataSets } from '@/types'
+import { DUnifiedFile, FileProof } from '@jackallabs/jackal.js-protos'
 
 export interface IStorageHandler {
   cleanShutdown (): void
@@ -75,6 +76,8 @@ export interface IStorageHandler {
 
   moveRenameResource (options: IMoveRenameResourceOptions): Promise<IWrappedEncodeObject[]>
 
+  getProofTruths (filePath: string, address?: string): Promise<FileProof[]>
+
   readActivePath (): string
 
   readCurrentLocation (): string
@@ -108,6 +111,8 @@ export interface IStorageHandler {
   findUlid (path: string, address?: string): string
 
   getFileMetaData (filePath: string, address?: string): Promise<IFileMetaData>
+
+  getUnifiedFileInstances (filePath: string, address?: string): Promise<DUnifiedFile[]>
 
   getFileParticulars (filePath: string): Promise<IFileParticulars>
 

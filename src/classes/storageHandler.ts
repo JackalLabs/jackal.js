@@ -1,7 +1,7 @@
-import type {
+import {
   DMsgBuyStorage,
   DMsgPostKey,
-  DUnifiedFile,
+  DUnifiedFile, FileProof,
   THostSigningClient,
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
@@ -431,7 +431,6 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
     } catch (err) {
       throw warnError('storageHandler getAvailableProviders()', err)
     }
-
   }
 
   /**
@@ -868,6 +867,38 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
 
   /**
    *
+   * @param {string} filePath
+   * @param {string} [address]
+   * @returns {Promise<FileProof[]>}
+   */
+  async getProofTruths (filePath: string, address?: string): Promise<FileProof[]> {
+    if (await this.checkLocked({ signer: true })) {
+      throw new Error('Locked.')
+    }
+    try {
+      const files = await this.getUnifiedFileInstances(filePath, address)
+      const finalProofs: FileProof[] = []
+      for (let file of files) {
+        const { proofs } = file
+        for (let proof of proofs) {
+          const parts = proof.split()
+          const res = await this.jackalClient.getQueries().storage.proof({
+            providerAddress: parts[0],
+            merkle: parts[2],
+            owner: parts[1],
+            start: parts[3],
+          })
+          finalProofs.push(res.proof)
+        }
+      }
+      return finalProofs
+    } catch (err) {
+      throw warnError('storageHandler getProofTruths()', err)
+    }
+  }
+
+  /**
+   *
    * @returns {string}
    */
   readActivePath (): string {
@@ -1227,6 +1258,31 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       return ft
     } catch (err) {
       throw warnError('storageHandler getFileMetaData()', err)
+    }
+  }
+
+  /**
+   *
+   * @param {string} filePath
+   * @param {string} [address]
+   * @returns {Promise<DUnifiedFile[]>}
+   */
+  async getUnifiedFileInstances (filePath: string, address?: string): Promise<DUnifiedFile[]> {
+    if (await this.checkLocked({ signer: true })) {
+      throw new Error('Locked.')
+    }
+    try {
+      const ica = address || this.jackalClient.getICAJackalAddress()
+      const ft = await this.reader.loadMetaByExternalPath(filePath, ica)
+      if (ft.metaDataType !== 'file') {
+        throw new Error('Not a file')
+      }
+      const { files } = await this.jackalSigner.queries.storage.allFilesByMerkle({
+        merkle: ft.merkleRoot,
+      })
+      return files
+    } catch (err) {
+      throw warnError('storageHandler getUnifiedFileInstances()', err)
     }
   }
 
