@@ -1,7 +1,8 @@
 import {
   DMsgBuyStorage,
   DMsgPostKey,
-  DUnifiedFile, FileProof,
+  DUnifiedFile,
+  FileProof,
   THostSigningClient,
   TJackalSigningClient,
 } from '@jackallabs/jackal.js-protos'
@@ -876,12 +877,12 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
       throw new Error('Locked.')
     }
     try {
-      const files = await this.getUnifiedFileInstances(filePath, address)
+      const files: DUnifiedFile[] = await this.getUnifiedFileInstances(filePath, address)
       const finalProofs: FileProof[] = []
       for (let file of files) {
-        const { proofs } = file
+        const { proofs } = (file as DUnifiedFile)
         for (let proof of proofs) {
-          const parts = proof.split()
+          const parts = (proof as string).split('/')
           const res = await this.jackalClient.getQueries().storage.proof({
             providerAddress: parts[0],
             merkle: parts[2],
