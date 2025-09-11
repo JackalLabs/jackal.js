@@ -1,6 +1,6 @@
 import {
   DMsgBuyStorage,
-  DMsgPostKey,
+  DMsgPostKey, DQueryProof,
   DUnifiedFile,
   FileProof,
   THostSigningClient,
@@ -883,12 +883,14 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         const { proofs } = (file as DUnifiedFile)
         for (let proof of proofs) {
           const parts = (proof as string).split('/')
-          const res = await this.jackalClient.getQueries().storage.proof({
+
+          let req: DQueryProof = {
             providerAddress: parts[0],
-            merkle: parts[2],
+            merkle: hexToBuffer(parts[2]),
             owner: parts[1],
-            start: parts[3],
-          })
+            start: parseInt(parts[3], 10),
+          }
+          const res = await this.jackalClient.getQueries().storage.proof(req)
           finalProofs.push(res.proof)
         }
       }
