@@ -1,6 +1,7 @@
 import {
   DMsgBuyStorage,
-  DMsgPostKey, DQueryProof,
+  DMsgPostKey,
+  DQueryProof,
   DUnifiedFile,
   FileProof,
   THostSigningClient,
@@ -883,7 +884,6 @@ export class StorageHandler extends EncodingHandler implements IStorageHandler {
         const { proofs } = (file as DUnifiedFile)
         for (let proof of proofs) {
           const parts = (proof as string).split('/')
-
           let req: DQueryProof = {
             providerAddress: parts[0],
             merkle: hexToBuffer(parts[2]),
