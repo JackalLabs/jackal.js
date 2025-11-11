@@ -43,6 +43,7 @@ export function estimateGas (msgArray: IWrappedEncodeObject[]): number {
  * @param {IWrappedEncodeObject[]} msgArray - Collection of Tx instances to calculate gas from.
  * @param {number} gasMultiplier - Multiplier for calculating gas.
  * @param {number} [gasOverride] - Value to replace calculated gas value.
+ * @param {string} payer - The Payer if using a feegrant
  * @returns {IFinalGas} - Gas object with best estimate based on input.
  * @private
  */
@@ -50,6 +51,7 @@ export function finalizeGas (
   msgArray: IWrappedEncodeObject[],
   gasMultiplier: number,
   gasOverride?: number,
+  payer?: string,
 ): IFinalGas {
   const [gas, msgs] = calculateGas(msgArray, gasMultiplier)
   const totalGas = Number(gasOverride) || gas
@@ -59,6 +61,7 @@ export function finalizeGas (
         { denom: 'ujkl', amount: Math.ceil(totalGas * 0.002).toString() },
       ],
       gas: Math.ceil(totalGas).toString(),
+      payer: payer,
     },
     msgs,
   }

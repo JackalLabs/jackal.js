@@ -16,6 +16,7 @@ export interface IClientSetup {
   selectedWallet?: TWalletExtensionNames
   networks?: TSockets[]
   gasMultiplier?: number
+  feeGrantPayer?: string
 }
 
 export type { SigningStargateClientOptions }

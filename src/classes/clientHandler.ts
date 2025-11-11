@@ -49,6 +49,7 @@ export class ClientHandler implements IClientHandler {
   protected readonly details: IWalletDetails
   protected readonly networks: TSockets[]
   protected readonly gasMultiplier: number
+  protected readonly feeGrantPayer: string | undefined
 
   protected myCosmwasm: IWasmHandler | null
   protected myContractAddress: string | null
@@ -68,6 +69,7 @@ export class ClientHandler implements IClientHandler {
     details: IWalletDetails,
     networks: TSockets[],
     gasMultiplier: number,
+    feeGrantPayer: string | undefined,
   ) {
     this.jklQuery = jklQuery
     this.hostQuery = hostQuery
@@ -82,6 +84,7 @@ export class ClientHandler implements IClientHandler {
     this.details = details
     this.networks = networks
     this.gasMultiplier = gasMultiplier
+    this.feeGrantPayer = feeGrantPayer
 
     this.myCosmwasm = null
     this.myContractAddress = null
@@ -104,6 +107,7 @@ export class ClientHandler implements IClientHandler {
         selectedWallet = 'leap',
         networks = ['jackal'],
         gasMultiplier,
+        feeGrantPayer,
       } = setup
       const jklQuery = connectJackalQueryClient(endpoint, {})
       const hostQuery = !host
@@ -253,6 +257,7 @@ export class ClientHandler implements IClientHandler {
         details,
         networks,
         gasMultiplier || myGasMultiplier,
+        feeGrantPayer,
       )
     } catch (err) {
       throw warnError('clientHandler connect()', err)
@@ -629,11 +634,12 @@ export class ClientHandler implements IClientHandler {
         monitorTimeout = 30,
         socketOverrides = {} as TSocketSet,
         queryOverride,
+        payer = this.feeGrantPayer,
       } = options
       const events: TxEvent[] = []
       const ready: IWrappedEncodeObject[] =
         wrappedMsgs instanceof Array ? [...wrappedMsgs] : [wrappedMsgs]
-      let { fee, msgs } = finalizeGas(ready, this.gasMultiplier, gasOverride)
+      let { fee, msgs } = finalizeGas(ready, this.gasMultiplier, gasOverride, payer)
 
       const connectionBundles: IIbcEngageBundle<TxEvent>[] =
         makeConnectionBundles(
@@ -653,6 +659,7 @@ export class ClientHandler implements IClientHandler {
           msgs,
         )
       }
+
       chosenSigner.monitor(connectionBundles)
       const broadcastResult = chosenSigner.selfSignAndBroadcast(msgs, {
         fee,
